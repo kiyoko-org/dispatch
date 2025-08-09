@@ -15,11 +15,9 @@ export default function App() {
 					<Text className='font-bold text-xl'>Sign In</Text>
 					<Text className='opacity-70 mt-1'>Use your email/phone and password to continue</Text>
 
-					<Text className='font-semibold text-lg mt-6'>Email</Text>
-					<TextInput className='mt-2' placeholder='you@example.com' />
+					<TextInput label='Email/Phone' className='mt-6' placeholder='you@example.com' />
 
-					<Text className='font-semibold text-lg mt-4'>Password</Text>
-					<TextInput className='mt-2' secureTextEntry={true} />
+					<TextInput label='Password' className='mt-4' secureTextEntry={true} />
 
 					<Button className='mt-6' label="Sign in"></Button>
 
