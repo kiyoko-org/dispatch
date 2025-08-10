@@ -12,6 +12,8 @@ export default function App() {
 		<>
 			<ScreenContent title="Home" path="App.tsx">
 				<Card>
+					<Text className='font-bold text-2xl mb-6'>Dispatch</Text>
+
 					<Text className='font-bold text-xl'>Sign In</Text>
 					<Text className='opacity-70 mt-1'>Use your email/phone and password to continue</Text>
 
