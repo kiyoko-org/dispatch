@@ -1,7 +1,7 @@
 import { Card } from 'components/Card';
 import { TextInput } from 'components/TextInput';
 import { Button } from 'components/Button';
-import { StatusBar, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView, StatusBar, StyleSheet, Text, View } from 'react-native';
 import { Home, Lock, Mail, User } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import StepProgress from 'components/StepProgress';
@@ -11,14 +11,12 @@ export default function RootLayout() {
 	const router = useRouter()
 
 	return (
-		<>
-			<View>
-				<View style={styles.topbar}>
-					<Text className='font-bold text-2xl'>DISPATCH</Text>
-					<Text >Step 1 of 2</Text>
-				</View>
-				<StepProgress current={1} max={2}/>
+		<SafeAreaView>
+			<View style={styles.topbar}>
+				<Text className='font-bold text-2xl'>DISPATCH</Text>
+				<Text >Step 1 of 2</Text>
 			</View>
+			<StepProgress current={1} max={2} />
 
 			<View className="items-center mt-8">
 
@@ -57,12 +55,12 @@ export default function RootLayout() {
 					>Sign in</Text></Text>
 				</Card>
 			</View>
-		</>
+		</SafeAreaView>
 	)
 }
 
 const styles = StyleSheet.create({
 	topbar: {
-		paddingTop: StatusBar.currentHeight, padding: 15, width: '100%', backgroundColor: 'white', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'
+		padding: 15, width: '100%', backgroundColor: 'white', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center'
 	}
 })
