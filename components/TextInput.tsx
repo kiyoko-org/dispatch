@@ -15,6 +15,7 @@ export function TextInput({ className, placeholder, keyboardType, secureTextEntr
 
 	const modifiedIcon = icon ? React.cloneElement(icon, {
 		color: "gray",
+		size: 20,
 	}) : null
 
 	return (
