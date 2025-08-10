@@ -27,7 +27,7 @@ export function TextInput({ className, placeholder, keyboardType, secureTextEntr
 				{modifiedIcon &&
 					modifiedIcon
 				}
-				<RNTextInput className="bg-white w-max flex-1" {...{ placeholder, keyboardType, secureTextEntry }} />
+				<RNTextInput className="bg-white w-max flex-1 p-2" {...{ placeholder, keyboardType, secureTextEntry }} />
 			</ View>
 		</View>
 	)
