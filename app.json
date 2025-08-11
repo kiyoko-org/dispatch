@@ -3,7 +3,7 @@
     "name": "dispatch",
     "slug": "dispatch",
     "version": "1.0.0",
-	"scheme": "dispatch",
+    "scheme": "dispatch",
     "web": {
       "favicon": "./assets/favicon.png"
     },
@@ -31,7 +31,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.kiyoko.dispatch"
     }
   }
 }
