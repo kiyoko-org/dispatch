@@ -1,11 +1,14 @@
 import { Card } from 'components/Card';
 import { TextInput } from 'components/TextInput';
 import { Button } from 'components/Button';
-import { SafeAreaView, StatusBar, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { Home, Lock, Mail, User } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import StepProgress from 'components/StepProgress';
 
+/* TODO:
+ * The next step should be a separate component, not a screen
+*/
 export default function RootLayout() {
 
 	const router = useRouter()
@@ -47,7 +50,12 @@ export default function RootLayout() {
 
 
 					<Button
-						className='mt-6' label="Continue"></Button>
+						className='mt-6'
+						label="Continue"
+						onPress={() => {
+							router.push('/sign-up/government-ids')
+						}}
+					></Button>
 
 					<Text className='opacity-70 mt-4 text-center'>Already have an account? <Text
 						onPress={() => { router.back() }}
