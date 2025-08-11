@@ -31,9 +31,12 @@ export default function Login() {
 
 					</View>
 
+					
 					<Button
-						className='mt-6' label="Sign in"></Button>
-
+						className='mt-6' 
+						label="Sign in"
+						onPress={() => { router.push('/home') }}
+					></Button>
 					<Text className='opacity-70 mt-4 text-center'>Don't have an account? <Text
 						onPress={() => { router.push('/sign-up') }}
 						className='underline'

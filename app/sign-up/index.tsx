@@ -57,7 +57,7 @@ export default function RootLayout() {
 					/>
 
 					<Text className='opacity-70 mt-4 text-center'>Already have an account? <Text
-						onPress={() => { router.push('/') }}
+						onPress={() => { router.push('/login') }}
 						className='underline'
 					>Sign in</Text></Text>
 				</Card>
