@@ -1,12 +1,10 @@
-import { View, Text, TouchableOpacity } from 'react-native';
+import { Text, TouchableOpacity, View } from 'react-native';
+
+import '../global.css';
 import { useRouter } from 'expo-router';
 
-export default function WelcomePage() {
-	const router = useRouter();
-
-	const handleLoginPress = () => {
-		router.push('/login');
-	};
+export default function Login() {
+	const router = useRouter()
 
 	return (
 		<View className="flex-1 bg-gradient-to-br from-blue-50 to-indigo-100 justify-center items-center px-6">
@@ -28,7 +26,9 @@ export default function WelcomePage() {
 
 				{/* Login Button */}
 				<TouchableOpacity
-					onPress={handleLoginPress}
+					onPress={() => {
+						router.push('/login');
+					}}
 					className="bg-indigo-600 px-8 py-4 rounded-xl shadow-lg"
 					activeOpacity={0.8}
 				>

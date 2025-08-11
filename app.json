@@ -3,7 +3,7 @@
     "name": "dispatch",
     "slug": "dispatch",
     "version": "1.0.0",
-    "scheme": "dispatch",
+    "scheme": "com.kiyoko.dispatch",
     "web": {
       "favicon": "./assets/favicon.png"
     },
