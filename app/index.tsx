@@ -1,43 +1,47 @@
-import { Card } from 'components/Card';
-import { TextInput } from 'components/TextInput';
-import { Button } from 'components/Button';
-import { Text, View } from 'react-native';
-import { Lock, Mail } from 'lucide-react-native';
-
-import '../global.css';
+import { View, Text, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 
-export default function Login() {
-	const router = useRouter()
+export default function WelcomePage() {
+	const router = useRouter();
+
+	const handleLoginPress = () => {
+		router.push('/login');
+	};
 
 	return (
-		<View className="items-center flex-1 justify-center">
-			<Card>
-				<Text className='font-bold text-2xl mb-6'>Dispatch</Text>
-
-				<Text className='font-bold text-xl'>Sign In</Text>
-				<Text className='opacity-70 mt-1'>Use your email/phone and password to continue</Text>
-
-				<View className='mt-6 flex gap-4'>
-
-					<TextInput icon={
-						<Mail />
-					} label='Email/Phone' placeholder='you@example.com' />
-
-					<TextInput icon={
-						<Lock />
-					} label='Password' placeholder='••••••' secureTextEntry={true} />
-
+		<View className="flex-1 bg-gradient-to-br from-blue-50 to-indigo-100 justify-center items-center px-6">
+			<View className="items-center space-y-6">
+				{/* Logo/Icon Placeholder */}
+				<View className="w-24 h-24 bg-indigo-500 rounded-full items-center justify-center">
+					<Text className="text-white text-3xl font-bold">D</Text>
+				</View>
+				
+				{/* Welcome Text */}
+				<View className="items-center space-y-2">
+					<Text className="text-4xl font-bold text-gray-800 text-center">
+						Welcome to Dispatch
+					</Text>
+					<Text className="text-lg text-gray-600 text-center max-w-xs">
+						Your trusted platform for efficient dispatch management
+					</Text>
 				</View>
 
-				<Button
-					className='mt-6' label="Sign in"></Button>
+				{/* Login Button */}
+				<TouchableOpacity
+					onPress={handleLoginPress}
+					className="bg-indigo-600 px-8 py-4 rounded-xl shadow-lg"
+					activeOpacity={0.8}
+				>
+					<Text className="text-white text-lg font-semibold">
+						Get Started
+					</Text>
+				</TouchableOpacity>
 
-				<Text className='opacity-70 mt-4 text-center'>Don't have an account? <Text
-					onPress={() => { router.push('/sign-up') }}
-					className='underline'
-				>Create one</Text></Text>
-			</Card>
+				{/* Additional Info */}
+				<Text className="text-gray-500 text-center text-sm mt-8">
+					New here? You can sign up after logging in
+				</Text>
+			</View>
 		</View>
-	)
+	);
 }
