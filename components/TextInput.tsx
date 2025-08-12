@@ -9,11 +9,11 @@ type TextInputProps = {
 	secureTextEntry?: boolean
 	label?: string
 	icon?: ReactNode
-	value?: string
 	onChangeText?: ((text: string) => void)
+	value?: string
 }
 
-export function TextInput({ className, placeholder, keyboardType, secureTextEntry, label, icon, value, onChangeText }: TextInputProps) {
+export function TextInput({ className, placeholder, keyboardType, secureTextEntry, label, icon, onChangeText, value }: TextInputProps) {
 
 	const modifiedIcon = icon ? React.cloneElement(icon, {
 		color: "gray",
@@ -29,7 +29,7 @@ export function TextInput({ className, placeholder, keyboardType, secureTextEntr
 				{modifiedIcon &&
 					modifiedIcon
 				}
-				<RNTextInput className="bg-white w-max flex-1 p-2" {...{ placeholder, keyboardType, secureTextEntry, value, onChangeText }} />
+				<RNTextInput className="bg-white w-max flex-1 p-2" {...{ placeholder, keyboardType, secureTextEntry, onChangeText, value }} />
 			</ View>
 		</View>
 	)
