@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 
 import { supabase } from 'lib/supabase';
 import { useState } from 'react';
+import { useURL } from 'expo-linking';
 
 // Tells Supabase Auth to continuously refresh the session automatically if
 // the app is in the foreground. When this is added, you will continue to receive
@@ -24,6 +25,8 @@ AppState.addEventListener('change', (state) => {
 
 export default function Login() {
 	const router = useRouter()
+
+	const linking = useURL()
 
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');

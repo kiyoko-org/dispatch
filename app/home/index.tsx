@@ -1,15 +1,55 @@
-import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { Shield, FileText, CheckCircle, Zap, AlertTriangle, Bell, Users, Search, Coins, Newspaper, Building, ArrowRight } from 'lucide-react-native';
 import '../../global.css';
+import { useEffect, useState } from 'react';
+import { Session } from '@supabase/supabase-js';
+import { supabase } from 'lib/supabase';
 
-export default function Home() {
+type HomeProps = {
+	session: Session | null;
+}
+
+export default function Home({ session }: HomeProps) {
+
+	const [loading, setLoading] = useState(false);
+	const [name, setName] = useState<string | null>(null);
+
+	useEffect(() => { if (!session) getProfile() }, [session])
+
+	async function getProfile() {
+		try {
+			setLoading(true);
+			if (!session?.user) throw new Error('No user on the session!');
+			const { data, error, status } = await supabase
+				.from('profiles')
+				.select(`first_name`)
+				.eq('id', session?.user.id)
+				.single();
+			if (error && status !== 406) {
+				throw error;
+			}
+			if (data) {
+				setName(data.first_name);
+			}
+		} catch (error) {
+			if (error instanceof Error) {
+				Alert.alert(error.message);
+			}
+		} finally {
+			setLoading(false);
+		}
+	}
+
 	return (
 		<ScrollView className="flex-1 bg-gray-100">
+
+			<ActivityIndicator animating={loading} />
+
 			{/* Welcome Banner */}
 			<View className="bg-gray-900 p-8">
-				<Text className="text-white text-3xl font-bold mb-2">Welcome back, John! 👋</Text>
+				<Text className="text-white text-3xl font-bold mb-2">Welcome back, {name}! 👋</Text>
 				<Text className="text-gray-300 text-lg mb-6">Your community is safer with you</Text>
-				
+
 				<View className="bg-gray-800 p-4 rounded-xl">
 					<View className="flex-row items-center mb-3">
 						<Shield size={24} color="white" />
@@ -57,7 +97,7 @@ export default function Home() {
 						<Text className="text-white text-xs font-bold">2 warnings</Text>
 					</View>
 				</View>
-				
+
 				<View className="flex-row gap-4">
 					<TouchableOpacity className="bg-gray-900 flex-1 p-5 rounded-xl">
 						<View className="flex-row items-center mb-2">
@@ -66,7 +106,7 @@ export default function Home() {
 						</View>
 						<Text className="text-gray-300 text-sm">Immediate Response</Text>
 					</TouchableOpacity>
-					
+
 					<TouchableOpacity className="bg-gray-700 flex-1 p-5 rounded-xl">
 						<View className="flex-row items-center mb-2">
 							<Bell size={24} color="white" />
@@ -80,7 +120,7 @@ export default function Home() {
 			{/* Quick Access */}
 			<View className="px-6 mb-8">
 				<Text className="text-gray-900 font-bold text-xl mb-4">Quick Access</Text>
-				
+
 				<View className="space-y-3">
 					<TouchableOpacity className="bg-white p-4 rounded-xl border border-gray-200">
 						<View className="flex-row items-center justify-between">
@@ -91,7 +131,7 @@ export default function Home() {
 							<ArrowRight size={18} color="#6B7280" />
 						</View>
 					</TouchableOpacity>
-					
+
 					<TouchableOpacity className="bg-white p-4 rounded-xl border border-gray-200">
 						<View className="flex-row items-center justify-between">
 							<View className="flex-row items-center">
@@ -101,7 +141,7 @@ export default function Home() {
 							<ArrowRight size={18} color="#6B7280" />
 						</View>
 					</TouchableOpacity>
-					
+
 					<TouchableOpacity className="bg-white p-4 rounded-xl border border-gray-200">
 						<View className="flex-row items-center justify-between">
 							<View className="flex-row items-center">
@@ -111,7 +151,7 @@ export default function Home() {
 							<ArrowRight size={18} color="#6B7280" />
 						</View>
 					</TouchableOpacity>
-					
+
 					<TouchableOpacity className="bg-white p-4 rounded-xl border border-gray-200">
 						<View className="flex-row items-center justify-between">
 							<View className="flex-row items-center">
@@ -121,7 +161,7 @@ export default function Home() {
 							<ArrowRight size={18} color="#6B7280" />
 						</View>
 					</TouchableOpacity>
-					
+
 					<TouchableOpacity className="bg-white p-4 rounded-xl border border-gray-200">
 						<View className="flex-row items-center justify-between">
 							<View className="flex-row items-center">
@@ -131,7 +171,7 @@ export default function Home() {
 							<ArrowRight size={18} color="#6B7280" />
 						</View>
 					</TouchableOpacity>
-					
+
 					<TouchableOpacity className="bg-white p-4 rounded-xl border border-gray-200">
 						<View className="flex-row items-center justify-between">
 							<View className="flex-row items-center">
@@ -147,7 +187,7 @@ export default function Home() {
 			{/* Recent Activity */}
 			<View className="px-6 mb-8">
 				<Text className="text-gray-900 font-bold text-xl mb-4">Recent Activity</Text>
-				
+
 				<View className="space-y-3">
 					<View className="bg-white p-4 rounded-xl border border-gray-200">
 						<View className="flex-row items-center justify-between mb-2">
@@ -159,7 +199,7 @@ export default function Home() {
 						</View>
 						<Text className="text-gray-500 text-sm ml-8">2 hours ago</Text>
 					</View>
-					
+
 					<View className="bg-white p-4 rounded-xl border border-gray-200">
 						<View className="flex-row items-center justify-between mb-2">
 							<View className="flex-row items-center">
@@ -170,7 +210,7 @@ export default function Home() {
 						</View>
 						<Text className="text-gray-500 text-sm ml-8">5 hours ago</Text>
 					</View>
-					
+
 					<View className="bg-white p-4 rounded-xl border border-gray-200">
 						<View className="flex-row items-center justify-between mb-2">
 							<View className="flex-row items-center">
