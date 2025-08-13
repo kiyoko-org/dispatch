@@ -1,6 +1,6 @@
-import { Card } from 'components/Card';
-import { TextInput } from 'components/TextInput';
-import { Button } from 'components/Button';
+import { Card } from 'components/ui/Card';
+import { TextInput } from 'components/ui/TextInput';
+import { Button } from 'components/ui/Button';
 import { Alert, SafeAreaView, StyleSheet, Text, View } from 'react-native';
 import { CreditCard, FileText, Home, Lock, Mail, User, UserCheck } from 'lucide-react-native';
 import { useRouter } from 'expo-router';

@@ -1,6 +1,6 @@
-import { Card } from 'components/Card';
-import { TextInput } from 'components/TextInput';
-import { Button } from 'components/Button';
+import { Card } from 'components/ui/Card';
+import { TextInput } from 'components/ui/TextInput';
+import { Button } from 'components/ui/Button';
 import { Alert, AppState, Text, View } from 'react-native';
 import { Lock, Mail } from 'lucide-react-native';
 
@@ -45,7 +45,7 @@ export default function Login() {
 		}
 		setLoading(false);
 		Alert.alert(`Signed in successfully! Welcome back!`);
-		router.push('/home');
+		router.replace('/home');
 	}
 
 	return (
