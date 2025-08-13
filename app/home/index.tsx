@@ -4,11 +4,13 @@ import { useEffect, useState } from 'react';
 import { supabase } from 'lib/supabase';
 import { useAuth } from 'hooks/useAuth';
 import { router } from 'expo-router';
+import Popover, { PopoverItem } from 'components/ui/Popover';
 
 export default function Home() {
 
 	const [loading, setLoading] = useState(false);
 	const [name, setName] = useState<string | null>(null);
+	const [popoverVisible, setPopoverVisible] = useState(false);
 
 	const { session, signOut } = useAuth()
 
@@ -53,10 +55,14 @@ export default function Home() {
 						<Text className="text-gray-300 text-lg mb-6">Your community is safer with you</Text>
 					</View>
 
-					<TouchableOpacity>
+					<TouchableOpacity onPress={() => setPopoverVisible(true)}>
 						<User color='white' />
 					</TouchableOpacity>
 				</View>
+
+				<Popover visible={popoverVisible} onClose={() => setPopoverVisible(false)}>
+					<PopoverItem text="Sign Out" onPress={onSignOutPress} />
+				</Popover>
 
 
 				<View className="bg-gray-800 p-4 rounded-xl">

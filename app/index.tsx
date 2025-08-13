@@ -15,23 +15,21 @@ export default function Login() {
 		}
 	}, [session, router]);
 
-	if (isLoading) return
-
 	return (
 		<View className="flex-1 bg-gradient-to-br from-blue-50 to-indigo-100 justify-center items-center px-6">
 			{session == null ?
-				<View className="items-center space-y-6">
+				<View className="flex items-center gap-8">
 					{/* Logo/Icon Placeholder */}
 					<View className="w-24 h-24 bg-indigo-500 rounded-full items-center justify-center">
 						<Text className="text-white text-3xl font-bold">D</Text>
 					</View>
 
 					{/* Welcome Text */}
-					<View className="items-center space-y-2">
+					<View className="items-center">
 						<Text className="text-4xl font-bold text-gray-800 text-center">
 							Welcome to Dispatch
 						</Text>
-						<Text className="text-lg text-gray-600 text-center max-w-xs">
+						<Text className="text-lg text-gray-600 text-center max-w-xs mt-2">
 							Your trusted platform for efficient dispatch management
 						</Text>
 					</View>
@@ -50,12 +48,14 @@ export default function Login() {
 					</TouchableOpacity>
 
 					{/* Additional Info */}
-					<Text className="text-gray-500 text-center text-sm mt-8">
+					<Text className="text-gray-500 text-center text-sm">
 						New here? You can sign up after logging in
 					</Text>
 				</View>
 				:
-				(<></>)
+				<View className="w-24 h-24 bg-indigo-500 rounded-full items-center justify-center">
+					<Text className="text-white text-3xl font-bold">D</Text>
+				</View>
 			}
 		</View>
 
