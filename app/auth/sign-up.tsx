@@ -6,6 +6,7 @@ import { CreditCard, FileText, Home, Lock, Mail, User, UserCheck } from 'lucide-
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { supabase } from 'lib/supabase';
+import { createURL } from 'expo-linking';
 
 export default function RootLayout() {
 	const router = useRouter();
@@ -30,7 +31,7 @@ export default function RootLayout() {
 			email: email,
 			password: password,
 			options: {
-				emailRedirectTo: 'com.kiyoko.dispatch://login',
+				emailRedirectTo: createURL('/home'),
 				data: {
 					first_name: firstName,
 					middle_name: middleName,

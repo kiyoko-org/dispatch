@@ -5,6 +5,8 @@ import { supabase } from 'lib/supabase';
 import { useAuth } from 'hooks/useAuth';
 import { router } from 'expo-router';
 import Popover, { PopoverItem } from 'components/ui/Popover';
+import * as QueryParams from "expo-auth-session/build/QueryParams";
+import * as Linking from 'expo-linking';
 
 export default function Home() {
 
@@ -14,7 +16,40 @@ export default function Home() {
 
 	const { session, signOut } = useAuth()
 
-	useEffect(() => { if (session) getProfile() }, [session])
+	useEffect(() => {
+		if (session) {
+			getProfile()
+		} else {
+			handleDeepLink()
+		}
+	}, [session])
+
+	const handleDeepLink = async () => {
+		const url = Linking.getLinkingURL()
+
+		if (url == null) {
+			console.log("was not linked")
+			return
+		}
+
+		const { params, errorCode } = QueryParams.getQueryParams(url)
+		if (errorCode) {
+			console.error("Failed to get params" + errorCode)
+			return
+		}
+
+		const { access_token, refresh_token } = params;
+
+		const { data, error } = await supabase.auth.setSession({
+			access_token,
+			refresh_token
+		})
+
+		if (error) {
+			console.error("Failed to set token" + error.message)
+			return
+		}
+	}
 
 	async function getProfile() {
 		try {

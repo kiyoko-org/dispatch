@@ -1,6 +1,5 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 
-import '../global.css';
 import { useRouter } from 'expo-router';
 import { useAuth } from 'hooks/useAuth';
 import { useEffect } from 'react';
@@ -37,7 +36,7 @@ export default function Login() {
 					{/* Login Button */}
 					<TouchableOpacity
 						onPress={() => {
-							router.replace('/login');
+							router.push('/auth/login');
 						}}
 						className="bg-indigo-600 px-8 py-4 rounded-xl shadow-lg"
 						activeOpacity={0.8}

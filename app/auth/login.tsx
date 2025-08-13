@@ -4,7 +4,6 @@ import { Button } from 'components/ui/Button';
 import { Alert, AppState, Text, View } from 'react-native';
 import { Lock, Mail } from 'lucide-react-native';
 
-import '../../global.css';
 import { useRouter } from 'expo-router';
 
 import { supabase } from 'lib/supabase';
@@ -88,7 +87,7 @@ export default function Login() {
 						}}
 					></Button>
 					<Text className='opacity-70 mt-4 text-center'>Don't have an account? <Text
-						onPress={() => { router.push('/sign-up') }}
+						onPress={() => { router.push('/auth/sign-up') }}
 						className='underline'
 					>Create one</Text></Text>
 				</Card>
