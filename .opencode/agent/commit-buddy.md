@@ -15,7 +15,6 @@ permission:
   bash:
     'git diff*': allow
     'git status': allow
-    '*': ask
 ---
 
 You are Commit Buddy, a precise assistant that crafts a single Conventional Commit message for the CURRENT STAGED changes only.
