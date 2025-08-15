@@ -4,7 +4,6 @@ import { Shield, FileText, CheckCircle, Zap, AlertTriangle, Bell, Users, Search,
 import { useRouter } from 'expo-router';
 import { Sidebar } from '../../components/sidebar';
 import UserProfile from '../../components/UserProfile';
-import { EmergencyButton } from '../../components/EmergencyButton';
 
 export default function Home() {
 	const router = useRouter()
@@ -109,26 +108,43 @@ export default function Home() {
 
 				{/* Key Metrics */}
 				<View className="px-4 sm:px-6 mt-6 mb-8">
-					<View className="grid grid-cols-4 lg:grid-cols-4 gap-4 sm:gap-6">
-						<View className="bg-blue-100 rounded-xl p-2 sm:p-3 border border-blue-200">
-							<Shield size={20} color="#1E40AF" />
-							<Text className="text-xl sm:text-2xl font-bold mt-2 text-blue-900">87%</Text>
-							<Text className="text-blue-700 text-xs font-medium">Trust Score</Text>
+					<Text className="text-gray-900 font-bold text-lg sm:text-xl mb-4 sm:mb-6">Key Metrics</Text>
+					<View className="flex-row flex-wrap gap-3">
+						<View className="bg-blue-100 rounded-xl p-3 sm:p-4 border border-blue-200" style={{ width: '48%' }}>
+							<View className="items-center">
+								<View className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-200 rounded-lg items-center justify-center mb-2">
+									<Shield size={20} color="#1E40AF" />
+								</View>
+								<Text className="text-xl sm:text-2xl font-bold text-blue-900">87%</Text>
+								<Text className="text-blue-700 text-xs font-medium text-center">Trust Score</Text>
+							</View>
 						</View>
-						<View className="bg-green-100 rounded-xl p-2 sm:p-3 border border-green-200">
-							<FileText size={20} color="#059669" />
-							<Text className="text-xl sm:text-2xl font-bold mt-2 text-green-900">47</Text>
-							<Text className="text-green-700 text-xs font-medium">Reports</Text>
+						<View className="bg-green-100 rounded-xl p-3 sm:p-4 border border-green-200" style={{ width: '48%' }}>
+							<View className="items-center">
+								<View className="w-8 h-8 sm:w-10 sm:h-10 bg-green-200 rounded-lg items-center justify-center mb-2">
+									<FileText size={20} color="#059669" />
+								</View>
+								<Text className="text-xl sm:text-2xl font-bold text-green-900">47</Text>
+								<Text className="text-green-700 text-xs font-medium text-center">Reports</Text>
+							</View>
 						</View>
-						<View className="bg-emerald-100 rounded-xl p-2 sm:p-3 border border-emerald-200">
-							<CheckCircle size={20} color="#10B981" />
-							<Text className="text-xl sm:text-2xl font-bold mt-2 text-emerald-900">42</Text>
-							<Text className="text-emerald-700 text-xs font-medium">Verified</Text>
+						<View className="bg-emerald-100 rounded-xl p-3 sm:p-4 border border-emerald-200" style={{ width: '48%' }}>
+							<View className="items-center">
+								<View className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-200 rounded-lg items-center justify-center mb-2">
+									<CheckCircle size={20} color="#10B981" />
+								</View>
+								<Text className="text-xl sm:text-2xl font-bold text-emerald-900">42</Text>
+								<Text className="text-emerald-700 text-xs font-medium text-center">Verified</Text>
+							</View>
 						</View>
-						<View className="bg-amber-100 rounded-xl p-2 sm:p-3 border border-amber-200">
-							<Zap size={20} color="#D97706" />
-							<Text className="text-xl sm:text-2xl font-bold mt-2 text-amber-900">2.3min</Text>
-							<Text className="text-amber-700 text-xs font-medium">Response</Text>
+						<View className="bg-amber-100 rounded-xl p-3 sm:p-4 border border-amber-200" style={{ width: '48%' }}>
+							<View className="items-center">
+								<View className="w-8 h-8 sm:w-10 sm:h-10 bg-amber-200 rounded-lg items-center justify-center mb-2">
+									<Zap size={20} color="#D97706" />
+								</View>
+								<Text className="text-xl sm:text-2xl font-bold text-amber-900">2.3min</Text>
+								<Text className="text-amber-700 text-xs font-medium text-center">Response</Text>
+							</View>
 						</View>
 					</View>
 				</View>
@@ -192,58 +208,58 @@ export default function Home() {
 				<View className="px-4 sm:px-6 mb-8">
 					<Text className="text-gray-900 font-bold text-lg sm:text-xl mb-4 sm:mb-6">Features</Text>
 					
-					<View className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
-						<TouchableOpacity className="bg-blue-100 p-3 sm:p-4 lg:p-6 rounded-xl border border-blue-200">
+					<View className="flex-row flex-wrap gap-3">
+						<TouchableOpacity className="bg-blue-100 p-4 sm:p-5 rounded-xl border border-blue-200" style={{ width: '31%' }}>
 							<View className="items-center">
-								<View className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-blue-200 rounded-lg items-center justify-center mb-2 sm:mb-3">
-									<Shield size={20} color="#1E40AF" />
+								<View className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-200 rounded-lg items-center justify-center mb-3">
+									<Shield size={24} color="#1E40AF" />
 								</View>
-								<Text className="text-blue-800 font-semibold text-xs sm:text-sm text-center">Anonymity</Text>
+								<Text className="text-blue-800 font-semibold text-sm text-center">Anonymity</Text>
 							</View>
 						</TouchableOpacity>
 						
-						<TouchableOpacity className="bg-green-100 p-3 sm:p-4 lg:p-6 rounded-xl border border-green-200">
+						<TouchableOpacity className="bg-green-100 p-4 sm:p-5 rounded-xl border border-green-200" style={{ width: '31%' }}>
 							<View className="items-center">
-								<View className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-green-200 rounded-lg items-center justify-center mb-2 sm:mb-3">
-									<Search size={20} color="#059669" />
+								<View className="w-10 h-10 sm:w-12 sm:h-12 bg-green-200 rounded-lg items-center justify-center mb-3">
+									<Search size={24} color="#059669" />
 								</View>
-								<Text className="text-green-800 font-semibold text-xs sm:text-sm text-center">Lost & Found</Text>
+								<Text className="text-green-800 font-semibold text-sm text-center">Lost & Found</Text>
 							</View>
 						</TouchableOpacity>
 						
-						<TouchableOpacity className="bg-purple-100 p-3 sm:p-4 lg:p-6 rounded-xl border border-purple-200">
+						<TouchableOpacity className="bg-purple-100 p-4 sm:p-5 rounded-xl border border-purple-200" style={{ width: '31%' }}>
 							<View className="items-center">
-								<View className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-purple-200 rounded-lg items-center justify-center mb-2 sm:mb-3">
-									<Users size={20} color="#7C3AED" />
+								<View className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-200 rounded-lg items-center justify-center mb-3">
+									<Users size={24} color="#7C3AED" />
 								</View>
-								<Text className="text-purple-800 font-semibold text-xs sm:text-sm text-center">Community</Text>
+								<Text className="text-purple-800 font-semibold text-sm text-center">Community</Text>
 							</View>
 						</TouchableOpacity>
 						
-						<TouchableOpacity className="bg-yellow-100 p-3 sm:p-4 lg:p-6 rounded-xl border border-yellow-200">
+						<TouchableOpacity className="bg-yellow-100 p-4 sm:p-5 rounded-xl border border-yellow-200" style={{ width: '31%' }}>
 							<View className="items-center">
-								<View className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-yellow-200 rounded-lg items-center justify-center mb-2 sm:mb-3">
-									<Coins size={20} color="#D97706" />
+								<View className="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-200 rounded-lg items-center justify-center mb-3">
+									<Coins size={24} color="#D97706" />
 								</View>
-								<Text className="text-yellow-800 font-semibold text-xs sm:text-sm text-center">Bounties</Text>
+								<Text className="text-yellow-800 font-semibold text-sm text-center">Bounties</Text>
 							</View>
 						</TouchableOpacity>
 						
-						<TouchableOpacity className="bg-red-100 p-3 sm:p-4 lg:p-6 rounded-xl border border-red-200">
+						<TouchableOpacity className="bg-red-100 p-4 sm:p-5 rounded-xl border border-red-200" style={{ width: '31%' }}>
 							<View className="items-center">
-								<View className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-red-200 rounded-lg items-center justify-center mb-2 sm:mb-3">
-									<Newspaper size={20} color="#DC2626" />
+								<View className="w-10 h-10 sm:w-12 sm:h-12 bg-red-200 rounded-lg items-center justify-center mb-3">
+									<Newspaper size={24} color="#DC2626" />
 								</View>
-								<Text className="text-red-800 font-semibold text-xs sm:text-sm text-center">News</Text>
+								<Text className="text-red-800 font-semibold text-sm text-center">News</Text>
 							</View>
 						</TouchableOpacity>
 						
-						<TouchableOpacity className="bg-indigo-100 p-3 sm:p-4 lg:p-6 rounded-xl border border-indigo-200">
+						<TouchableOpacity className="bg-indigo-100 p-4 sm:p-5 rounded-xl border border-indigo-200" style={{ width: '31%' }}>
 							<View className="items-center">
-								<View className="w-8 h-8 sm:w-10 sm:h-10 lg:w-12 lg:h-12 bg-indigo-200 rounded-lg items-center justify-center mb-2 sm:mb-3">
-									<MapPin size={20} color="#3730A3" />
+								<View className="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-200 rounded-lg items-center justify-center mb-3">
+									<MapPin size={24} color="#3730A3" />
 								</View>
-								<Text className="text-indigo-800 font-semibold text-xs sm:text-sm text-center">Map</Text>
+								<Text className="text-indigo-800 font-semibold text-sm text-center">Map</Text>
 							</View>
 						</TouchableOpacity>
 					</View>
@@ -299,8 +315,6 @@ export default function Home() {
 				<View className="h-8" />
 			</ScrollView>
 
-			{/* Emergency Button - Floating Action Button */}
-			<EmergencyButton />
 		</View>
 	);
 }

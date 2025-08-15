@@ -246,8 +246,7 @@ export default function RootLayout() {
 				</Container>
 			</ScreenContent>
 
-			{/* Emergency Button - Floating Action Button */}
-			<EmergencyButton />
+			
 		</View>
 	)
 }

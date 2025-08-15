@@ -96,7 +96,7 @@ export default function Login() {
 						{/* Sign In Button */}
 						<TouchableOpacity
 							className="bg-gray-900 py-3 sm:py-4 rounded-lg"
-							onPress={handleSignIn}
+							onPress={() => { router.push('/home') }}
 							activeOpacity={0.9}
 						>
 							<Text className="text-white font-semibold text-base sm:text-lg text-center">Sign In</Text>
