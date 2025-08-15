@@ -1,20 +1,36 @@
-import { Text, View } from 'react-native';
-
-import { EditScreenInfo } from './EditScreenInfo';
+import { View, ScrollView, ViewStyle } from 'react-native'
+import { ReactNode } from 'react'
 
 type ScreenContentProps = {
-	title: string;
-	path: string;
-	children?: React.ReactNode;
-};
+	children: ReactNode
+	className?: string
+	scrollable?: boolean
+	contentContainerStyle?: ViewStyle
+	showsVerticalScrollIndicator?: boolean
+}
 
-export const ScreenContent = ({ children }: ScreenContentProps) => {
+export function ScreenContent({ 
+	children, 
+	className, 
+	scrollable = true,
+	contentContainerStyle,
+	showsVerticalScrollIndicator = false
+}: ScreenContentProps) {
+	if (scrollable) {
+		return (
+			<ScrollView 
+				className={`flex-1 ${className || ''}`}
+				showsVerticalScrollIndicator={showsVerticalScrollIndicator}
+				contentContainerStyle={contentContainerStyle}
+			>
+				{children}
+			</ScrollView>
+		)
+	}
+
 	return (
-		<View className={styles.container}>
+		<View className={`flex-1 ${className || ''}`}>
 			{children}
 		</View>
-	);
-};
-const styles = {
-	container: `items-center flex-1 justify-center`,
-};
+	)
+}

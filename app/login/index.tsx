@@ -1,48 +1,146 @@
 import { Card } from 'components/Card';
-import { TextInput } from 'components/TextInput';
-import { Button } from 'components/Button';
-import { Text, View } from 'react-native';
-import { Lock, Mail } from 'lucide-react-native';
-
-import '../../global.css';
+import { Text, View, TouchableOpacity, TextInput as RNTextInput } from 'react-native';
+import { Lock, Mail, Shield, Eye, EyeOff } from 'lucide-react-native';
+import { useState } from 'react';
 import { useRouter } from 'expo-router';
 
 export default function Login() {
-	const router = useRouter()
+	const router = useRouter();
+	const [showPassword, setShowPassword] = useState(false);
+	const [email, setEmail] = useState('');
+	const [password, setPassword] = useState('');
+
+	const handleSignIn = () => {
+		if (email && password) {
+			router.push('/home');
+		}
+	};
 
 	return (
-		<>
-			<View className="items-center flex-1 justify-center">
-				<Card>
-					<Text className='font-bold text-2xl mb-6'>Dispatch</Text>
+		<View className="flex-1 bg-gray-50">
+			{/* Header Section */}
+			<View className="pt-12 sm:pt-16 lg:pt-20 pb-8 sm:pb-10 lg:pb-12 px-4 sm:px-6 lg:px-8">
+				<View className="items-center">
+					<View className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-gray-900 rounded-xl sm:rounded-2xl items-center justify-center mb-4 sm:mb-5 lg:mb-6 shadow-lg mt-10">
+						<Shield size={24} color="white" className="sm:w-7 sm:h-7 lg:w-8 lg:h-8" />
+					</View>
+					<Text className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 text-center">DISPATCH</Text>
+				</View>
+			</View>
 
-					<Text className='font-bold text-xl'>Sign In</Text>
-					<Text className='opacity-70 mt-1'>Use your email/phone and password to continue</Text>
-
-					<View className='mt-6 flex gap-4'>
-
-						<TextInput icon={
-							<Mail />
-						} label='Email/Phone' placeholder='you@example.com' />
-
-						<TextInput icon={
-							<Lock />
-						} label='Password' placeholder='••••••' secureTextEntry={true} />
-
+			{/* Main Login Form */}
+			<View className="flex-1 px-4 sm:px-6 lg:px-8 mt-6">
+				<Card className="bg-white border border-gray-200 shadow-lg">
+					{/* Form Header */}
+					<View className="mb-6 sm:mb-7 lg:mb-8 px-2 sm:px-4">
+						<Text className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2 text-center sm:text-left">Sign In</Text>
+						<Text className="text-gray-600 leading-5 text-sm sm:text-base text-center sm:text-left">
+							Access your security dashboard and manage community safety protocols
+						</Text>
 					</View>
 
-					
-					<Button
-						className='mt-6' 
-						label="Sign in"
-						onPress={() => { router.push('/home') }}
-					></Button>
-					<Text className='opacity-70 mt-4 text-center'>Don't have an account? <Text
-						onPress={() => { router.push('/sign-up') }}
-						className='underline'
-					>Create one</Text></Text>
+					{/* Form Fields */}
+					<View className="space-y-4 sm:space-y-5 lg:space-y-6 px-2 sm:px-4">
+						{/* Email/Phone Input */}
+						<View>
+							<Text className="text-gray-700 font-medium mb-2 text-xs sm:text-sm">Email or Phone Number</Text>
+							<View className="relative">
+								<View className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 z-10">
+									<Mail size={18} color="#6B7280" className="sm:w-5 sm:h-5" />
+								</View>
+								<RNTextInput
+									className="pl-10 sm:pl-12 pr-3 sm:pr-4 py-3 sm:py-4 bg-gray-50 border border-gray-300 rounded-lg text-sm sm:text-base"
+									placeholder="Enter your email or phone"
+									value={email}
+									onChangeText={setEmail}
+									placeholderTextColor="#9CA3AF"
+								/>
+							</View>
+						</View>
+
+						{/* Password Input */}
+						<View>
+							<Text className="text-gray-700 font-medium mb-2 text-xs sm:text-sm">Password</Text>
+							<View className="relative">
+								<View className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2 z-10">
+									<Lock size={18} color="#6B7280" className="sm:w-5 sm:h-5" />
+								</View>
+								<RNTextInput
+									className="pl-10 sm:pl-12 pr-14 sm:pr-16 py-3 sm:py-4 bg-gray-50 border border-gray-300 rounded-lg text-sm sm:text-base"
+									placeholder="Enter your password"
+									value={password}
+									onChangeText={setPassword}
+									secureTextEntry={!showPassword}
+									placeholderTextColor="#9CA3AF"
+								/>
+								<TouchableOpacity
+									className="absolute right-3 sm:right-4 top-1/2 transform -translate-y-1/2 z-10 p-1 sm:p-2"
+									onPress={() => setShowPassword(!showPassword)}
+								>
+									{showPassword ? (
+										<EyeOff size={18} color="#6B7280" className="sm:w-5 sm:h-5" />
+									) : (
+										<Eye size={18} color="#6B7280" className="sm:w-5 sm:h-5" />
+									)}
+								</TouchableOpacity>
+							</View>
+						</View>
+
+						{/* Forgot Password */}
+						<View className="items-end">
+							<TouchableOpacity>
+								<Text className="text-gray-700 font-medium text-xs sm:text-sm">Forgot Password?</Text>
+							</TouchableOpacity>
+						</View>
+
+						{/* Sign In Button */}
+						<TouchableOpacity
+							className="bg-gray-900 py-3 sm:py-4 rounded-lg shadow-md active:opacity-80"
+							onPress={handleSignIn}
+							activeOpacity={0.9}
+						>
+							<Text className="text-white font-semibold text-base sm:text-lg text-center">Sign In</Text>
+						</TouchableOpacity>
+
+						{/* Divider */}
+						<View className="flex-row items-center my-4 sm:my-5 lg:my-6">
+							<View className="flex-1 h-px bg-gray-200" />
+							<Text className="mx-3 sm:mx-4 text-gray-500 text-xs sm:text-sm">or</Text>
+							<View className="flex-1 h-px bg-gray-200" />
+						</View>
+
+						{/* Google Sign In */}
+						<TouchableOpacity className="flex-row items-center justify-center py-3 sm:py-4 px-4 sm:px-6 border border-gray-300 rounded-lg bg-white active:opacity-80 shadow-sm">
+							<View className="w-5 h-5 sm:w-6 sm:h-6 mr-3 sm:mr-4">
+								{/* Google Logo SVG */}
+								<View className="w-full h-full">
+									<View className="w-full h-full bg-white rounded-sm border border-gray-200 items-center justify-center">
+										<Text className="text-blue-600 font-bold text-xs sm:text-sm">G</Text>
+									</View>
+								</View>
+							</View>
+							<Text className="text-gray-700 font-medium text-sm sm:text-base">Continue with Google</Text>
+						</TouchableOpacity>
+
+						{/* Create Account */}
+						<View className="items-center pt-3 sm:pt-4">
+							<Text className="text-gray-600 text-center text-sm sm:text-base">
+								Don't have an account?{' '}
+								<TouchableOpacity onPress={() => router.push('/sign-up')}>
+									<Text className="text-gray-900 font-semibold underline">Create one</Text>
+								</TouchableOpacity>
+							</Text>
+						</View>
+					</View>
 				</Card>
 			</View>
-		</>
-	)
+
+			{/* Footer */}
+			<View className="pb-6 sm:pb-8 px-4 sm:px-6 lg:px-8">
+				<Text className="text-center text-gray-500 text-xs sm:text-sm">
+					By signing in, you agree to our Terms of Service and Privacy Policy
+				</Text>
+			</View>
+		</View>
+	);
 }
