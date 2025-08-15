@@ -194,40 +194,9 @@ export default function ReportIncidentScreen() {
 		calculateCompletion();
 	}, [incidentTitle, incidentDescription, selectedLocation, incidentType]);
 
-	const validateForm = () => {
-		const newErrors = {};
-		
-		if (!incidentTitle.trim()) {
-			newErrors.title = 'Incident title is required';
-		}
-		
-		if (!incidentDescription.trim()) {
-			newErrors.description = 'Incident description is required';
-		}
-		
-		if (incidentDescription.trim().length < 20) {
-			newErrors.description = 'Description must be at least 20 characters';
-		}
-		
-		setErrors(newErrors);
-		return Object.keys(newErrors).length === 0;
-	};
+
 
 	const handleSubmitReport = async () => {
-		if (!validateForm()) {
-			// Add haptic feedback for error (if available)
-			if (Platform.OS === 'ios') {
-				try {
-					// Try to use haptic feedback if available
-					const Haptics = require('expo-haptics');
-					Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-				} catch (error) {
-					// Fallback: no haptic feedback
-					console.log('Haptic feedback not available');
-				}
-			}
-			return;
-		}
 
 		setIsSubmitting(true);
 		
