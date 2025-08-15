@@ -1,18 +1,18 @@
 import { Text, TouchableOpacity, View } from 'react-native';
 
-import { useRouter } from 'expo-router';
+import { Redirect, useRouter } from 'expo-router';
 import { useAuth } from 'hooks/useAuth';
 import { useEffect } from 'react';
 
-export default function Login() {
+export default function Welcome() {
 	const router = useRouter()
 	const { session, isLoading } = useAuth();
 
-	useEffect(() => {
-		if (session) {
-			router.replace('/home');
-		}
-	}, [session, router]);
+	if (session) {
+		return (
+			<Redirect href={'/home'} />
+		)
+	}
 
 	return (
 		<View className="flex-1 bg-gradient-to-br from-blue-50 to-indigo-100 justify-center items-center px-6">

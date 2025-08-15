@@ -3,6 +3,7 @@ import { Session, User } from '@supabase/supabase-js';
 import { supabase } from 'lib/supabase';
 import * as Linking from 'expo-linking';
 import * as QueryParams from "expo-auth-session/build/QueryParams";
+import { useRouter } from 'expo-router';
 
 type AuthState = {
 	user: User | null;
@@ -23,6 +24,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 		isLoading: true,
 	});
 
+	const router = useRouter()
+
+	useEffect(() => {
+		if (authState.session) {
+			router.replace('/home')
+		}
+	}, [authState])
+
+
 	useEffect(() => {
 		let isComponentMounted = true;
 
@@ -30,10 +40,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 			try {
 				// Handle deep linking first
 				await handleDeepLink();
-				
+
 				// Then get the current session
 				const { data: { session } } = await supabase.auth.getSession();
-				
+
 				if (isComponentMounted) {
 					setAuthState({
 						user: session?.user ?? null,
@@ -100,7 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 			// Parse query parameters from the URL
 			const { params, errorCode } = QueryParams.getQueryParams(linkingUrl);
-			
+
 			if (errorCode) {
 				console.error("Failed to get params:", errorCode);
 				return;
@@ -111,7 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 			// Only process if we have both tokens
 			if (access_token && refresh_token) {
 				console.log("Setting session from deep link tokens");
-				
+
 				const { data, error } = await supabase.auth.setSession({
 					access_token,
 					refresh_token
@@ -132,13 +142,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 	const signOut = async () => {
 		try {
 			await supabase.auth.signOut();
+			router.replace('/auth/login')
 		} catch (error) {
 			console.error('Error signing out:', error);
 		}
 	};
 
+	// TODO: put sign in here
+	const singIn = async () => {
+
+	}
+
 	return (
-		<AuthContext.Provider 
+		<AuthContext.Provider
 			value={{
 				...authState,
 				signOut,

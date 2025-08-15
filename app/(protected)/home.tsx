@@ -1,10 +1,10 @@
-import { View, Text, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Button } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import { Shield, FileText, CheckCircle, Zap, AlertTriangle, Bell, Users, Search, Coins, Newspaper, Building, ArrowRight, User } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { supabase } from 'lib/supabase';
 import { useAuth } from 'hooks/useAuth';
-import { router } from 'expo-router';
 import Popover, { PopoverItem } from 'components/ui/Popover';
+import Splash from 'components/ui/Splash';
 
 export default function Home() {
 
@@ -12,13 +12,19 @@ export default function Home() {
 	const [name, setName] = useState<string | null>(null);
 	const [popoverVisible, setPopoverVisible] = useState(false);
 
-	const { session, signOut } = useAuth()
+	const { session, isLoading, signOut } = useAuth()
 
 	useEffect(() => {
 		if (session) {
 			getProfile()
 		}
 	}, [session])
+
+	if (loading) {
+		return (
+			<Splash />
+		)
+	}
 
 	async function getProfile() {
 		try {
@@ -46,7 +52,6 @@ export default function Home() {
 
 	async function onSignOutPress() {
 		await signOut()
-		router.replace('/auth/login')
 	}
 
 	return (
