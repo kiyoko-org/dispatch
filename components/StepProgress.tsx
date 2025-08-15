@@ -20,7 +20,7 @@ export default function StepProgress({ max = 100, current = 0 }: StepProgress) {
 			aria-valuenow={c}
 			className="h-2 w-full overflow-hidden bg-neutral-200"
 		>
-			<View className="h-full bg-black transition-[width] duration-200 ease-out" style={{ width }} />
+			<View className="h-full bg-black" style={{ width }} />
 		</View>
 	)
 }

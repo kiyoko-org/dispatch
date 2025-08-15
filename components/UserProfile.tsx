@@ -15,8 +15,9 @@ export default function UserProfile({
   return (
     <TouchableOpacity 
       onPress={onToggleSidebar}
-      className="p-1 hover:bg-blue-100 rounded-full transition-colors"
+      className="p-1 rounded-full"
       style={{ minWidth: 40, minHeight: 40 }}
+      activeOpacity={0.7}
     >
       {userAvatar ? (
         <Image 
@@ -24,7 +25,16 @@ export default function UserProfile({
           className="w-10 h-10 rounded-full"
         />
       ) : (
-        <View className="w-10 h-10 bg-blue-500 rounded-full items-center justify-center shadow-md">
+        <View 
+          className="w-10 h-10 bg-blue-500 rounded-full items-center justify-center"
+          style={{
+           	elevation: 4,
+           	shadowColor: '#000',
+           	shadowOffset: { width: 0, height: 2 },
+           	shadowOpacity: 0.25,
+           	shadowRadius: 4,
+          }}
+        >
           <Text className="text-white text-sm font-bold">
             {userName.split(' ').map(n => n[0]).join('')}
           </Text>

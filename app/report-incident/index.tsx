@@ -143,7 +143,7 @@ export default function ReportIncidentScreen() {
 						<View className="flex-row items-center flex-1">
 							<TouchableOpacity
 								onPress={() => router.push('/home')}
-								className="w-10 h-10 bg-white rounded-full items-center justify-center mr-4 shadow-sm"
+								className="w-10 h-10 bg-white rounded-full items-center justify-center mr-4"
 								activeOpacity={0.7}
 							>
 								<ArrowLeft size={20} color="#374151" />
@@ -154,7 +154,7 @@ export default function ReportIncidentScreen() {
 							</View>
 						</View>
 						<TouchableOpacity
-							className="w-10 h-10 bg-white rounded-full items-center justify-center shadow-sm"
+							className="w-10 h-10 bg-white rounded-full items-center justify-center"
 							activeOpacity={0.7}
 						>
 							<Bell size={20} color="#2563EB" />
@@ -171,7 +171,7 @@ export default function ReportIncidentScreen() {
 				<Container maxWidth="md" padding="sm">
 					{/* Status Bar */}
 					<View className="mb-6">
-						<View className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+						<View className="bg-white rounded-2xl p-4 border border-gray-100">
 							<View className="flex-row items-center justify-between mb-3">
 								<View className="flex-row items-center">
 									<View className="w-3 h-3 bg-green-500 rounded-full mr-2" />
@@ -234,7 +234,7 @@ export default function ReportIncidentScreen() {
 							
 							{/* Dropdown Content */}
 							<View 
-								className="absolute bg-white rounded-xl border border-gray-200 shadow-2xl"
+								className="absolute bg-white rounded-xl border border-gray-200"
 								style={{
 									position: 'absolute',
 									top: 200, // Adjust this value based on your layout
@@ -436,7 +436,7 @@ export default function ReportIncidentScreen() {
 							/>
 							
 							<View 
-								className="absolute bg-white rounded-xl border border-gray-200 shadow-2xl max-h-80"
+								className="absolute bg-white rounded-xl border border-gray-200 max-h-80"
 								style={{
 									position: 'absolute',
 									top: 350,
@@ -488,7 +488,7 @@ export default function ReportIncidentScreen() {
 							/>
 							
 							<View 
-								className="absolute bg-white rounded-xl border border-gray-200 shadow-2xl max-h-80"
+								className="absolute bg-white rounded-xl border border-gray-200 max-h-80"
 								style={{
 									position: 'absolute',
 									top: 350,
@@ -540,7 +540,7 @@ export default function ReportIncidentScreen() {
 							/>
 							
 							<View 
-								className="absolute bg-white rounded-xl border border-gray-200 shadow-2xl max-h-80"
+								className="absolute bg-white rounded-xl border border-gray-200 max-h-80"
 								style={{
 									position: 'absolute',
 									top: 350,
@@ -592,7 +592,7 @@ export default function ReportIncidentScreen() {
 							/>
 							
 							<View 
-								className="absolute bg-white rounded-xl border border-gray-200 shadow-2xl max-h-80"
+								className="absolute bg-white rounded-xl border border-gray-200 max-h-80"
 								style={{
 									position: 'absolute',
 									top: 400,
@@ -644,7 +644,7 @@ export default function ReportIncidentScreen() {
 							/>
 							
 							<View 
-								className="absolute bg-white rounded-xl border border-gray-200 shadow-2xl max-h-80"
+								className="absolute bg-white rounded-xl border border-gray-200 max-h-80"
 								style={{
 									position: 'absolute',
 									top: 400,
@@ -668,7 +668,7 @@ export default function ReportIncidentScreen() {
 										>
 											<Text className="text-gray-900 font-medium">{minute.toString().padStart(2, '0')}</Text>
 											{selectedMinute === minute && (
-												<Check size={18} color="#10B981" />
+												<Check size={18} color="#10B900" />
 											)}
 										</TouchableOpacity>
 									))}
@@ -696,7 +696,7 @@ export default function ReportIncidentScreen() {
 							/>
 							
 							<View 
-								className="absolute bg-white rounded-xl border border-gray-200 shadow-2xl max-h-80"
+								className="absolute bg-white rounded-xl border border-gray-200 max-h-80"
 								style={{
 									position: 'absolute',
 									top: 400,
@@ -819,7 +819,7 @@ export default function ReportIncidentScreen() {
 					{/* Submit Button */}
 					<TouchableOpacity
 						onPress={handleSubmitReport}
-						className="w-full bg-blue-600 rounded-xl py-4 px-6 items-center shadow-lg"
+													className="w-full bg-blue-600 rounded-xl py-4 px-6 items-center"
 						activeOpacity={0.8}
 					>
 						<View className="flex-row items-center">

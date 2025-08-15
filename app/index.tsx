@@ -9,7 +9,7 @@ export default function WelcomePage() {
 	};
 
 	return (
-		<View className="flex-1 bg-gradient-to-br from-blue-50 to-indigo-100 justify-center items-center px-6">
+		<View className="flex-1 bg-blue-50 justify-center items-center px-6">
 			<View className="items-center space-y-6">
 				{/* Logo/Icon Placeholder */}
 				<View className="w-24 h-24 bg-indigo-500 rounded-full items-center justify-center">
@@ -29,8 +29,15 @@ export default function WelcomePage() {
 				{/* Login Button */}
 				<TouchableOpacity
 					onPress={handleLoginPress}
-					className="bg-indigo-600 px-8 py-4 rounded-xl shadow-lg"
+					className="bg-indigo-600 px-8 py-4 rounded-xl"
 					activeOpacity={0.8}
+					style={{
+						elevation: 8,
+						shadowColor: '#000',
+						shadowOffset: { width: 0, height: 4 },
+						shadowOpacity: 0.3,
+						shadowRadius: 8,
+					}}
 				>
 					<Text className="text-white text-lg font-semibold">
 						Get Started

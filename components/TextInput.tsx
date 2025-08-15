@@ -30,7 +30,7 @@ export function TextInput({ className, placeholder, keyboardType, secureTextEntr
 			{label &&
 				<Text className='font-medium text-sm text-gray-700 mb-2'>{label}</Text>
 			}
-			<View className="bg-white flex flex-row items-center rounded-xl border border-gray-200 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all" >
+			<View className="bg-white flex flex-row items-center rounded-xl border border-gray-200 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-100" >
 				{modifiedIcon &&
 					<View className="mr-3">
 						{modifiedIcon}

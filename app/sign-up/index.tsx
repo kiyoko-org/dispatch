@@ -62,7 +62,7 @@ export default function RootLayout() {
 					{/* Progress Bar */}
 					<View className="w-full bg-gray-200 rounded-full h-2 mt-6">
 						<View 
-							className="bg-gray-900 h-2 rounded-full transition-all duration-500 ease-out" 
+							className="bg-gray-900 h-2 rounded-full" 
 							style={{ width: `${(currentStep / 2) * 100}%` }}
 						/>
 					</View>
@@ -123,7 +123,7 @@ export default function RootLayout() {
 
 								<View>
 									<TouchableOpacity 
-										className="border border-gray-200 rounded-xl p-4 flex-row justify-between items-center bg-white hover:border-gray-300 transition-colors"
+										className="border border-gray-200 rounded-xl p-4 flex-row justify-between items-center bg-white"
 										onPress={() => setShowIdDropdown(!showIdDropdown)}
 									>
 										<Text className={selectedIdType ? 'text-gray-900 font-medium' : 'text-gray-500'}>
@@ -134,11 +134,11 @@ export default function RootLayout() {
 
 									{/* Dropdown Options */}
 									{showIdDropdown && (
-										<View className="border border-gray-200 rounded-xl mt-2 bg-white shadow-elevated">
+										<View className="border border-gray-200 rounded-xl mt-2 bg-white">
 											{idTypes.map((idType, index) => (
 												<TouchableOpacity
 													key={index}
-													className="p-4 border-b border-gray-100 last:border-b-0 hover:bg-gray-50"
+													className="p-4 border-b border-gray-100 last:border-b-0"
 													onPress={() => selectIdType(idType)}
 												>
 													<Text className="text-gray-900">{idType}</Text>
@@ -178,11 +178,11 @@ export default function RootLayout() {
 												</View>
 											</View>
 											<View className="flex-row gap-3 mt-4">
-												<TouchableOpacity className="flex-1 bg-gray-900 rounded-xl p-3 items-center justify-center flex-row gap-2 transition-smooth">
+												<TouchableOpacity className="flex-1 bg-gray-900 rounded-xl p-3 items-center justify-center flex-row gap-2">
 													<Camera size={18} className="text-white" />
 													<Text className="text-white font-medium text-sm">Camera</Text>
 												</TouchableOpacity>
-												<TouchableOpacity className="flex-1 bg-gray-100 rounded-xl p-3 items-center justify-center flex-row gap-2 border border-gray-200 transition-smooth">
+												<TouchableOpacity className="flex-1 bg-gray-100 rounded-xl p-3 items-center justify-center flex-row gap-2 border border-gray-200">
 													<Upload size={18} className="text-gray-700" />
 													<Text className="text-gray-700 font-medium text-sm">Upload</Text>
 												</TouchableOpacity>
@@ -202,11 +202,11 @@ export default function RootLayout() {
 												</View>
 											</View>
 											<View className="flex-row gap-3 mt-4">
-												<TouchableOpacity className="flex-1 bg-gray-900 rounded-xl p-3 items-center justify-center flex-row gap-2 transition-smooth">
+												<TouchableOpacity className="flex-1 bg-gray-900 rounded-xl p-3 items-center justify-center flex-row gap-2">
 													<Camera size={18} className="text-white" />
 													<Text className="text-white font-medium text-sm">Camera</Text>
 												</TouchableOpacity>
-												<TouchableOpacity className="flex-1 bg-gray-100 rounded-xl p-3 items-center justify-center flex-row gap-2 border border-gray-200 transition-smooth">
+												<TouchableOpacity className="flex-1 bg-gray-100 rounded-xl p-3 items-center justify-center flex-row gap-2 border border-gray-200">
 													<Upload size={18} className="text-gray-700" />
 													<Text className="text-gray-700 font-medium text-sm">Upload</Text>
 												</TouchableOpacity>

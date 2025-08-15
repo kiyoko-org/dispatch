@@ -90,7 +90,7 @@ export default function Sidebar({ activeRoute = 'dashboard', onNavigate, onClose
                 className={`flex-row items-center px-3 py-3 rounded-lg mb-2 ${
                   activeRoute === item.id
                     ? 'bg-gray-100 border border-gray-200'
-                    : 'hover:bg-gray-50'
+                    : ''
                 }`}
                 onPress={() => handleNavigation(item.id)}
               >
@@ -122,7 +122,7 @@ export default function Sidebar({ activeRoute = 'dashboard', onNavigate, onClose
                 className={`flex-row items-center px-3 py-3 rounded-lg mb-2 ${
                   activeRoute === item.id
                     ? 'bg-gray-100 border border-gray-200'
-                    : 'hover:bg-gray-50'
+                    : ''
                 }`}
                 onPress={() => handleNavigation(item.id)}
               >

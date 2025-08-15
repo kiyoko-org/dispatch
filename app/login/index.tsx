@@ -21,7 +21,7 @@ export default function Login() {
 			{/* Header Section */}
 			<View className="pt-12 sm:pt-16 lg:pt-20 pb-8 sm:pb-10 lg:pb-12 px-4 sm:px-6 lg:px-8">
 				<View className="items-center">
-					<View className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-gray-900 rounded-xl sm:rounded-2xl items-center justify-center mb-4 sm:mb-5 lg:mb-6 shadow-lg mt-10">
+					<View className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-gray-900 rounded-xl sm:rounded-2xl items-center justify-center mb-4 sm:mb-5 lg:mb-6 mt-10">
 						<Shield size={24} color="white" className="sm:w-7 sm:h-7 lg:w-8 lg:h-8" />
 					</View>
 					<Text className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2 text-center">DISPATCH</Text>
@@ -30,7 +30,7 @@ export default function Login() {
 
 			{/* Main Login Form */}
 			<View className="flex-1 px-4 sm:px-6 lg:px-8 mt-6">
-				<Card className="bg-white border border-gray-200 shadow-lg">
+				<Card className="bg-white border border-gray-200">
 					{/* Form Header */}
 					<View className="mb-6 sm:mb-7 lg:mb-8 px-2 sm:px-4">
 						<Text className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2 text-center sm:text-left">Sign In</Text>
@@ -95,7 +95,7 @@ export default function Login() {
 
 						{/* Sign In Button */}
 						<TouchableOpacity
-							className="bg-gray-900 py-3 sm:py-4 rounded-lg shadow-md active:opacity-80"
+							className="bg-gray-900 py-3 sm:py-4 rounded-lg"
 							onPress={handleSignIn}
 							activeOpacity={0.9}
 						>
@@ -110,7 +110,7 @@ export default function Login() {
 						</View>
 
 						{/* Google Sign In */}
-						<TouchableOpacity className="flex-row items-center justify-center py-3 sm:py-4 px-4 sm:px-6 border border-gray-300 rounded-lg bg-white active:opacity-80 shadow-sm">
+						<TouchableOpacity className="flex-row items-center justify-center py-3 sm:py-4 px-4 sm:px-6 border border-gray-300 rounded-lg bg-white">
 							<View className="w-5 h-5 sm:w-6 sm:h-6 mr-3 sm:mr-4">
 								{/* Google Logo SVG */}
 								<View className="w-full h-full">
