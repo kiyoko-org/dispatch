@@ -1,17 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StatusBar } from 'react-native';
-import { Shield, FileText, CheckCircle, Zap, AlertTriangle, Bell, Users, Search, Coins, Newspaper, Building, ArrowRight, BarChart3, TrendingUp, Activity, Clock, User, Settings, LogOut, MapPin, AlertCircle } from 'lucide-react-native';
+import { Shield, FileText, CheckCircle, Zap, AlertTriangle, Bell, Users, Search, Coins, Newspaper, Building, ArrowRight, BarChart3, TrendingUp, Activity, Clock, Settings, LogOut, MapPin, AlertCircle } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { Sidebar } from '../../components/sidebar';
-import UserProfile from '../../components/UserProfile';
+import HeaderWithSidebar from '../../components/HeaderWithSidebar';
 
 export default function Home() {
 	const router = useRouter()
-	const [isSidebarVisible, setIsSidebarVisible] = useState(false);
-
-	const toggleSidebar = () => {
-		setIsSidebarVisible(!isSidebarVisible);
-	};
 
 	const handleLogout = () => {
 		// Handle logout logic
@@ -30,50 +24,12 @@ export default function Home() {
 		<View className="flex-1 bg-gray-50">
 			<StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
 			
-			{/* Backdrop overlay when sidebar is open */}
-			{isSidebarVisible && (
-				<TouchableOpacity 
-					className="absolute inset-0 bg-black/30 z-40"
-					onPress={() => setIsSidebarVisible(false)}
-					activeOpacity={1}
-				/>
-			)}
+
 			
-			{/* Sidebar - Overlay on top when visible */}
-			<View 
-				className={`absolute top-0 left-0 z-50 h-full ${
-					isSidebarVisible ? 'translate-x-0' : '-translate-x-full'
-				}`}
-			>
-				<Sidebar 
-					activeRoute="dashboard" 
-					onClose={() => setIsSidebarVisible(false)}
-				/>
-			</View>
-			
-			{/* Header */}
-			<View className="bg-white border-b border-gray-200 px-4 sm:px-6 py-4 sm:py-6">
-				<View className="flex-row items-center justify-between">
-					<View className="flex-row items-center">
-						<View className="w-10 h-10 bg-indigo-500 rounded-full items-center justify-center mr-3">
-							<Text className="text-white text-xl font-bold">D</Text>
-						</View>
-						<View>
-							<Text className="text-gray-900 font-bold text-lg sm:text-xl">Welcome back, User</Text>
-							<Text className="text-gray-600 text-sm">Dispatch Dashboard</Text>
-						</View>
-					</View>
-					
-					<View className="flex-row items-center space-x-3">
-						<TouchableOpacity className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center">
-							<Settings size={20} color="#6B7280" />
-						</TouchableOpacity>
-						<TouchableOpacity onPress={handleLogout} className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center">
-							<LogOut size={20} color="#6B7280" />
-						</TouchableOpacity>
-					</View>
-				</View>
-			</View>
+			<HeaderWithSidebar
+				title="Dispatch Dashboard"
+				showBackButton={false}
+			/>
 
 			{/* Main Content */}
 			<ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
@@ -81,11 +37,6 @@ export default function Home() {
 				<View className="bg-blue-800 p-6 sm:p-8">
 					<View className="flex-row items-center justify-between mb-2">
 						<Text className="text-white text-2xl sm:text-3xl font-bold">Welcome back, John! 👋</Text>
-						{/* User Profile Component */}
-						<UserProfile 
-							userName="John Doe"
-							onToggleSidebar={toggleSidebar}
-						/>
 					</View>
 					<Text className="text-blue-100 text-base sm:text-lg mb-6">Your community is safer with you</Text>
 					
@@ -218,7 +169,11 @@ export default function Home() {
 							</View>
 						</TouchableOpacity>
 						
-						<TouchableOpacity className="bg-green-100 p-4 sm:p-5 rounded-xl border border-green-200" style={{ width: '31%' }}>
+						<TouchableOpacity 
+							className="bg-green-100 p-4 sm:p-5 rounded-xl border border-green-200" 
+							style={{ width: '31%' }}
+							onPress={() => router.push('/lost-and-found')}
+						>
 							<View className="items-center">
 								<View className="w-10 h-10 sm:w-12 sm:h-12 bg-green-200 rounded-lg items-center justify-center mb-3">
 									<Search size={24} color="#059669" />
@@ -318,3 +273,5 @@ export default function Home() {
 		</View>
 	);
 }
+
+

@@ -63,7 +63,7 @@ export default function Sidebar({ activeRoute = 'dashboard', onNavigate, onClose
   };
 
   return (
-    <View className="w-64 bg-white h-full border-r border-gray-200">
+    <View className="w-full bg-white h-full border-r border-gray-200">
       {/* Header */}
       <View className="p-6 border-b border-gray-200">
         <View className="flex-row items-center">
