@@ -1,10 +1,10 @@
-import { Card } from 'components/Card';
-import { Container } from 'components/Container';
-import { ScreenContent } from 'components/ScreenContent';
 import { StatusBar, StyleSheet, Text, View, TouchableOpacity, TextInput, Alert, Animated } from 'react-native';
 import { Shield, AlertTriangle, Phone, MessageCircle, Video, X, User, ArrowLeft } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
+import { Container } from 'components/ui/Container';
+import { ScreenContent } from 'components/ui/ScreenContent';
+import { Card } from 'components/ui/Card';
 
 export default function EmergencyScreen() {
 	const router = useRouter()
@@ -180,7 +180,7 @@ export default function EmergencyScreen() {
 				</Container>
 			</View>
 
-			<ScreenContent 
+			<ScreenContent
 				contentContainerStyle={{ paddingBottom: 40 }}
 				className="mt-6"
 			>
@@ -231,7 +231,7 @@ export default function EmergencyScreen() {
 							elevation: 12,
 						}}
 					>
-						<TouchableOpacity 
+						<TouchableOpacity
 							className="p-8 items-center"
 							onPress={handleEmergencyButton}
 							activeOpacity={1}
@@ -256,7 +256,7 @@ export default function EmergencyScreen() {
 								shadowRadius: 4,
 								elevation: 4,
 							}}>
-								<TextInput 
+								<TextInput
 									placeholder="Enter emergency number"
 									value={emergencyNumber}
 									onChangeText={setEmergencyNumber}
@@ -265,8 +265,8 @@ export default function EmergencyScreen() {
 								/>
 							</View>
 							{emergencyNumber.length > 0 && (
-								<TouchableOpacity 
-									onPress={clearNumber} 
+								<TouchableOpacity
+									onPress={clearNumber}
 									className="ml-3 w-10 h-10 bg-gray-100 rounded-full items-center justify-center"
 									onPressIn={() => handleButtonPressIn('clear')}
 									onPressOut={() => handleButtonPressOut('clear')}
@@ -318,13 +318,13 @@ export default function EmergencyScreen() {
 					{/* Call Type Icons */}
 					<Card className="mb-6">
 						<View className="flex-row justify-center space-x-8">
-							<TouchableOpacity 
-								className="items-center" 
+							<TouchableOpacity
+								className="items-center"
 								activeOpacity={1}
 								onPressIn={() => handleButtonPressIn('message')}
 								onPressOut={() => handleButtonPressOut('message')}
 							>
-								<View 
+								<View
 									className="w-14 h-14 items-center justify-center mb-3"
 									style={getActionButtonStyle('#3B82F6', '#60A5FA', pressedButtons.has('message'))}
 								>
@@ -332,15 +332,15 @@ export default function EmergencyScreen() {
 								</View>
 								<Text className="text-sm text-gray-700 font-medium">Message</Text>
 							</TouchableOpacity>
-							
-							<TouchableOpacity 
-								className="items-center" 
+
+							<TouchableOpacity
+								className="items-center"
 								activeOpacity={1}
 								onPress={makeCall}
 								onPressIn={() => handleButtonPressIn('call')}
 								onPressOut={() => handleButtonPressOut('call')}
 							>
-								<View 
+								<View
 									className="w-14 h-14 items-center justify-center mb-3"
 									style={getActionButtonStyle('#10B981', '#34D399', pressedButtons.has('call'))}
 								>
@@ -348,14 +348,14 @@ export default function EmergencyScreen() {
 								</View>
 								<Text className="text-sm text-gray-700 font-medium">Call</Text>
 							</TouchableOpacity>
-							
-							<TouchableOpacity 
-								className="items-center" 
+
+							<TouchableOpacity
+								className="items-center"
 								activeOpacity={1}
 								onPressIn={() => handleButtonPressIn('video')}
 								onPressOut={() => handleButtonPressOut('video')}
 							>
-								<View 
+								<View
 									className="w-14 h-14 items-center justify-center mb-3"
 									style={getActionButtonStyle('#8B5CF6', '#A78BFA', pressedButtons.has('video'))}
 								>
@@ -369,7 +369,7 @@ export default function EmergencyScreen() {
 					{/* Quick Contacts */}
 					<Card>
 						<Text className="font-bold text-lg text-gray-900 mb-4">Quick Contacts</Text>
-						<TouchableOpacity 
+						<TouchableOpacity
 							className="flex-row justify-between items-center py-4 px-4 bg-red-50 rounded-xl border border-red-200"
 							activeOpacity={1}
 							onPressIn={() => handleButtonPressIn('contact')}
@@ -405,9 +405,9 @@ export default function EmergencyScreen() {
 
 const styles = StyleSheet.create({
 	header: {
-		paddingTop: StatusBar.currentHeight, 
-		padding: 20, 
-		width: '100%', 
+		paddingTop: StatusBar.currentHeight,
+		padding: 20,
+		width: '100%',
 		backgroundColor: 'white',
 		borderBottomWidth: 1,
 		borderBottomColor: '#F3F4F6',

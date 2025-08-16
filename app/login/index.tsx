@@ -1,4 +1,4 @@
-import { Card } from 'components/Card';
+import { Card } from 'components/ui/Card';
 import { Text, View, TouchableOpacity, TextInput as RNTextInput } from 'react-native';
 import { Lock, Mail, Shield, Eye, EyeOff } from 'lucide-react-native';
 import { useState } from 'react';

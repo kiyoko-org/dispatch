@@ -14,7 +14,7 @@ type TextInputProps = {
 	value?: string
 }
 
-export function TextInput({ className, placeholder, keyboardType, secureTextEntry, label, icon }: TextInputProps) {
+export function TextInput({ className, placeholder, keyboardType, secureTextEntry, label, icon, value, onChangeText }: TextInputProps) {
 	const [showPassword, setShowPassword] = useState(false)
 	const isPassword = secureTextEntry
 
@@ -38,14 +38,16 @@ export function TextInput({ className, placeholder, keyboardType, secureTextEntr
 						{modifiedIcon}
 					</View>
 				}
-				<RNTextInput 
-					className="flex-1 text-gray-900 placeholder:text-gray-400 text-base" 
+				<RNTextInput
+					{...{ value, onChangeText }}
+
+					className="flex-1 text-gray-900 placeholder:text-gray-400 text-base"
 					placeholder={placeholder}
 					keyboardType={keyboardType}
 					secureTextEntry={isPassword && !showPassword}
 				/>
 				{isPassword && (
-					<TouchableOpacity 
+					<TouchableOpacity
 						onPress={togglePasswordVisibility}
 						className="ml-3 p-1"
 						activeOpacity={0.7}

@@ -1,9 +1,8 @@
-import { Card } from 'components/Card';
-import { TextInput } from 'components/TextInput';
+import { Card } from 'components/ui/Card';
+import { TextInput } from 'components/ui/TextInput';
 import { Button } from 'components/Button';
-import { Container } from 'components/Container';
-import { ScreenContent } from 'components/ScreenContent';
-import { EmergencyButton } from 'components/EmergencyButton';
+import { Container } from 'components/ui/Container';
+import { ScreenContent } from 'components/ui/ScreenContent';
 import { StatusBar, StyleSheet, Text, View, TouchableOpacity, Dimensions } from 'react-native';
 import { Home, Lock, Mail, User, CreditCard, FileText, UserCheck, Upload, Shield, ChevronLeft, ChevronRight, ChevronDown, Camera } from 'lucide-react-native';
 import { useRouter } from 'expo-router';

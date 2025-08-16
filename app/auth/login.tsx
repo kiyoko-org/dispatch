@@ -40,7 +40,7 @@ export default function Login() {
 			password: password,
 		});
 		if (error) {
-			Alert.alert(error.message)
+			console.error('Error signing in:', error);
 			setLoading(false);
 			return
 		}
