@@ -4,7 +4,9 @@ import { useAuth } from "hooks/useAuth";
 export function ProtectedLayout() {
 	const auth = useAuth()
 
-	if (auth.session === null) {
+	console.log(auth.session)
+
+	if (auth.session === null || auth.session === undefined) {
 		return <Redirect href={'/auth/login'} />
 	}
 

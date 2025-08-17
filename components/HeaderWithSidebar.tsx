@@ -1,10 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { 
-	StatusBar, 
-	StyleSheet, 
-	Text, 
-	View, 
-	TouchableOpacity, 
+import { useState, useRef, useEffect } from 'react';
+import {
+	StyleSheet,
+	Text,
+	View,
+	TouchableOpacity,
 	Animated,
 	Dimensions
 } from 'react-native';
@@ -24,22 +23,23 @@ interface HeaderWithSidebarProps {
 			status: 'completed' | 'active' | 'pending';
 		}>;
 	};
+	logoutPressed?: () => void
 }
 
-export default function HeaderWithSidebar({ 
-	title, 
-	showBackButton = false, 
+export default function HeaderWithSidebar({
+	title,
+	showBackButton = false,
 	backRoute,
 	showStepProgress = false,
-	stepProgressData
+	stepProgressData,
+	logoutPressed
 }: HeaderWithSidebarProps) {
 	const router = useRouter();
 	const fadeAnim = useRef(new Animated.Value(0)).current;
 	const slideAnim = useRef(new Animated.Value(50)).current;
 	const sidebarAnim = useRef(new Animated.Value(-300)).current;
-	
+
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-	const { width: screenWidth } = Dimensions.get('window');
 
 	useEffect(() => {
 		Animated.parallel([
@@ -111,6 +111,9 @@ export default function HeaderWithSidebar({
 				case 'community':
 					router.push('/community');
 					break;
+				case 'logout':
+					logoutPressed()
+					break;
 				default:
 					break;
 			}
@@ -128,7 +131,7 @@ export default function HeaderWithSidebar({
 	return (
 		<>
 			{/* Header */}
-			<Animated.View 
+			<Animated.View
 				style={[
 					styles.header,
 					{ opacity: fadeAnim }
@@ -147,7 +150,7 @@ export default function HeaderWithSidebar({
 						)}
 						<Text className="font-bold text-2xl text-gray-900 flex-1">{title}</Text>
 					</View>
-					
+
 					{/* User Profile / Sidebar Button */}
 					<TouchableOpacity
 						onPress={toggleSidebar}
@@ -161,7 +164,7 @@ export default function HeaderWithSidebar({
 
 			{/* Step Progress Indicator - Below Header */}
 			{showStepProgress && stepProgressData && (
-				<Animated.View 
+				<Animated.View
 					style={[
 						{ opacity: fadeAnim },
 						styles.stepProgress
@@ -170,24 +173,21 @@ export default function HeaderWithSidebar({
 					<View className="flex-row items-center px-6 py-3">
 						{stepProgressData.steps.map((step, index) => (
 							<View key={step.number} className="flex-row items-center mr-4">
-								<View className={`w-6 h-6 rounded-full items-center justify-center ${
-									step.status === 'completed' ? 'bg-green-600' :
+								<View className={`w-6 h-6 rounded-full items-center justify-center ${step.status === 'completed' ? 'bg-green-600' :
 									step.status === 'active' ? 'bg-blue-600' : 'bg-gray-300'
-								}`}>
-									<Text className={`font-bold text-xs ${
-										step.status === 'completed' || step.status === 'active' ? 'text-white' : 'text-gray-600'
 									}`}>
+									<Text className={`font-bold text-xs ${step.status === 'completed' || step.status === 'active' ? 'text-white' : 'text-gray-600'
+										}`}>
 										{step.number}
 									</Text>
 								</View>
-								<Text className={`font-medium text-xs ml-1 ${
-									step.status === 'completed' ? 'text-green-600' :
+								<Text className={`font-medium text-xs ml-1 ${step.status === 'completed' ? 'text-green-600' :
 									step.status === 'active' ? 'text-blue-600' : 'text-gray-500'
-								}`}>
+									}`}>
 									{step.label}
 								</Text>
 							</View>
-					 ))}
+						))}
 					</View>
 				</Animated.View>
 			)}
@@ -229,9 +229,8 @@ export default function HeaderWithSidebar({
 
 const styles = StyleSheet.create({
 	header: {
-		paddingTop: StatusBar.currentHeight || 44, 
-		padding: 20, 
-		width: '100%', 
+		padding: 20,
+		width: '100%',
 		backgroundColor: 'rgba(255, 255, 255, 0.95)',
 		borderBottomWidth: 1,
 		borderBottomColor: '#F3F4F6',

@@ -1,20 +1,65 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StatusBar } from 'react-native';
-import { Shield, FileText, CheckCircle, Zap, AlertTriangle, Bell, Users, Search, Coins, Newspaper, Building, ArrowRight, BarChart3, TrendingUp, Activity, Clock, Settings, LogOut, MapPin, AlertCircle } from 'lucide-react-native';
+import { View, Text, ScrollView, TouchableOpacity, StatusBar, Alert } from 'react-native';
+import { Shield, FileText, CheckCircle, Zap, AlertTriangle, Bell, Users, Search, Coins, Newspaper, Clock, MapPin, AlertCircle } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import HeaderWithSidebar from '../../components/HeaderWithSidebar';
+import { useAuthContext } from 'components/AuthProvider';
+import { useEffect, useState } from 'react';
+import { supabase } from 'lib/supabase';
+import Splash from 'components/ui/Splash';
+
+
+type Profile = {
+	first_name: string
+}
 
 export default function Home() {
 	const router = useRouter()
+	const { session, signOut } = useAuthContext()
+	const [loading, setLoading] = useState(false)
+	const [profile, setProfile] = useState<Profile>()
 
 	const handleLogout = () => {
-		// Handle logout logic
-		router.push('/login');
+		// TODO: add a loading indicator when signingout
+		signOut()
 	};
 
 	const handleEmergency = () => {
-		router.push('/emergency');
+		router.push('/emergency')
 	};
+
+
+	useEffect(() => {
+		if (session) getProfile()
+	}, [])
+
+	if (loading) {
+		return <Splash />
+	}
+
+	async function getProfile() {
+		try {
+			setLoading(true);
+			if (!session?.user) throw new Error('No user on the session!');
+			const { data, error, status } = await supabase
+				.from('profiles')
+				.select(`first_name`)
+				.eq('id', session?.user.id)
+				.single();
+			if (error && status !== 406) {
+				throw error;
+			}
+			if (data) {
+				setProfile(data)
+			}
+		} catch (error) {
+			if (error instanceof Error) {
+				Alert.alert(error.message);
+				console.error(error.message);
+			}
+		} finally {
+			setLoading(false);
+		}
+	}
 
 	const handleReportIncident = () => {
 		router.push('/report-incident');
@@ -23,12 +68,11 @@ export default function Home() {
 	return (
 		<View className="flex-1 bg-gray-50">
 			<StatusBar barStyle="dark-content" backgroundColor="#F9FAFB" />
-			
 
-			
 			<HeaderWithSidebar
 				title="Dispatch Dashboard"
 				showBackButton={false}
+				logoutPressed={handleLogout}
 			/>
 
 			{/* Main Content */}
@@ -36,10 +80,10 @@ export default function Home() {
 				{/* Welcome Banner */}
 				<View className="bg-blue-800 p-6 sm:p-8">
 					<View className="flex-row items-center justify-between mb-2">
-						<Text className="text-white text-2xl sm:text-3xl font-bold">Welcome back, John! 👋</Text>
+						<Text className="text-white text-2xl sm:text-3xl font-bold">Welcome back, {profile?.first_name}! 👋</Text>
 					</View>
 					<Text className="text-blue-100 text-base sm:text-lg mb-6">Your community is safer with you</Text>
-					
+
 					<View className="bg-white/20 p-4 rounded-xl border border-white/30">
 						<View className="flex-row items-center justify-between mb-3">
 							<View className="flex-row items-center">
@@ -109,9 +153,9 @@ export default function Home() {
 							<Text className="text-white text-xs font-bold">2 warnings</Text>
 						</View>
 					</View>
-					
+
 					<View className="flex-row gap-4">
-						<TouchableOpacity 
+						<TouchableOpacity
 							className="bg-red-500 flex-1 p-4 rounded-3xl border border-red-400/30"
 							style={{
 								elevation: 8,
@@ -131,8 +175,8 @@ export default function Home() {
 								<Text className="text-red-100 text-xs text-center font-medium">Tap for immediate response</Text>
 							</View>
 						</TouchableOpacity>
-						
-						<TouchableOpacity 
+
+						<TouchableOpacity
 							className="bg-amber-500 flex-1 p-4 rounded-3xl border border-amber-400/30"
 							style={{
 								elevation: 8,
@@ -158,7 +202,7 @@ export default function Home() {
 				{/* Quick Access */}
 				<View className="px-4 sm:px-6 mb-8">
 					<Text className="text-gray-900 font-bold text-lg sm:text-xl mb-4 sm:mb-6">Features</Text>
-					
+
 					<View className="flex-row flex-wrap gap-3">
 						<TouchableOpacity className="bg-blue-100 p-4 sm:p-5 rounded-xl border border-blue-200" style={{ width: '31%' }}>
 							<View className="items-center">
@@ -168,9 +212,9 @@ export default function Home() {
 								<Text className="text-blue-800 font-semibold text-sm text-center">Anonymity</Text>
 							</View>
 						</TouchableOpacity>
-						
-						<TouchableOpacity 
-							className="bg-green-100 p-4 sm:p-5 rounded-xl border border-green-200" 
+
+						<TouchableOpacity
+							className="bg-green-100 p-4 sm:p-5 rounded-xl border border-green-200"
 							style={{ width: '31%' }}
 							onPress={() => router.push('/lost-and-found')}
 						>
@@ -181,7 +225,7 @@ export default function Home() {
 								<Text className="text-green-800 font-semibold text-sm text-center">Lost & Found</Text>
 							</View>
 						</TouchableOpacity>
-						
+
 						<TouchableOpacity className="bg-purple-100 p-4 sm:p-5 rounded-xl border border-purple-200" style={{ width: '31%' }}>
 							<View className="items-center">
 								<View className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-200 rounded-lg items-center justify-center mb-3">
@@ -190,7 +234,7 @@ export default function Home() {
 								<Text className="text-purple-800 font-semibold text-sm text-center">Community</Text>
 							</View>
 						</TouchableOpacity>
-						
+
 						<TouchableOpacity className="bg-yellow-100 p-4 sm:p-5 rounded-xl border border-yellow-200" style={{ width: '31%' }}>
 							<View className="items-center">
 								<View className="w-10 h-10 sm:w-12 sm:h-12 bg-yellow-200 rounded-lg items-center justify-center mb-3">
@@ -199,7 +243,7 @@ export default function Home() {
 								<Text className="text-yellow-800 font-semibold text-sm text-center">Bounties</Text>
 							</View>
 						</TouchableOpacity>
-						
+
 						<TouchableOpacity className="bg-red-100 p-4 sm:p-5 rounded-xl border border-red-200" style={{ width: '31%' }}>
 							<View className="items-center">
 								<View className="w-10 h-10 sm:w-12 sm:h-12 bg-red-200 rounded-lg items-center justify-center mb-3">
@@ -208,7 +252,7 @@ export default function Home() {
 								<Text className="text-red-800 font-semibold text-sm text-center">News</Text>
 							</View>
 						</TouchableOpacity>
-						
+
 						<TouchableOpacity className="bg-indigo-100 p-4 sm:p-5 rounded-xl border border-indigo-200" style={{ width: '31%' }}>
 							<View className="items-center">
 								<View className="w-10 h-10 sm:w-12 sm:h-12 bg-indigo-200 rounded-lg items-center justify-center mb-3">
@@ -223,7 +267,7 @@ export default function Home() {
 				{/* Recent Activity */}
 				<View className="px-4 sm:px-6 mb-8">
 					<Text className="text-gray-900 font-bold text-lg sm:text-xl mb-4 sm:mb-6">Recent Activity</Text>
-					
+
 					<View className="space-y-3 sm:space-y-4">
 						<View className="bg-green-100 p-3 sm:p-4 sm:p-5 rounded-lg sm:rounded-xl border border-green-200">
 							<View className="flex-row items-center">
@@ -237,7 +281,7 @@ export default function Home() {
 								<Text className="text-green-600 text-xs">2h ago</Text>
 							</View>
 						</View>
-						
+
 						<View className="bg-blue-100 p-3 sm:p-4 sm:p-5 rounded-lg sm:rounded-xl border border-blue-200">
 							<View className="flex-row items-center">
 								<View className="w-8 h-8 sm:w-10 sm:h-10 bg-blue-200 rounded-lg items-center justify-center mr-3 sm:mr-4">
@@ -250,7 +294,7 @@ export default function Home() {
 								<Text className="text-blue-600 text-xs">4h ago</Text>
 							</View>
 						</View>
-						
+
 						<View className="bg-amber-100 p-3 sm:p-4 sm:p-5 rounded-lg sm:rounded-xl border border-amber-200">
 							<View className="flex-row items-center">
 								<View className="w-8 h-8 sm:w-10 sm:h-10 bg-amber-200 rounded-lg items-center justify-center mr-3 sm:mr-4">

@@ -2,7 +2,7 @@ import { Text, TouchableOpacity, View } from 'react-native';
 
 import { Redirect, useRouter } from 'expo-router';
 import { useAuth } from 'hooks/useAuth';
-import { useEffect } from 'react';
+import Splash from 'components/ui/Splash';
 
 export default function Welcome() {
 	const router = useRouter()
@@ -12,6 +12,10 @@ export default function Welcome() {
 		return (
 			<Redirect href={'/home'} />
 		)
+	}
+
+	if (isLoading) {
+		return <Splash />
 	}
 
 	return (
