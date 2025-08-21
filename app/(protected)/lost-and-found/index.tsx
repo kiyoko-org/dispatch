@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Linking, TextInput } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { View, Text, ScrollView, TouchableOpacity, Linking, TextInput, StatusBar } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import HeaderWithSidebar from 'components/HeaderWithSidebar';
 
 interface LostItem {
   id: string;
@@ -152,32 +153,15 @@ export default function LostAndFoundScreen() {
   const foundItems = mockItems.filter(item => item.type === 'found');
 
   return (
-    <ScrollView className="flex-1 bg-gray-50">
-      <Stack.Screen
-        options={{
-          title: 'Lost & Found',
-          headerStyle: { backgroundColor: '#ffffff' },
-          headerTintColor: '#000000',
-          headerShadowVisible: false,
-          headerBackVisible: true,
-        }}
+    <View className="flex-1 bg-gray-50">
+      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      
+      <HeaderWithSidebar
+        title="Lost & Found Registry"
+        showBackButton={false}
       />
       
-      {/* Header with Back Button */}
-      <View className="bg-white">
-        <View className="flex-row items-center px-4 py-4">
-          <TouchableOpacity 
-            onPress={() => router.back()}
-            className="mr-3 p-2"
-          >
-            <Ionicons name="arrow-back" size={24} color="#000000" />
-          </TouchableOpacity>
-          <View className="flex-1">
-            <Text className="text-2xl font-bold text-gray-900 mb-1">Lost & Found Registry</Text>
-            <Text className="text-gray-600">Tuguegarao City Police Department</Text>
-          </View>
-        </View>
-      </View>
+      <ScrollView className="flex-1">
 
       {/* Search Bar */}
       <View className="bg-white mx-4 mt-4 rounded-lg border border-gray-200">
@@ -370,6 +354,7 @@ export default function LostAndFoundScreen() {
           </View>
         </View>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }

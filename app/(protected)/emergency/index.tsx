@@ -1,10 +1,11 @@
 import { StatusBar, StyleSheet, Text, View, TouchableOpacity, TextInput, Alert, Animated } from 'react-native';
-import { Shield, AlertTriangle, Phone, MessageCircle, Video, X, User, ArrowLeft } from 'lucide-react-native';
+import { Shield, AlertTriangle, Phone, MessageCircle, Video, X, User } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
 import { Container } from 'components/ui/Container';
 import { ScreenContent } from 'components/ui/ScreenContent';
 import { Card } from 'components/ui/Card';
+import HeaderWithSidebar from 'components/HeaderWithSidebar';
 
 export default function EmergencyScreen() {
 	const router = useRouter()
@@ -144,41 +145,12 @@ export default function EmergencyScreen() {
 
 	return (
 		<View className="flex-1 bg-gray-50">
-			{/* Header */}
-			<View style={styles.header}>
-				<Container maxWidth="2xl" padding="none">
-					<View className="flex-row items-center justify-between w-full">
-						<View className="flex-row items-center">
-							<TouchableOpacity
-								onPress={() => router.back()}
-								className="w-10 h-10 bg-gray-100 rounded-full items-center justify-center mr-4"
-								activeOpacity={1}
-								onPressIn={() => handleButtonPressIn('back')}
-								onPressOut={() => handleButtonPressOut('back')}
-								style={[
-									{
-										shadowColor: '#000',
-										shadowOffset: { width: 0, height: 2 },
-										shadowOpacity: 0.1,
-										shadowRadius: 4,
-										elevation: 4,
-									},
-									pressedButtons.has('back') && {
-										backgroundColor: '#E5E7EB',
-										transform: [{ scale: 0.9 }],
-									}
-								]}
-							>
-								<ArrowLeft size={20} color="#374151" />
-							</TouchableOpacity>
-							<View>
-								<Text className="font-bold text-2xl text-gray-900">Immediate Response System</Text>
-								<Text className="text-sm text-gray-600 mt-1">Emergency Access Portal</Text>
-							</View>
-						</View>
-					</View>
-				</Container>
-			</View>
+			<StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+			
+			<HeaderWithSidebar
+				title="Emergency Response"
+				showBackButton={false}
+			/>
 
 			<ScreenContent
 				contentContainerStyle={{ paddingBottom: 40 }}
