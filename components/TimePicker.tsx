@@ -122,46 +122,49 @@ export default function TimePicker({
         {/* Backdrop */}
         <TouchableOpacity className="flex-1 bg-black/50" activeOpacity={1} onPress={onClose} />
 
-        {/* Time Picker Content */}
-        <View className="absolute left-4 right-4 top-20 rounded-lg bg-white shadow-lg">
-          {/* Header */}
-          <View className="flex-row items-center justify-between border-b border-gray-200 px-4 py-3">
-            <Text className="text-lg font-semibold text-slate-900">Select Time</Text>
-            <TouchableOpacity onPress={onClose} className="p-1">
-              <X size={20} color="#64748B" />
-            </TouchableOpacity>
-          </View>
+        {/* Centered Container */}
+        <View className="absolute inset-0 flex items-center justify-center px-4">
+          {/* Time Picker Content */}
+          <View className="w-full max-w-md rounded-lg bg-white shadow-lg">
+            {/* Header */}
+            <View className="flex-row items-center justify-between border-b border-gray-200 px-4 py-3">
+              <Text className="text-lg font-semibold text-slate-900">Select Time</Text>
+              <TouchableOpacity onPress={onClose} className="p-1">
+                <X size={20} color="#64748B" />
+              </TouchableOpacity>
+            </View>
 
-          {/* Time Selection */}
-          <View className="flex-row">
-            {renderTimeColumn(hourOptions, selectedHour, setSelectedHour, 'Hour')}
-            {renderTimeColumn(minuteOptions, selectedMinute, setSelectedMinute, 'Minute')}
-            {format === '12h' &&
-              renderTimeColumn(periodOptions, selectedPeriod, setSelectedPeriod, 'AM/PM')}
-          </View>
+            {/* Time Selection */}
+            <View className="flex-row">
+              {renderTimeColumn(hourOptions, selectedHour, setSelectedHour, 'Hour')}
+              {renderTimeColumn(minuteOptions, selectedMinute, setSelectedMinute, 'Minute')}
+              {format === '12h' &&
+                renderTimeColumn(periodOptions, selectedPeriod, setSelectedPeriod, 'AM/PM')}
+            </View>
 
-          {/* Footer */}
-          <View className="flex-row space-x-3 border-t border-gray-200 px-4 py-3">
-            <TouchableOpacity
-              onPress={onClose}
-              className="flex-1 rounded-lg border border-gray-300 px-4 py-3"
-              activeOpacity={0.8}>
-              <Text className="text-center font-medium text-slate-700">Cancel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={handleDone}
-              disabled={!isValidSelection}
-              className={`flex-1 rounded-lg px-4 py-3 ${
-                isValidSelection ? 'bg-slate-700' : 'bg-gray-300'
-              }`}
-              activeOpacity={0.8}>
-              <Text
-                className={`text-center font-medium ${
-                  isValidSelection ? 'text-white' : 'text-gray-500'
-                }`}>
-                Done
-              </Text>
-            </TouchableOpacity>
+            {/* Footer */}
+            <View className="flex-row space-x-3 border-t border-gray-200 px-4 py-3">
+              <TouchableOpacity
+                onPress={onClose}
+                className="flex-1 rounded-lg border border-gray-300 px-4 py-3"
+                activeOpacity={0.8}>
+                <Text className="text-center font-medium text-slate-700">Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleDone}
+                disabled={!isValidSelection}
+                className={`flex-1 rounded-lg px-4 py-3 ${
+                  isValidSelection ? 'bg-slate-700' : 'bg-gray-300'
+                }`}
+                activeOpacity={0.8}>
+                <Text
+                  className={`text-center font-medium ${
+                    isValidSelection ? 'text-white' : 'text-gray-500'
+                  }`}>
+                  Done
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </KeyboardAvoidingView>

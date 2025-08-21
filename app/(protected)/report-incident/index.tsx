@@ -18,7 +18,6 @@ import {
 	KeyboardAvoidingView,
 	StatusBar,
 } from 'react-native';
-import { Check } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
 
@@ -386,23 +385,3 @@ export default function ReportIncidentIndex() {
 		</KeyboardAvoidingView>
 	);
 }
-
-const styles = StyleSheet.create({
-	dropdown: {
-		position: 'absolute',
-		left: 20,
-		right: 20,
-		top: 200,
-		zIndex: 1001,
-		elevation: 1001,
-		backgroundColor: 'white',
-		borderRadius: 8,
-		borderWidth: 1,
-		borderColor: '#E5E7EB',
-		shadowColor: '#000',
-		shadowOffset: { width: 0, height: 4 },
-		shadowOpacity: 0.15,
-		shadowRadius: 12,
-		maxHeight: 400,
-	},
-});

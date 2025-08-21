@@ -103,38 +103,41 @@ export default function Dropdown<T = any>({
         {/* Backdrop */}
         <TouchableOpacity className="flex-1 bg-black/50" activeOpacity={1} onPress={onClose} />
 
-        {/* Dropdown Content */}
-        <View className="absolute left-4 right-4 top-20 rounded-lg bg-white shadow-lg">
-          {/* Header */}
-          <View className="flex-row items-center justify-between border-b border-gray-200 px-4 py-3">
-            <Text className="text-lg font-semibold text-slate-900">{title || placeholder}</Text>
-            <TouchableOpacity onPress={onClose} className="p-1">
-              <X size={20} color="#64748B" />
-            </TouchableOpacity>
-          </View>
+        {/* Centered Container */}
+        <View className="absolute inset-0 flex items-center justify-center px-4">
+          {/* Dropdown Content */}
+          <View className="w-full max-w-md rounded-lg bg-white shadow-lg">
+            {/* Header */}
+            <View className="flex-row items-center justify-between border-b border-gray-200 px-4 py-3">
+              <Text className="text-lg font-semibold text-slate-900">{title || placeholder}</Text>
+              <TouchableOpacity onPress={onClose} className="p-1">
+                <X size={20} color="#64748B" />
+              </TouchableOpacity>
+            </View>
 
-          {/* Search Bar */}
-          {renderSearchBar()}
+            {/* Search Bar */}
+            {renderSearchBar()}
 
-          {/* List */}
-          <FlatList
-            data={filteredData}
-            keyExtractor={keyExtractor}
-            renderItem={renderDropdownItem}
-            showsVerticalScrollIndicator={showsVerticalScrollIndicator}
-            style={{ maxHeight }}
-            keyboardShouldPersistTaps="handled"
-            initialNumToRender={10}
-            maxToRenderPerBatch={10}
-            windowSize={10}
-            removeClippedSubviews={true}
-          />
+            {/* List */}
+            <FlatList
+              data={filteredData}
+              keyExtractor={keyExtractor}
+              renderItem={renderDropdownItem}
+              showsVerticalScrollIndicator={showsVerticalScrollIndicator}
+              style={{ maxHeight }}
+              keyboardShouldPersistTaps="handled"
+              initialNumToRender={10}
+              maxToRenderPerBatch={10}
+              windowSize={10}
+              removeClippedSubviews={true}
+            />
 
-          {/* Footer */}
-          <View className="border-t border-gray-200 px-4 py-3">
-            <Text className="text-center text-sm text-slate-500">
-              {filteredData.length} item{filteredData.length !== 1 ? 's' : ''} available
-            </Text>
+            {/* Footer */}
+            <View className="border-t border-gray-200 px-4 py-3">
+              <Text className="text-center text-sm text-slate-500">
+                {filteredData.length} item{filteredData.length !== 1 ? 's' : ''} available
+              </Text>
+            </View>
           </View>
         </View>
       </KeyboardAvoidingView>
