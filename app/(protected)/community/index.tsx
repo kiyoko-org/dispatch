@@ -352,39 +352,39 @@ export default function CommunityIndex() {
       />
 
       {/* Tab Navigation */}
-      <View className="bg-gray-100 px-6 py-2">
-        <View className="flex-row">
+      <View className="bg-gray-100 px-4 py-3">
+        <View className="flex-row justify-between">
           <TouchableOpacity 
-            className={`rounded-lg px-4 py-2 mr-2 ${
+            className={`flex-1 rounded-lg py-3 px-2 mr-2 items-center ${
               activeTab === 'Watch' ? 'bg-yellow-500' : 'bg-gray-200'
             }`}
             onPress={() => setActiveTab('Watch')}
           >
-            <Text className={`font-semibold ${
+            <Text className={`font-semibold text-sm ${
               activeTab === 'Watch' ? 'text-slate-900' : 'text-slate-600'
             }`}>
               Watch
             </Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            className={`rounded-lg px-4 py-2 mr-2 ${
+            className={`flex-1 rounded-lg py-3 px-2 mx-1 items-center ${
               activeTab === 'Resources' ? 'bg-yellow-500' : 'bg-gray-200'
             }`}
             onPress={() => setActiveTab('Resources')}
           >
-            <Text className={`font-semibold ${
+            <Text className={`font-semibold text-sm ${
               activeTab === 'Resources' ? 'text-slate-900' : 'text-slate-600'
             }`}>
               Resources
             </Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            className={`rounded-lg px-4 py-2 ${
+            className={`flex-1 rounded-lg py-3 px-2 ml-2 items-center ${
               activeTab === 'Forums' ? 'bg-yellow-500' : 'bg-gray-200'
             }`}
             onPress={() => setActiveTab('Forums')}
           >
-            <Text className={`font-semibold ${
+            <Text className={`font-semibold text-sm ${
               activeTab === 'Forums' ? 'text-slate-900' : 'text-slate-600'
             }`}>
               Forums

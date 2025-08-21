@@ -296,7 +296,7 @@ export default function HeaderWithSidebar({
             zIndex: 1000,
           },
         ]}>
-        <View className="border-b border-gray-200 p-4">
+        <View className="border-b border-gray-200 p-4 mb-4">
           <View className="flex-row items-center">
             <Shield size={24} color="#1E40AF" />
             <View className="ml-3">
