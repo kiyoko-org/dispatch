@@ -1,12 +1,16 @@
-import { Card } from 'components/ui/Card';
 import HeaderWithSidebar from 'components/HeaderWithSidebar';
+import BasicInfoStep from 'components/report-incident/BasicInfoStep';
+import LocationStep from 'components/report-incident/LocationStep';
+import DetailsStep from 'components/report-incident/DetailsStep';
+import EvidenceStep from 'components/report-incident/EvidenceStep';
+import ReporterStep from 'components/report-incident/ReporterStep';
+import ReviewStep from 'components/report-incident/ReviewStep';
 
 import {
   StyleSheet,
   Text,
   View,
   TouchableOpacity,
-  TextInput,
   Alert,
   ScrollView,
   Animated,
@@ -14,21 +18,52 @@ import {
   KeyboardAvoidingView,
   StatusBar,
 } from 'react-native';
-import { 
-  FileText, 
-  ChevronDown, 
-  Check, 
-  Calendar, 
-  EyeOff, 
-  AlertTriangle,
-  MapPin,
-  Mic,
-  Camera,
-  Upload,
-  User
-} from 'lucide-react-native';
+import { Check } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
+
+// TypeScript interfaces for better type safety
+interface IncidentReport {
+  // Basic Information
+  incidentCategory: string;
+  incidentSubcategory: string;
+  incidentTitle: string;
+  incidentDate: string;
+  incidentTime: string;
+
+  // Location Information
+  streetAddress: string;
+  nearbyLandmark: string;
+  city: string;
+  province: string;
+  briefDescription: string;
+
+  // Detailed Information
+  whatHappened: string;
+  whoWasInvolved: string;
+  numberOfWitnesses: string;
+  injuriesReported: string;
+  propertyDamage: string;
+  suspectDescription: string;
+  witnessContactInfo: string;
+
+  // Options
+  requestFollowUp: boolean;
+  shareWithCommunity: boolean;
+  isAnonymous: boolean;
+}
+
+interface UIState {
+  showCategoryDropdown: boolean;
+  showSubcategoryDropdown: boolean;
+  showTimePicker: boolean;
+  selectedHour: string;
+  selectedMinute: string;
+  selectedPeriod: string;
+  isRecording: boolean;
+  currentStep: number;
+  isSubmitting: boolean;
+}
 
 export default function ReportIncidentIndex() {
   const router = useRouter();
@@ -36,58 +71,74 @@ export default function ReportIncidentIndex() {
   const slideAnim = useRef(new Animated.Value(50)).current;
   const dropdownAnim = useRef(new Animated.Value(0)).current;
 
-  // Step 1: Basic Information
-  const [incidentCategory, setIncidentCategory] = useState('');
-  const [incidentSubcategory, setIncidentSubcategory] = useState('');
-  const [incidentTitle, setIncidentTitle] = useState('');
-  const [incidentDate, setIncidentDate] = useState('');
-  const [incidentTime, setIncidentTime] = useState('');
-  const [selectedHour, setSelectedHour] = useState('');
-  const [selectedMinute, setSelectedMinute] = useState('');
-  const [selectedPeriod, setSelectedPeriod] = useState('');
-  const [reportDate] = useState('08/16/2025');
-  const [reportTime] = useState('11:45 AM');
+  // Consolidated form data state - replaces 28 individual useState calls
+  const [formData, setFormData] = useState<IncidentReport>({
+    // Basic Information
+    incidentCategory: '',
+    incidentSubcategory: '',
+    incidentTitle: '',
+    incidentDate: '',
+    incidentTime: '',
 
-  // Step 2: Location & Description
-  const [streetAddress, setStreetAddress] = useState('');
-  const [nearbyLandmark, setNearbyLandmark] = useState('');
-  const [city, setCity] = useState('Tuguegarao City');
-  const [province, setProvince] = useState('Cagayan');
-  const [gpsLatitude] = useState('17.6132');
-  const [gpsLongitude] = useState('121.7270');
-  const [briefDescription, setBriefDescription] = useState('');
+    // Location Information
+    streetAddress: '',
+    nearbyLandmark: '',
+    city: 'Tuguegarao City',
+    province: 'Cagayan',
+    briefDescription: '',
 
-  // Step 3: Detailed Information
-  const [whatHappened, setWhatHappened] = useState('');
-  const [whoWasInvolved, setWhoWasInvolved] = useState('');
-  const [numberOfWitnesses, setNumberOfWitnesses] = useState('');
-  const [injuriesReported, setInjuriesReported] = useState('');
-  const [propertyDamage, setPropertyDamage] = useState('');
-  const [suspectDescription, setSuspectDescription] = useState('');
-  const [witnessContactInfo, setWitnessContactInfo] = useState('');
+    // Detailed Information
+    whatHappened: '',
+    whoWasInvolved: '',
+    numberOfWitnesses: '',
+    injuriesReported: '',
+    propertyDamage: '',
+    suspectDescription: '',
+    witnessContactInfo: '',
 
-  // Step 4: Review & Submit
-  const [requestFollowUp, setRequestFollowUp] = useState(true);
-  const [shareWithCommunity, setShareWithCommunity] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+    // Options
+    requestFollowUp: true,
+    shareWithCommunity: false,
+    isAnonymous: false,
+  });
 
-  // UI state
-  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
-  const [showSubcategoryDropdown, setShowSubcategoryDropdown] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [isAnonymous, setIsAnonymous] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
+  // UI state - separate from form data
+  const [uiState, setUIState] = useState<UIState>({
+    showCategoryDropdown: false,
+    showSubcategoryDropdown: false,
+    showTimePicker: false,
+    selectedHour: '',
+    selectedMinute: '',
+    selectedPeriod: '',
+    isRecording: false,
+    currentStep: 1,
+    isSubmitting: false,
+  });
 
-  // Current step tracking
-  const [currentStep, setCurrentStep] = useState(1);
+  // Read-only data
+  const reportDate = '08/16/2025';
+  const reportTime = '11:45 AM';
+  const gpsLatitude = '17.6132';
+  const gpsLongitude = '121.7270';
+
+  // Helper functions for updating state
+  const updateFormData = (updates: Partial<IncidentReport>) => {
+    setFormData((prev) => ({ ...prev, ...updates }));
+  };
+
+  const updateUIState = (updates: Partial<UIState>) => {
+    setUIState((prev) => ({ ...prev, ...updates }));
+  };
 
   // Function to handle dropdown opening - closes others automatically
   const openDropdown = (dropdownType: 'category' | 'subcategory' | 'time') => {
     if (dropdownType === 'category') {
-      const newState = !showCategoryDropdown;
-      setShowCategoryDropdown(newState);
-      setShowSubcategoryDropdown(false);
-      setShowTimePicker(false);
+      const newState = !uiState.showCategoryDropdown;
+      updateUIState({
+        showCategoryDropdown: newState,
+        showSubcategoryDropdown: false,
+        showTimePicker: false,
+      });
 
       Animated.timing(dropdownAnim, {
         toValue: newState ? 1 : 0,
@@ -95,10 +146,12 @@ export default function ReportIncidentIndex() {
         useNativeDriver: true,
       }).start();
     } else if (dropdownType === 'subcategory') {
-      const newState = !showSubcategoryDropdown;
-      setShowSubcategoryDropdown(newState);
-      setShowCategoryDropdown(false);
-      setShowTimePicker(false);
+      const newState = !uiState.showSubcategoryDropdown;
+      updateUIState({
+        showSubcategoryDropdown: newState,
+        showCategoryDropdown: false,
+        showTimePicker: false,
+      });
 
       Animated.timing(dropdownAnim, {
         toValue: newState ? 1 : 0,
@@ -106,10 +159,12 @@ export default function ReportIncidentIndex() {
         useNativeDriver: true,
       }).start();
     } else if (dropdownType === 'time') {
-      const newState = !showTimePicker;
-      setShowTimePicker(newState);
-      setShowCategoryDropdown(false);
-      setShowSubcategoryDropdown(false);
+      const newState = !uiState.showTimePicker;
+      updateUIState({
+        showTimePicker: newState,
+        showCategoryDropdown: false,
+        showSubcategoryDropdown: false,
+      });
 
       Animated.timing(dropdownAnim, {
         toValue: newState ? 1 : 0,
@@ -199,18 +254,13 @@ export default function ReportIncidentIndex() {
     ]).start();
   }, []);
 
-  const handleVoiceRecording = () => {
-    setIsRecording(!isRecording);
-    // TODO: Implement actual voice recording functionality
-  };
-
   const handleSubmitReport = async () => {
-    setIsSubmitting(true);
+    updateUIState({ isSubmitting: true });
 
     // Simulate API call
     await new Promise((resolve) => setTimeout(resolve, 2000));
 
-    setIsSubmitting(false);
+    updateUIState({ isSubmitting: false });
 
     Alert.alert(
       'Report Submitted Successfully!',
@@ -228,13 +278,9 @@ export default function ReportIncidentIndex() {
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       className="flex-1 bg-white">
-      
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
-      
-      <HeaderWithSidebar
-        title="Report Incident"
-        showBackButton={false}
-      />
+
+      <HeaderWithSidebar title="Report Incident" showBackButton={false} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -246,517 +292,71 @@ export default function ReportIncidentIndex() {
               opacity: fadeAnim,
               transform: [{ translateY: slideAnim }],
             }}>
-
             {/* Step 1: Basic Incident Information */}
-            <Card className="mb-6 mt-6">
-              <View className="mb-4 flex-row items-center">
-                <View className="mr-3 h-8 w-8 items-center justify-center rounded-lg bg-slate-100">
-                  <FileText size={20} color="#475569" />
-                </View>
-                <Text className="text-xl font-bold text-slate-900">Basic Incident Information</Text>
-              </View>
-
-              <View className="space-y-4">
-                {/* Incident Category */}
-                <View style={{ position: 'relative' }}>
-                  <Text className="mb-2 font-medium text-slate-700">
-                    Incident Category <Text className="text-red-600">*</Text>
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => openDropdown('category')}
-                    className="flex-row items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3">
-                    <Text className={incidentCategory ? 'text-slate-900' : 'text-gray-500'}>
-                      {incidentCategory || 'Select incident category'}
-                    </Text>
-                    <ChevronDown size={20} color="#64748B" />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Incident Subcategory */}
-                {incidentCategory && (
-                  <View style={{ position: 'relative' }}>
-                    <Text className="mb-2 font-medium text-slate-700">
-                      Subcategory <Text className="text-red-600">*</Text>
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => openDropdown('subcategory')}
-                      className="flex-row items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3">
-                      <Text className={incidentSubcategory ? 'text-slate-900' : 'text-gray-500'}>
-                        {incidentSubcategory || 'Select subcategory'}
-                      </Text>
-                      <ChevronDown size={20} color="#64748B" />
-                    </TouchableOpacity>
-                  </View>
-                )}
-
-                {/* Incident Title */}
-                <View>
-                  <Text className="mb-2 font-medium text-slate-700">
-                    Incident Title <Text className="text-red-600">*</Text>
-                  </Text>
-                  <TextInput
-                    placeholder="Brief, clear title describing the incident"
-                    value={incidentTitle}
-                    onChangeText={setIncidentTitle}
-                    className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
-                    placeholderTextColor="#9CA3AF"
-                  />
-                </View>
-
-                {/* Incident Date */}
-                <View>
-                  <Text className="mb-2 font-medium text-slate-700">
-                    Incident Date <Text className="text-red-600">*</Text>
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setIncidentDate('08/15/2025');
-                    }}
-                    className="flex-row items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3">
-                    <Text className={incidentDate ? 'text-slate-900' : 'text-gray-500'}>
-                      {incidentDate || 'mm/dd/yyyy'}
-                    </Text>
-                    <Calendar size={20} color="#64748B" />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Incident Time */}
-                <View style={{ position: 'relative' }}>
-                  <Text className="mb-2 font-medium text-slate-700">
-                    Incident Time <Text className="text-red-600">*</Text>
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => openDropdown('time')}
-                    className="flex-row items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3">
-                    <Text className={incidentTime ? 'text-slate-900' : 'text-gray-500'}>
-                      {incidentTime || 'Select time'}
-                    </Text>
-                    <ChevronDown size={20} color="#64748B" />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Report Date & Time (Read-only) */}
-                <View className="grid grid-cols-2 gap-4">
-                  <View>
-                    <Text className="mb-2 font-medium text-slate-700">Report Date</Text>
-                    <View className="rounded-lg border border-gray-300 bg-gray-50 px-4 py-3">
-                      <Text className="text-slate-900">{reportDate}</Text>
-                    </View>
-                  </View>
-                  <View>
-                    <Text className="mb-2 font-medium text-slate-700">Report Time</Text>
-                    <View className="rounded-lg border border-gray-300 bg-gray-50 px-4 py-3">
-                      <Text className="text-slate-900">{reportTime}</Text>
-                    </View>
-                  </View>
-                </View>
-              </View>
-            </Card>
+            <BasicInfoStep
+              formData={{
+                incidentCategory: formData.incidentCategory,
+                incidentSubcategory: formData.incidentSubcategory,
+                incidentTitle: formData.incidentTitle,
+                incidentDate: formData.incidentDate,
+                incidentTime: formData.incidentTime,
+              }}
+              onUpdateFormData={updateFormData}
+              onOpenDropdown={openDropdown}
+              reportDate={reportDate}
+              reportTime={reportTime}
+            />
 
             {/* Step 2: Location Information */}
-            <Card className="mb-6">
-              <View className="mb-4 flex-row items-center">
-                <View className="mr-3 h-8 w-8 items-center justify-center rounded-lg bg-slate-100">
-                  <MapPin size={20} color="#475569" />
-                </View>
-                <Text className="text-xl font-bold text-slate-900">Location Information</Text>
-              </View>
-              
-              <View className="space-y-4">
-                {/* Street Address */}
-                <View>
-                  <Text className="text-slate-700 font-medium mb-2">Street Address</Text>
-                  <TextInput
-                    placeholder="Complete street address"
-                    value={streetAddress}
-                    onChangeText={setStreetAddress}
-                    className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-slate-900"
-                    placeholderTextColor="#9CA3AF"
-                  />
-                </View>
-
-                {/* Nearby Landmark */}
-                <View>
-                  <Text className="text-slate-700 font-medium mb-2">Nearby Landmark</Text>
-                  <TextInput
-                    placeholder="Notable landmark or building"
-                    value={nearbyLandmark}
-                    onChangeText={setNearbyLandmark}
-                    className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-slate-900"
-                    placeholderTextColor="#9CA3AF"
-                  />
-                </View>
-
-                {/* City & Province */}
-                <View className="grid grid-cols-2 gap-4">
-                  <View>
-                    <Text className="text-slate-700 font-medium mb-2">City</Text>
-                    <TextInput
-                      placeholder="Enter city name"
-                      value={city}
-                      onChangeText={setCity}
-                      className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-slate-900"
-                      placeholderTextColor="#9CA3AF"
-                    />
-                  </View>
-                  <View>
-                    <Text className="text-slate-700 font-medium mb-2">Province</Text>
-                    <TextInput
-                      placeholder="Enter province name"
-                      value={province}
-                      onChangeText={setProvince}
-                      className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-slate-900"
-                      placeholderTextColor="#9CA3AF"
-                    />
-                  </View>
-                </View>
-
-                {/* GPS Location */}
-                <View className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-                  <View className="flex-row items-center mb-2">
-                    <MapPin size={20} color="#475569" className="mr-2" />
-                    <Text className="text-slate-900 font-medium">Current GPS Location</Text>
-                  </View>
-                  <Text className="text-slate-600 text-sm mb-3">
-                    Lat: {gpsLatitude}, Long: {gpsLongitude} (Auto-detected)
-                  </Text>
-                  <View className="flex-row space-x-2">
-                    <TouchableOpacity className="flex-1 bg-slate-700 rounded-lg py-2 px-4 items-center">
-                      <Text className="text-white font-medium text-sm">Use Current Location</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity className="flex-1 bg-white border border-slate-300 rounded-lg py-2 px-4 items-center">
-                      <Text className="text-slate-700 font-medium text-sm">Get Directions</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                {/* Brief Description */}
-                <View>
-                  <Text className="text-slate-700 font-medium mb-2">Brief Description</Text>
-                  <TextInput
-                    placeholder="Provide a brief overview of what happened..."
-                    value={briefDescription}
-                    onChangeText={setBriefDescription}
-                    multiline
-                    numberOfLines={4}
-                    className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-slate-900"
-                    placeholderTextColor="#9CA3AF"
-                    textAlignVertical="top"
-                  />
-                </View>
-              </View>
-            </Card>
+            <LocationStep
+              formData={{
+                streetAddress: formData.streetAddress,
+                nearbyLandmark: formData.nearbyLandmark,
+                city: formData.city,
+                province: formData.province,
+                briefDescription: formData.briefDescription,
+              }}
+              onUpdateFormData={updateFormData}
+              gpsLatitude={gpsLatitude}
+              gpsLongitude={gpsLongitude}
+            />
 
             {/* Step 3: Detailed Incident Information */}
-            <Card className="mb-6">
-              <View className="mb-4 flex-row items-center">
-                <View className="mr-3 h-8 w-8 items-center justify-center rounded-lg bg-slate-100">
-                  <AlertTriangle size={20} color="#475569" />
-                </View>
-                <Text className="text-xl font-bold text-slate-900">Detailed Incident Information</Text>
-              </View>
-              
-              <View className="space-y-4">
-                {/* What Happened? */}
-                <View>
-                  <Text className="text-slate-700 font-medium mb-2">
-                    What Happened? <Text className="text-red-600">*</Text>
-                  </Text>
-                  <TextInput
-                    placeholder="Provide a detailed, chronological account of the incident. Include specific actions, times, and sequence of events..."
-                    value={whatHappened}
-                    onChangeText={setWhatHappened}
-                    multiline
-                    numberOfLines={4}
-                    className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-slate-900"
-                    placeholderTextColor="#9CA3AF"
-                    textAlignVertical="top"
-                  />
-                </View>
-
-                {/* Who Was Involved? */}
-                <View>
-                  <Text className="text-slate-700 font-medium mb-2">Who Was Involved?</Text>
-                  <TextInput
-                    placeholder="Describe people involved (suspects, victims, witnesses). Include physical descriptions, clothing, behavior, etc."
-                    value={whoWasInvolved}
-                    onChangeText={setWhoWasInvolved}
-                    multiline
-                    numberOfLines={4}
-                    className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-slate-900"
-                    placeholderTextColor="#9CA3AF"
-                    textAlignVertical="top"
-                  />
-                </View>
-
-                {/* Additional Details Grid */}
-                <View className="grid grid-cols-2 gap-4">
-                  <View>
-                    <Text className="text-slate-700 font-medium mb-2">Number of Witnesses</Text>
-                    <TextInput
-                      placeholder="Enter number"
-                      value={numberOfWitnesses}
-                      onChangeText={setNumberOfWitnesses}
-                      className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-slate-900"
-                      placeholderTextColor="#9CA3AF"
-                      keyboardType="numeric"
-                    />
-                  </View>
-                  <View>
-                    <Text className="text-slate-700 font-medium mb-2">Injuries Reported</Text>
-                    <TextInput
-                      placeholder="None, Minor, Serious"
-                      value={injuriesReported}
-                      onChangeText={setInjuriesReported}
-                      className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-slate-900"
-                      placeholderTextColor="#9CA3AF"
-                    />
-                  </View>
-                </View>
-
-                {/* Property Damage */}
-                <View>
-                  <Text className="text-slate-700 font-medium mb-2">Property Damage</Text>
-                  <TextInput
-                    placeholder="Describe any property damage, estimated costs, affected items or structures..."
-                    value={propertyDamage}
-                    onChangeText={setPropertyDamage}
-                    multiline
-                    numberOfLines={3}
-                    className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-slate-900"
-                    placeholderTextColor="#9CA3AF"
-                    textAlignVertical="top"
-                  />
-                </View>
-
-                {/* Suspect Description */}
-                <View>
-                  <Text className="text-slate-700 font-medium mb-2">Suspect Description (if applicable)</Text>
-                  <TextInput
-                    placeholder="Physical description, clothing, vehicle"
-                    value={suspectDescription}
-                    onChangeText={setSuspectDescription}
-                    className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-slate-900"
-                    placeholderTextColor="#9CA3AF"
-                  />
-                </View>
-
-                {/* Witness Contact Information */}
-                <View>
-                  <Text className="text-slate-700 font-medium mb-2">Witness Contact Information</Text>
-                  <TextInput
-                    placeholder="Names and contact information of witnesses (if available and consented)"
-                    value={witnessContactInfo}
-                    onChangeText={setWitnessContactInfo}
-                    multiline
-                    numberOfLines={3}
-                    className="bg-white border border-gray-300 rounded-lg px-4 py-3 text-slate-900"
-                    placeholderTextColor="#9CA3AF"
-                    textAlignVertical="top"
-                  />
-                </View>
-              </View>
-            </Card>
+            <DetailsStep
+              formData={{
+                whatHappened: formData.whatHappened,
+                whoWasInvolved: formData.whoWasInvolved,
+                numberOfWitnesses: formData.numberOfWitnesses,
+                injuriesReported: formData.injuriesReported,
+                propertyDamage: formData.propertyDamage,
+                suspectDescription: formData.suspectDescription,
+                witnessContactInfo: formData.witnessContactInfo,
+              }}
+              onUpdateFormData={updateFormData}
+            />
 
             {/* Voice Statement & Evidence */}
-            <Card className="mb-6">
-              <View className="mb-4 flex-row items-center">
-                <View className="mr-3 h-8 w-8 items-center justify-center rounded-lg bg-slate-100">
-                  <Mic size={20} color="#475569" />
-                </View>
-                <Text className="text-xl font-bold text-slate-900">Voice Statement & Evidence</Text>
-              </View>
-              
-              <View className="space-y-4">
-                <Text className="text-slate-600 text-sm">
-                  Record a voice statement or attach evidence to provide additional details.
-                </Text>
-                
-                {/* Voice Recording */}
-                <View className="border-2 border-dashed border-gray-300 rounded-lg p-6 items-center">
-                  <TouchableOpacity
-                    onPress={handleVoiceRecording}
-                    className={`w-16 h-16 rounded-full items-center justify-center mb-3 ${
-                      isRecording ? 'bg-red-600' : 'bg-slate-600'
-                    }`}
-                    activeOpacity={0.8}
-                  >
-                    <Mic size={24} color="white" />
-                  </TouchableOpacity>
-                  <Text className="text-slate-700 font-medium text-base mb-1">
-                    {isRecording ? 'Stop Recording' : 'Start Recording'}
-                  </Text>
-                  <Text className="text-slate-500 text-sm">
-                    Click to {isRecording ? 'stop' : 'start'} voice recording
-                  </Text>
-                </View>
-
-                {/* Evidence Attachments */}
-                <View className="flex-row space-x-3">
-                  <TouchableOpacity className="flex-1 border-2 border-dashed border-gray-300 rounded-lg p-4 items-center">
-                    <Upload size={24} color="#64748B" />
-                    <Text className="text-slate-700 font-medium mt-2 text-sm">Upload Files</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity className="flex-1 border-2 border-dashed border-gray-300 rounded-lg p-4 items-center">
-                    <Camera size={24} color="#64748B" />
-                    <Text className="text-slate-700 font-medium mt-2 text-sm">Take Photo</Text>
-                  </TouchableOpacity>
-                  
-                  <TouchableOpacity className="flex-1 border-2 border-dashed border-gray-300 rounded-lg p-4 items-center">
-                    <FileText size={24} color="#64748B" />
-                    <Text className="text-slate-700 font-medium mt-2 text-sm">Add Document</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </Card>
+            <EvidenceStep
+              uiState={{ isRecording: uiState.isRecording }}
+              onUpdateUIState={updateUIState}
+            />
 
             {/* Reporter Information */}
-            <Card className="mb-6">
-              <View className="mb-4 flex-row items-center">
-                <View className="mr-3 h-8 w-8 items-center justify-center rounded-lg bg-slate-100">
-                  <User size={20} color="#475569" />
-                </View>
-                <Text className="text-xl font-bold text-slate-900">Reporter Information</Text>
-              </View>
-
-              <View className="space-y-4">
-                {/* Trust Score */}
-                <View className="flex-row items-center justify-between">
-                  <Text className="font-medium text-slate-700">Trust Score</Text>
-                  <View className="flex-row items-center space-x-2">
-                    <Text className="text-lg font-bold text-slate-900">87%</Text>
-                    <View className="rounded bg-slate-200 px-2 py-1">
-                      <Text className="text-xs font-medium text-slate-700">VERIFIED</Text>
-                    </View>
-                  </View>
-                </View>
-
-                {/* Report ID */}
-                <View>
-                  <Text className="mb-2 font-medium text-slate-700">Report ID</Text>
-                  <View className="rounded-lg border border-gray-300 bg-gray-50 px-4 py-3">
-                    <Text className="font-mono text-slate-900">RPT-959465</Text>
-                  </View>
-                </View>
-
-                {/* Status */}
-                <View className="flex-row items-center justify-between">
-                  <Text className="font-medium text-slate-700">Status</Text>
-                  <View className="rounded-md bg-slate-100 px-3 py-1">
-                    <Text className="text-sm font-medium text-slate-700">Active Reporter</Text>
-                  </View>
-                </View>
-
-                {/* Anonymous Report Option */}
-                <View className="flex-row items-center justify-between">
-                  <View className="flex-row items-center">
-                    <View className="mr-3 h-6 w-6 items-center justify-center rounded bg-gray-100">
-                      <EyeOff size={16} color="#64748B" />
-                    </View>
-                    <Text className="font-medium text-slate-700">Submit as Anonymous Report</Text>
-                  </View>
-                  <TouchableOpacity
-                    onPress={() => setIsAnonymous(!isAnonymous)}
-                    className={`h-6 w-12 rounded-full ${
-                      isAnonymous ? 'bg-slate-600' : 'bg-gray-300'
-                    }`}>
-                    <View
-                      className={`m-0.5 h-5 w-5 rounded-full bg-white ${
-                        isAnonymous ? 'ml-auto' : 'mr-auto'
-                      }`}
-                    />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </Card>
+            <ReporterStep
+              formData={{ isAnonymous: formData.isAnonymous }}
+              onUpdateFormData={updateFormData}
+            />
 
             {/* Review & Submit Options */}
-            <Card className="mb-6">
-              <View className="mb-4 flex-row items-center">
-                <View className="mr-3 h-8 w-8 items-center justify-center rounded-lg bg-slate-100">
-                  <Check size={20} color="#475569" />
-                </View>
-                <Text className="text-xl font-bold text-slate-900">Review & Submit Options</Text>
-              </View>
-
-              <View className="space-y-4">
-                {/* Follow-up Updates Toggle */}
-                <View className="rounded-lg bg-gray-50 p-4">
-                  <View className="flex-row items-center justify-between">
-                    <View className="flex-1 flex-row items-center">
-                      <View className="mr-3 h-6 w-6 items-center justify-center rounded-full bg-slate-100">
-                        <Text className="text-sm text-slate-600">🔔</Text>
-                      </View>
-                      <Text className="font-medium text-slate-700">Request follow-up updates</Text>
-                    </View>
-                    <TouchableOpacity
-                      onPress={() => setRequestFollowUp(!requestFollowUp)}
-                      className={`h-6 w-12 items-center rounded-full px-1 ${
-                        requestFollowUp ? 'justify-end bg-slate-600' : 'justify-start bg-gray-300'
-                      }`}>
-                      <View className="h-5 w-5 rounded-full bg-white" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                {/* Community Sharing Toggle */}
-                <View className="rounded-lg bg-gray-50 p-4">
-                  <View className="flex-row items-center justify-between">
-                    <View className="flex-1 flex-row items-center">
-                      <View className="mr-3 h-6 w-6 items-center justify-center rounded-full bg-slate-100">
-                        <Text className="text-sm text-slate-600">👥</Text>
-                      </View>
-                      <View>
-                        <Text className="font-medium text-slate-700">Share with community</Text>
-                        <Text className="text-sm text-slate-500">(anonymous)</Text>
-                      </View>
-                    </View>
-                    <TouchableOpacity
-                      onPress={() => setShareWithCommunity(!shareWithCommunity)}
-                      className={`h-6 w-12 items-center rounded-full px-1 ${
-                        shareWithCommunity ? 'justify-end bg-slate-600' : 'justify-start bg-gray-300'
-                      }`}>
-                      <View className="h-5 w-5 rounded-full bg-white" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-            </Card>
-
-            {/* Report Verification Notice */}
-            <View className="mb-6 rounded-lg border border-slate-200 bg-slate-50 p-4">
-              <View className="mb-2 flex-row items-center">
-                <View className="mr-3 h-6 w-6 items-center justify-center rounded-full bg-slate-100">
-                  <Text className="text-sm text-slate-600">🛡️</Text>
-                </View>
-                <Text className="text-lg font-bold text-slate-900">Report Verification</Text>
-              </View>
-              <Text className="text-sm text-slate-600">
-                This report will be automatically analyzed and may be subject to manual review.
-                False reports may result in account restrictions.
-              </Text>
-            </View>
-
-            {/* Submit Button */}
-            <View className="mb-6">
-              <TouchableOpacity
-                onPress={handleSubmitReport}
-                disabled={isSubmitting}
-                className={`items-center rounded-lg px-8 py-4 shadow-md ${
-                  isSubmitting ? 'bg-gray-400' : 'bg-slate-800'
-                }`}
-                activeOpacity={0.8}>
-                {isSubmitting ? (
-                  <View className="flex-row items-center">
-                    <View className="mr-2 h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    <Text className="text-base font-semibold text-white">Submitting Report...</Text>
-                  </View>
-                ) : (
-                  <Text className="text-base font-semibold text-white">Submit Incident Report</Text>
-                )}
-              </TouchableOpacity>
-            </View>
+            <ReviewStep
+              formData={{
+                requestFollowUp: formData.requestFollowUp,
+                shareWithCommunity: formData.shareWithCommunity,
+              }}
+              uiState={{ isSubmitting: uiState.isSubmitting }}
+              onUpdateFormData={updateFormData}
+              onSubmit={handleSubmitReport}
+            />
 
             {/* Cancel Button */}
             <View className="mb-6">
@@ -767,17 +367,16 @@ export default function ReportIncidentIndex() {
                 <Text className="text-base font-semibold text-slate-700">Cancel & Return Home</Text>
               </TouchableOpacity>
             </View>
-
           </Animated.View>
         </View>
       </ScrollView>
 
       {/* Category Dropdown */}
-      {showCategoryDropdown && (
+      {uiState.showCategoryDropdown && (
         <>
           <TouchableOpacity
             style={[StyleSheet.absoluteFillObject, { zIndex: 1000 }]}
-            onPress={() => setShowCategoryDropdown(false)}
+            onPress={() => updateUIState({ showCategoryDropdown: false })}
             activeOpacity={1}
           />
           <View style={styles.dropdown}>
@@ -786,9 +385,8 @@ export default function ReportIncidentIndex() {
                 <TouchableOpacity
                   key={index}
                   onPress={() => {
-                    setIncidentCategory(category.name);
-                    setIncidentSubcategory('');
-                    setShowCategoryDropdown(false);
+                    updateFormData({ incidentCategory: category.name, incidentSubcategory: '' });
+                    updateUIState({ showCategoryDropdown: false });
                   }}
                   className="flex-row items-center justify-between border-b border-gray-100 px-4 py-3 last:border-b-0"
                   activeOpacity={0.7}>
@@ -820,7 +418,9 @@ export default function ReportIncidentIndex() {
                       </View>
                     </View>
                   </View>
-                  {incidentCategory === category.name && <Check size={20} color="#475569" />}
+                  {formData.incidentCategory === category.name && (
+                    <Check size={20} color="#475569" />
+                  )}
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -829,27 +429,29 @@ export default function ReportIncidentIndex() {
       )}
 
       {/* Subcategory Dropdown */}
-      {showSubcategoryDropdown && incidentCategory && (
+      {uiState.showSubcategoryDropdown && formData.incidentCategory && (
         <>
           <TouchableOpacity
             style={[StyleSheet.absoluteFillObject, { zIndex: 1000 }]}
-            onPress={() => setShowSubcategoryDropdown(false)}
+            onPress={() => updateUIState({ showSubcategoryDropdown: false })}
             activeOpacity={1}
           />
           <View style={styles.dropdown}>
             <ScrollView showsVerticalScrollIndicator={false}>
-              {subcategories[incidentCategory as keyof typeof subcategories]?.map(
+              {subcategories[formData.incidentCategory as keyof typeof subcategories]?.map(
                 (subcategory: string, index: number) => (
                   <TouchableOpacity
                     key={index}
                     onPress={() => {
-                      setIncidentSubcategory(subcategory);
-                      setShowSubcategoryDropdown(false);
+                      updateFormData({ incidentSubcategory: subcategory });
+                      updateUIState({ showSubcategoryDropdown: false });
                     }}
                     className="flex-row items-center justify-between border-b border-gray-100 px-4 py-3 last:border-b-0"
                     activeOpacity={0.7}>
                     <Text className="text-slate-900">{subcategory}</Text>
-                    {incidentSubcategory === subcategory && <Check size={20} color="#475569" />}
+                    {formData.incidentSubcategory === subcategory && (
+                      <Check size={20} color="#475569" />
+                    )}
                   </TouchableOpacity>
                 )
               )}
@@ -859,11 +461,11 @@ export default function ReportIncidentIndex() {
       )}
 
       {/* Time Dropdown */}
-      {showTimePicker && (
+      {uiState.showTimePicker && (
         <>
           <TouchableOpacity
             style={[StyleSheet.absoluteFillObject, { zIndex: 1000 }]}
-            onPress={() => setShowTimePicker(false)}
+            onPress={() => updateUIState({ showTimePicker: false })}
             activeOpacity={1}
           />
           <View style={styles.dropdown}>
@@ -880,14 +482,16 @@ export default function ReportIncidentIndex() {
                   {hourOptions.map((hour, index) => (
                     <TouchableOpacity
                       key={index}
-                      onPress={() => setSelectedHour(hour)}
+                      onPress={() => updateUIState({ selectedHour: hour })}
                       className={`border-b border-gray-100 px-4 py-3 last:border-b-0 ${
-                        selectedHour === hour ? 'bg-slate-50' : ''
+                        uiState.selectedHour === hour ? 'bg-slate-50' : ''
                       }`}
                       activeOpacity={0.7}>
                       <Text
                         className={`text-center ${
-                          selectedHour === hour ? 'font-medium text-slate-900' : 'text-slate-700'
+                          uiState.selectedHour === hour
+                            ? 'font-medium text-slate-900'
+                            : 'text-slate-700'
                         }`}>
                         {hour}
                       </Text>
@@ -908,14 +512,16 @@ export default function ReportIncidentIndex() {
                   {minuteOptions.map((minute, index) => (
                     <TouchableOpacity
                       key={index}
-                      onPress={() => setSelectedMinute(minute)}
+                      onPress={() => updateUIState({ selectedMinute: minute })}
                       className={`border-b border-gray-100 px-4 py-3 last:border-b-0 ${
-                        selectedMinute === minute ? 'bg-slate-50' : ''
+                        uiState.selectedMinute === minute ? 'bg-slate-50' : ''
                       }`}
                       activeOpacity={0.7}>
                       <Text
                         className={`text-center ${
-                          selectedMinute === minute ? 'font-medium text-slate-900' : 'text-slate-700'
+                          uiState.selectedMinute === minute
+                            ? 'font-medium text-slate-900'
+                            : 'text-slate-700'
                         }`}>
                         {minute}
                       </Text>
@@ -936,14 +542,16 @@ export default function ReportIncidentIndex() {
                   {periodOptions.map((period, index) => (
                     <TouchableOpacity
                       key={index}
-                      onPress={() => setSelectedPeriod(period)}
+                      onPress={() => updateUIState({ selectedPeriod: period })}
                       className={`border-b border-gray-100 px-4 py-3 last:border-b-0 ${
-                        selectedPeriod === period ? 'bg-slate-50' : ''
+                        uiState.selectedPeriod === period ? 'bg-slate-50' : ''
                       }`}
                       activeOpacity={0.7}>
                       <Text
                         className={`text-center ${
-                          selectedPeriod === period ? 'font-medium text-slate-900' : 'text-slate-700'
+                          uiState.selectedPeriod === period
+                            ? 'font-medium text-slate-900'
+                            : 'text-slate-700'
                         }`}>
                         {period}
                       </Text>
@@ -956,19 +564,25 @@ export default function ReportIncidentIndex() {
             {/* Done Button */}
             <TouchableOpacity
               onPress={() => {
-                if (selectedHour && selectedMinute && selectedPeriod) {
-                  const timeString = `${selectedHour}:${selectedMinute} ${selectedPeriod}`;
-                  setIncidentTime(timeString);
-                  setShowTimePicker(false);
+                if (uiState.selectedHour && uiState.selectedMinute && uiState.selectedPeriod) {
+                  const timeString = `${uiState.selectedHour}:${uiState.selectedMinute} ${uiState.selectedPeriod}`;
+                  updateFormData({ incidentTime: timeString });
+                  updateUIState({ showTimePicker: false });
                 }
               }}
               className={`mx-4 my-3 rounded-lg py-3 ${
-                selectedHour && selectedMinute && selectedPeriod ? 'bg-slate-700' : 'bg-gray-300'
+                uiState.selectedHour && uiState.selectedMinute && uiState.selectedPeriod
+                  ? 'bg-slate-700'
+                  : 'bg-gray-300'
               }`}
-              disabled={!selectedHour || !selectedMinute || !selectedPeriod}>
+              disabled={
+                !uiState.selectedHour || !uiState.selectedMinute || !uiState.selectedPeriod
+              }>
               <Text
                 className={`text-center font-medium ${
-                  selectedHour && selectedMinute && selectedPeriod ? 'text-white' : 'text-gray-500'
+                  uiState.selectedHour && uiState.selectedMinute && uiState.selectedPeriod
+                    ? 'text-white'
+                    : 'text-gray-500'
                 }`}>
                 Done
               </Text>
