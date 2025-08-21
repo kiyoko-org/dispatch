@@ -25,6 +25,7 @@ interface BasicInfoStepProps {
   selectedHour: string;
   selectedMinute: string;
   selectedPeriod: string;
+  validationErrors: Record<string, string>;
 }
 
 export default function BasicInfoStep({
@@ -42,6 +43,7 @@ export default function BasicInfoStep({
   selectedHour,
   selectedMinute,
   selectedPeriod,
+  validationErrors,
 }: BasicInfoStepProps) {
   return (
     <Card className="mb-6 mt-6">
@@ -66,6 +68,9 @@ export default function BasicInfoStep({
             </Text>
             <Text className="text-gray-400">▼</Text>
           </TouchableOpacity>
+          {validationErrors.incidentCategory && (
+            <Text className="mt-1 text-sm text-red-600">{validationErrors.incidentCategory}</Text>
+          )}
         </View>
 
         {/* Incident Subcategory */}
@@ -97,6 +102,9 @@ export default function BasicInfoStep({
             className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
             placeholderTextColor="#9CA3AF"
           />
+          {validationErrors.incidentTitle && (
+            <Text className="mt-1 text-sm text-red-600">{validationErrors.incidentTitle}</Text>
+          )}
         </View>
 
         {/* Incident Date */}
@@ -114,6 +122,9 @@ export default function BasicInfoStep({
             </Text>
             <Calendar size={20} color="#64748B" />
           </TouchableOpacity>
+          {validationErrors.incidentDate && (
+            <Text className="mt-1 text-sm text-red-600">{validationErrors.incidentDate}</Text>
+          )}
         </View>
 
         {/* Incident Time */}
@@ -129,6 +140,9 @@ export default function BasicInfoStep({
             </Text>
             <Text className="text-gray-400">▼</Text>
           </TouchableOpacity>
+          {validationErrors.incidentTime && (
+            <Text className="mt-1 text-sm text-red-600">{validationErrors.incidentTime}</Text>
+          )}
         </View>
 
         {/* Report Date & Time (Read-only) */}

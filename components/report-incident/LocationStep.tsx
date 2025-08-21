@@ -13,6 +13,7 @@ interface LocationStepProps {
   onUpdateFormData: (updates: Partial<LocationStepProps['formData']>) => void;
   gpsLatitude: string;
   gpsLongitude: string;
+  validationErrors: Record<string, string>;
 }
 
 export default function LocationStep({
@@ -20,6 +21,7 @@ export default function LocationStep({
   onUpdateFormData,
   gpsLatitude,
   gpsLongitude,
+  validationErrors,
 }: LocationStepProps) {
   return (
     <Card className="mb-6">
@@ -41,6 +43,9 @@ export default function LocationStep({
             className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
             placeholderTextColor="#9CA3AF"
           />
+          {validationErrors.streetAddress && (
+            <Text className="mt-1 text-sm text-red-600">{validationErrors.streetAddress}</Text>
+          )}
         </View>
 
         {/* Nearby Landmark */}
@@ -66,6 +71,9 @@ export default function LocationStep({
               className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
               placeholderTextColor="#9CA3AF"
             />
+            {validationErrors.city && (
+              <Text className="mt-1 text-sm text-red-600">{validationErrors.city}</Text>
+            )}
           </View>
           <View>
             <Text className="mb-2 font-medium text-slate-700">Province</Text>
@@ -76,6 +84,9 @@ export default function LocationStep({
               className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
               placeholderTextColor="#9CA3AF"
             />
+            {validationErrors.province && (
+              <Text className="mt-1 text-sm text-red-600">{validationErrors.province}</Text>
+            )}
           </View>
         </View>
 
@@ -111,6 +122,9 @@ export default function LocationStep({
             placeholderTextColor="#9CA3AF"
             textAlignVertical="top"
           />
+          {validationErrors.briefDescription && (
+            <Text className="mt-1 text-sm text-red-600">{validationErrors.briefDescription}</Text>
+          )}
         </View>
       </View>
     </Card>

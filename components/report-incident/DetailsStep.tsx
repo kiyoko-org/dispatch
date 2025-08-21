@@ -13,9 +13,14 @@ interface DetailsStepProps {
     witnessContactInfo: string;
   };
   onUpdateFormData: (updates: Partial<DetailsStepProps['formData']>) => void;
+  validationErrors: Record<string, string>;
 }
 
-export default function DetailsStep({ formData, onUpdateFormData }: DetailsStepProps) {
+export default function DetailsStep({
+  formData,
+  onUpdateFormData,
+  validationErrors,
+}: DetailsStepProps) {
   return (
     <Card className="mb-6">
       <View className="mb-4 flex-row items-center">
@@ -41,6 +46,9 @@ export default function DetailsStep({ formData, onUpdateFormData }: DetailsStepP
             placeholderTextColor="#9CA3AF"
             textAlignVertical="top"
           />
+          {validationErrors.whatHappened && (
+            <Text className="mt-1 text-sm text-red-600">{validationErrors.whatHappened}</Text>
+          )}
         </View>
 
         {/* Who Was Involved? */}
