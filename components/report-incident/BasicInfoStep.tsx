@@ -1,6 +1,8 @@
 import { View, Text, TouchableOpacity, TextInput } from 'react-native';
-import { ChevronDown, Calendar } from 'lucide-react-native';
+import { Calendar } from 'lucide-react-native';
 import { Card } from '../ui/Card';
+import Dropdown from '../Dropdown';
+import TimePicker from '../TimePicker';
 
 interface BasicInfoStepProps {
   formData: {
@@ -14,6 +16,15 @@ interface BasicInfoStepProps {
   onOpenDropdown: (dropdownType: 'category' | 'subcategory' | 'time') => void;
   reportDate: string;
   reportTime: string;
+  incidentCategories: Array<{ name: string; severity: string }>;
+  subcategories: Record<string, string[]>;
+  showCategoryDropdown: boolean;
+  showSubcategoryDropdown: boolean;
+  showTimePicker: boolean;
+  onCloseDropdown: (type: 'category' | 'subcategory' | 'time') => void;
+  selectedHour: string;
+  selectedMinute: string;
+  selectedPeriod: string;
 }
 
 export default function BasicInfoStep({
@@ -22,6 +33,15 @@ export default function BasicInfoStep({
   onOpenDropdown,
   reportDate,
   reportTime,
+  incidentCategories,
+  subcategories,
+  showCategoryDropdown,
+  showSubcategoryDropdown,
+  showTimePicker,
+  onCloseDropdown,
+  selectedHour,
+  selectedMinute,
+  selectedPeriod,
 }: BasicInfoStepProps) {
   return (
     <Card className="mb-6 mt-6">
@@ -34,7 +54,7 @@ export default function BasicInfoStep({
 
       <View className="space-y-4">
         {/* Incident Category */}
-        <View style={{ position: 'relative' }}>
+        <View>
           <Text className="mb-2 font-medium text-slate-700">
             Incident Category <Text className="text-red-600">*</Text>
           </Text>
@@ -44,13 +64,13 @@ export default function BasicInfoStep({
             <Text className={formData.incidentCategory ? 'text-slate-900' : 'text-gray-500'}>
               {formData.incidentCategory || 'Select incident category'}
             </Text>
-            <ChevronDown size={20} color="#64748B" />
+            <Text className="text-gray-400">▼</Text>
           </TouchableOpacity>
         </View>
 
         {/* Incident Subcategory */}
         {formData.incidentCategory && (
-          <View style={{ position: 'relative' }}>
+          <View>
             <Text className="mb-2 font-medium text-slate-700">
               Subcategory <Text className="text-red-600">*</Text>
             </Text>
@@ -60,7 +80,7 @@ export default function BasicInfoStep({
               <Text className={formData.incidentSubcategory ? 'text-slate-900' : 'text-gray-500'}>
                 {formData.incidentSubcategory || 'Select subcategory'}
               </Text>
-              <ChevronDown size={20} color="#64748B" />
+              <Text className="text-gray-400">▼</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -97,7 +117,7 @@ export default function BasicInfoStep({
         </View>
 
         {/* Incident Time */}
-        <View style={{ position: 'relative' }}>
+        <View>
           <Text className="mb-2 font-medium text-slate-700">
             Incident Time <Text className="text-red-600">*</Text>
           </Text>
@@ -107,7 +127,7 @@ export default function BasicInfoStep({
             <Text className={formData.incidentTime ? 'text-slate-900' : 'text-gray-500'}>
               {formData.incidentTime || 'Select time'}
             </Text>
-            <ChevronDown size={20} color="#64748B" />
+            <Text className="text-gray-400">▼</Text>
           </TouchableOpacity>
         </View>
 
@@ -127,6 +147,71 @@ export default function BasicInfoStep({
           </View>
         </View>
       </View>
+
+      {/* Dropdown Components */}
+      <Dropdown
+        isVisible={showCategoryDropdown}
+        onClose={() => onCloseDropdown('category')}
+        onSelect={(item) =>
+          onUpdateFormData({ incidentCategory: item.name, incidentSubcategory: '' })
+        }
+        data={incidentCategories}
+        keyExtractor={(item) => item.name}
+        renderItem={({ item }) => (
+          <View className="px-4 py-3">
+            <Text className="font-medium text-slate-900">{item.name}</Text>
+            <View
+              className={`mt-1 self-start rounded-md px-2 py-1 ${
+                item.severity === 'Critical'
+                  ? 'bg-red-100'
+                  : item.severity === 'High'
+                    ? 'bg-orange-100'
+                    : item.severity === 'Medium'
+                      ? 'bg-yellow-100'
+                      : 'bg-gray-100'
+              }`}>
+              <Text
+                className={`text-xs font-medium ${
+                  item.severity === 'Critical'
+                    ? 'text-red-700'
+                    : item.severity === 'High'
+                      ? 'text-orange-700'
+                      : item.severity === 'Medium'
+                        ? 'text-yellow-700'
+                        : 'text-gray-700'
+                }`}>
+                {item.severity}
+              </Text>
+            </View>
+          </View>
+        )}
+        title="Select Incident Category"
+        searchable={true}
+        searchPlaceholder="Search categories..."
+      />
+
+      <Dropdown
+        isVisible={showSubcategoryDropdown}
+        onClose={() => onCloseDropdown('subcategory')}
+        onSelect={(item) => onUpdateFormData({ incidentSubcategory: item })}
+        data={subcategories[formData.incidentCategory as keyof typeof subcategories] || []}
+        keyExtractor={(item, index) => index.toString()}
+        renderItem={({ item }) => (
+          <View className="px-4 py-3">
+            <Text className="text-slate-900">{item}</Text>
+          </View>
+        )}
+        title="Select Subcategory"
+      />
+
+      <TimePicker
+        isVisible={showTimePicker}
+        onClose={() => onCloseDropdown('time')}
+        onSelectTime={(timeString) => onUpdateFormData({ incidentTime: timeString })}
+        initialHour={selectedHour}
+        initialMinute={selectedMinute}
+        initialPeriod={selectedPeriod}
+      />
     </Card>
   );
 }
