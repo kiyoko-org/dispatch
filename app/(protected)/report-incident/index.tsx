@@ -20,37 +20,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
-
-// TypeScript interfaces for better type safety
-interface IncidentReport {
-  // Basic Information
-  incidentCategory: string;
-  incidentSubcategory: string;
-  incidentTitle: string;
-  incidentDate: string;
-  incidentTime: string;
-
-  // Location Information
-  streetAddress: string;
-  nearbyLandmark: string;
-  city: string;
-  province: string;
-  briefDescription: string;
-
-  // Detailed Information
-  whatHappened: string;
-  whoWasInvolved: string;
-  numberOfWitnesses: string;
-  injuriesReported: string;
-  propertyDamage: string;
-  suspectDescription: string;
-  witnessContactInfo: string;
-
-  // Options
-  requestFollowUp: boolean;
-  shareWithCommunity: boolean;
-  isAnonymous: boolean;
-}
+import { ReportData } from 'lib/types';
 
 interface UIState {
   showCategoryDropdown: boolean;
@@ -72,7 +42,7 @@ export default function ReportIncidentIndex() {
   const dropdownAnim = useRef(new Animated.Value(0)).current;
 
   // Consolidated form data state - replaces 28 individual useState calls
-  const [formData, setFormData] = useState<IncidentReport>({
+  const [formData, setFormData] = useState<ReportData>({
     // Basic Information
     incidentCategory: '',
     incidentSubcategory: '',
@@ -123,7 +93,7 @@ export default function ReportIncidentIndex() {
   const gpsLongitude = '121.7270';
 
   // Helper functions for updating state
-  const updateFormData = (updates: Partial<IncidentReport>) => {
+  const updateFormData = (updates: Partial<ReportData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
   };
 
@@ -132,7 +102,7 @@ export default function ReportIncidentIndex() {
   };
 
   // Validation function using built-in JavaScript/TypeScript
-  const validateForm = (data: IncidentReport): Record<string, string> => {
+  const validateForm = (data: ReportData): Record<string, string> => {
     const errors: Record<string, string> = {};
 
     // Required field validations

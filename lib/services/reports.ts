@@ -1,4 +1,5 @@
 import { db, Report, DbResponse } from '../database';
+import { ReportData } from '../types';
 
 /**
  * Service for handling incident reports
@@ -6,21 +7,14 @@ import { db, Report, DbResponse } from '../database';
 export const reportService = {
   /**
    * Create a new incident report
-   * @param subject The subject/title of the report
-   * @param body The detailed content of the report
-   * @param attachments Optional array of attachment URLs
+   * @param reportData The complete report data
    * @returns Promise with the created report or error
    */
-  async addReport(
-    subject: string, 
-    body: string, 
-    attachments?: string[]
-  ): Promise<DbResponse<Report>> {
+  async addReport(reportData: ReportData, attachments?: string[]): Promise<DbResponse<Report>> {
     // The reporter_id will be added automatically by Supabase using auth.uid()
     return db.reports.add({
-      subject,
-      body,
-      attachments
+      ...reportData,
+      attachments,
     });
   },
 
@@ -44,23 +38,13 @@ export const reportService = {
   /**
    * Update an existing report (if the user is the owner)
    * @param id The report ID to update
-   * @param subject Updated subject
-   * @param body Updated body content
-   * @param attachments Updated attachments array
+   * @param updates The fields to update
    * @returns Promise with the updated report or error
    */
   async updateReport(
     id: number,
-    subject?: string,
-    body?: string,
-    attachments?: string[]
+    updates: Partial<ReportData & { attachments?: string[] }>
   ): Promise<DbResponse<Report>> {
-    const updates: Partial<Report> = {};
-    
-    if (subject !== undefined) updates.subject = subject;
-    if (body !== undefined) updates.body = body;
-    if (attachments !== undefined) updates.attachments = attachments;
-    
     return db.reports.update(id, updates);
   },
 
@@ -71,5 +55,5 @@ export const reportService = {
    */
   async deleteReport(id: number): Promise<DbResponse<Report>> {
     return db.reports.delete(id);
-  }
+  },
 };

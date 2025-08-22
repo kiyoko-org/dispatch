@@ -1,15 +1,14 @@
 import { supabase } from './supabase';
 import { PostgrestError } from '@supabase/supabase-js';
+import { ReportData } from './types';
 
 /**
  * Types for the reports table
  */
-export type Report = {
+export type Report = ReportData & {
   id?: number;
   reporter_id?: string;
   created_at?: string;
-  subject?: string;
-  body?: string;
   attachments?: string[];
 };
 
@@ -32,12 +31,8 @@ export const db = {
      * @returns Promise with the created report or error
      */
     async add(report: Omit<Report, 'id' | 'created_at'>): Promise<DbResponse<Report>> {
-      const { data, error } = await supabase
-        .from('reports')
-        .insert(report)
-        .select()
-        .single();
-      
+      const { data, error } = await supabase.from('reports').insert(report).select().single();
+
       return { data, error };
     },
 
@@ -50,7 +45,7 @@ export const db = {
         .from('reports')
         .select('*')
         .order('created_at', { ascending: false });
-      
+
       return { data, error };
     },
 
@@ -60,12 +55,8 @@ export const db = {
      * @returns Promise with the report or error
      */
     async getById(id: number): Promise<DbResponse<Report>> {
-      const { data, error } = await supabase
-        .from('reports')
-        .select('*')
-        .eq('id', id)
-        .single();
-      
+      const { data, error } = await supabase.from('reports').select('*').eq('id', id).single();
+
       return { data, error };
     },
 
@@ -80,7 +71,7 @@ export const db = {
         .select('*')
         .eq('reporter_id', reporterId)
         .order('created_at', { ascending: false });
-      
+
       return { data, error };
     },
 
@@ -90,14 +81,17 @@ export const db = {
      * @param updates The fields to update
      * @returns Promise with the updated report or error
      */
-    async update(id: number, updates: Partial<Omit<Report, 'id' | 'reporter_id' | 'created_at'>>): Promise<DbResponse<Report>> {
+    async update(
+      id: number,
+      updates: Partial<Omit<Report, 'id' | 'reporter_id' | 'created_at'>>
+    ): Promise<DbResponse<Report>> {
       const { data, error } = await supabase
         .from('reports')
         .update(updates)
         .eq('id', id)
         .select()
         .single();
-      
+
       return { data, error };
     },
 
@@ -113,8 +107,8 @@ export const db = {
         .eq('id', id)
         .select()
         .single();
-      
+
       return { data, error };
-    }
-  }
+    },
+  },
 };
