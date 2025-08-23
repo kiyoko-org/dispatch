@@ -24,7 +24,7 @@ export default function LocationStep({
   validationErrors,
 }: LocationStepProps) {
   return (
-    <Card className="mb-6">
+    <Card className="mb-5">
       <View className="mb-4 flex-row items-center">
         <View className="mr-3 h-8 w-8 items-center justify-center rounded-lg bg-slate-100">
           <MapPin size={20} color="#475569" />
@@ -33,97 +33,96 @@ export default function LocationStep({
       </View>
 
       <View className="space-y-4">
-        {/* Street Address */}
+        {/* Primary Location */}
         <View>
-          <Text className="mb-2 font-medium text-slate-700">Street Address</Text>
+          <Text className="mb-2 font-medium text-slate-700">
+            Where did this happen? <Text className="text-red-600">*</Text>
+          </Text>
           <TextInput
-            placeholder="Complete street address"
+            placeholder="Street address or location"
             value={formData.street_address}
             onChangeText={(value) => onUpdateFormData({ street_address: value })}
-            className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
+            className="mb-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
             placeholderTextColor="#9CA3AF"
           />
           {validationErrors.street_address && (
-            <Text className="mt-1 text-sm text-red-600">{validationErrors.street_address}</Text>
+            <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.street_address}</Text>
           )}
         </View>
 
-        {/* Nearby Landmark */}
-        <View>
-          <Text className="mb-2 font-medium text-slate-700">Nearby Landmark</Text>
-          <TextInput
-            placeholder="Notable landmark or building"
-            value={formData.nearby_landmark}
-            onChangeText={(value) => onUpdateFormData({ nearby_landmark: value })}
-            className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
-            placeholderTextColor="#9CA3AF"
-          />
-        </View>
+        {/* GPS Quick Action */}
+        <TouchableOpacity className="mb-3 flex-row items-center justify-between rounded-lg border border-gray-300 bg-gray-50 px-4 py-3">
+          <View className="flex-row items-center">
+            <MapPin size={16} color="#475569" className="mr-2" />
+            <Text className="font-medium text-slate-700">Use Current Location</Text>
+          </View>
+          <Text className="text-slate-600 text-sm">→</Text>
+        </TouchableOpacity>
 
-        {/* City & Province */}
-        <View className="grid grid-cols-2 gap-4">
+        {/* Area Details */}
+        <View className="space-y-4">
+          <View className="flex-row space-x-4">
+            <View className="flex-1">
+              <Text className="mb-2 font-medium text-slate-700">
+                City <Text className="text-red-600">*</Text>
+              </Text>
+              <TextInput
+                placeholder="City"
+                value={formData.city}
+                onChangeText={(value) => onUpdateFormData({ city: value })}
+                className="mb-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
+                placeholderTextColor="#9CA3AF"
+              />
+              {validationErrors.city && (
+                <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.city}</Text>
+              )}
+            </View>
+            <View className="flex-1">
+              <Text className="mb-2 font-medium text-slate-700">
+                Province <Text className="text-red-600">*</Text>
+              </Text>
+              <TextInput
+                placeholder="Province"
+                value={formData.province}
+                onChangeText={(value) => onUpdateFormData({ province: value })}
+                className="mb-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
+                placeholderTextColor="#9CA3AF"
+              />
+              {validationErrors.province && (
+                <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.province}</Text>
+              )}
+            </View>
+          </View>
+          
           <View>
-            <Text className="mb-2 font-medium text-slate-700">City</Text>
+            <Text className="mb-2 font-medium text-slate-700">Nearby Landmark (Optional)</Text>
             <TextInput
-              placeholder="Enter city name"
-              value={formData.city}
-              onChangeText={(value) => onUpdateFormData({ city: value })}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
+              placeholder="Notable landmark or building"
+              value={formData.nearby_landmark}
+              onChangeText={(value) => onUpdateFormData({ nearby_landmark: value })}
+              className="mb-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
               placeholderTextColor="#9CA3AF"
             />
-            {validationErrors.city && (
-              <Text className="mt-1 text-sm text-red-600">{validationErrors.city}</Text>
-            )}
-          </View>
-          <View>
-            <Text className="mb-2 font-medium text-slate-700">Province</Text>
-            <TextInput
-              placeholder="Enter province name"
-              value={formData.province}
-              onChangeText={(value) => onUpdateFormData({ province: value })}
-              className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
-              placeholderTextColor="#9CA3AF"
-            />
-            {validationErrors.province && (
-              <Text className="mt-1 text-sm text-red-600">{validationErrors.province}</Text>
-            )}
-          </View>
-        </View>
-
-        {/* GPS Location */}
-        <View className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-          <View className="mb-2 flex-row items-center">
-            <MapPin size={20} color="#475569" className="mr-2" />
-            <Text className="font-medium text-slate-900">Current GPS Location</Text>
-          </View>
-          <Text className="mb-3 text-sm text-slate-600">
-            Lat: {gpsLatitude}, Long: {gpsLongitude} (Auto-detected)
-          </Text>
-          <View className="flex-row space-x-2">
-            <TouchableOpacity className="flex-1 items-center rounded-lg bg-slate-700 px-4 py-2">
-              <Text className="text-sm font-medium text-white">Use Current Location</Text>
-            </TouchableOpacity>
-            <TouchableOpacity className="flex-1 items-center rounded-lg border border-slate-300 bg-white px-4 py-2">
-              <Text className="text-sm font-medium text-slate-700">Get Directions</Text>
-            </TouchableOpacity>
           </View>
         </View>
 
         {/* Brief Description */}
         <View>
-          <Text className="mb-2 font-medium text-slate-700">Brief Description</Text>
+          <Text className="mb-2 font-medium text-slate-700">
+            Brief Description <Text className="text-red-600">*</Text>
+          </Text>
           <TextInput
-            placeholder="Provide a brief overview of what happened..."
+            placeholder="Briefly describe what happened..."
             value={formData.brief_description}
             onChangeText={(value) => onUpdateFormData({ brief_description: value })}
             multiline
-            numberOfLines={4}
-            className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
+            numberOfLines={3}
+            className="mb-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
             placeholderTextColor="#9CA3AF"
             textAlignVertical="top"
           />
           {validationErrors.brief_description && (
-            <Text className="mt-1 text-sm text-red-600">{validationErrors.brief_description}</Text>
+            <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.brief_description}</Text>
           )}
         </View>
       </View>

@@ -14,8 +14,6 @@ interface BasicInfoStepProps {
   };
   onUpdateFormData: (updates: Partial<BasicInfoStepProps['formData']>) => void;
   onOpenDropdown: (dropdownType: 'category' | 'subcategory' | 'time') => void;
-  reportDate: string;
-  reportTime: string;
   incidentCategories: Array<{ name: string; severity: string }>;
   subcategories: Record<string, string[]>;
   showCategoryDropdown: boolean;
@@ -32,8 +30,6 @@ export default function BasicInfoStep({
   formData,
   onUpdateFormData,
   onOpenDropdown,
-  reportDate,
-  reportTime,
   incidentCategories,
   subcategories,
   showCategoryDropdown,
@@ -46,7 +42,7 @@ export default function BasicInfoStep({
   validationErrors,
 }: BasicInfoStepProps) {
   return (
-    <Card className="mb-6 mt-6">
+    <Card className="mb-5">
       <View className="mb-4 flex-row items-center">
         <View className="mr-3 h-8 w-8 items-center justify-center rounded-lg bg-slate-100">
           <Text className="text-xl">📋</Text>
@@ -62,14 +58,14 @@ export default function BasicInfoStep({
           </Text>
           <TouchableOpacity
             onPress={() => onOpenDropdown('category')}
-            className="flex-row items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3">
+            className="mb-3 flex-row items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3">
             <Text className={formData.incident_category ? 'text-slate-900' : 'text-gray-500'}>
               {formData.incident_category || 'Select incident category'}
             </Text>
             <Text className="text-gray-400">▼</Text>
           </TouchableOpacity>
           {validationErrors.incident_category && (
-            <Text className="mt-1 text-sm text-red-600">{validationErrors.incident_category}</Text>
+            <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.incident_category}</Text>
           )}
         </View>
 
@@ -81,7 +77,7 @@ export default function BasicInfoStep({
             </Text>
             <TouchableOpacity
               onPress={() => onOpenDropdown('subcategory')}
-              className="flex-row items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3">
+              className="mb-3 flex-row items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3">
               <Text className={formData.incident_subcategory ? 'text-slate-900' : 'text-gray-500'}>
                 {formData.incident_subcategory || 'Select subcategory'}
               </Text>
@@ -99,11 +95,11 @@ export default function BasicInfoStep({
             placeholder="Brief, clear title describing the incident"
             value={formData.incident_title}
             onChangeText={(value) => onUpdateFormData({ incident_title: value })}
-            className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
+            className="mb-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
             placeholderTextColor="#9CA3AF"
           />
           {validationErrors.incident_title && (
-            <Text className="mt-1 text-sm text-red-600">{validationErrors.incident_title}</Text>
+            <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.incident_title}</Text>
           )}
         </View>
 
@@ -116,14 +112,14 @@ export default function BasicInfoStep({
             onPress={() => {
               onUpdateFormData({ incident_date: '08/15/2025' });
             }}
-            className="flex-row items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3">
+            className="mb-3 flex-row items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3">
             <Text className={formData.incident_date ? 'text-slate-900' : 'text-gray-500'}>
               {formData.incident_date || 'mm/dd/yyyy'}
             </Text>
             <Calendar size={20} color="#64748B" />
           </TouchableOpacity>
           {validationErrors.incident_date && (
-            <Text className="mt-1 text-sm text-red-600">{validationErrors.incident_date}</Text>
+            <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.incident_date}</Text>
           )}
         </View>
 
@@ -134,32 +130,18 @@ export default function BasicInfoStep({
           </Text>
           <TouchableOpacity
             onPress={() => onOpenDropdown('time')}
-            className="flex-row items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3">
+            className="mb-3 flex-row items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3">
             <Text className={formData.incident_time ? 'text-slate-900' : 'text-gray-500'}>
               {formData.incident_time || 'Select time'}
             </Text>
             <Text className="text-gray-400">▼</Text>
           </TouchableOpacity>
           {validationErrors.incident_time && (
-            <Text className="mt-1 text-sm text-red-600">{validationErrors.incident_time}</Text>
+            <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.incident_time}</Text>
           )}
         </View>
 
-        {/* Report Date & Time (Read-only) */}
-        <View className="grid grid-cols-2 gap-4">
-          <View>
-            <Text className="mb-2 font-medium text-slate-700">Report Date</Text>
-            <View className="rounded-lg border border-gray-300 bg-gray-50 px-4 py-3">
-              <Text className="text-slate-900">{reportDate}</Text>
-            </View>
-          </View>
-          <View>
-            <Text className="mb-2 font-medium text-slate-700">Report Time</Text>
-            <View className="rounded-lg border border-gray-300 bg-gray-50 px-4 py-3">
-              <Text className="text-slate-900">{reportTime}</Text>
-            </View>
-          </View>
-        </View>
+
       </View>
 
       {/* Dropdown Components */}

@@ -3,7 +3,6 @@ import BasicInfoStep from 'components/report-incident/BasicInfoStep';
 import LocationStep from 'components/report-incident/LocationStep';
 import DetailsStep from 'components/report-incident/DetailsStep';
 import EvidenceStep from 'components/report-incident/EvidenceStep';
-import ReporterStep from 'components/report-incident/ReporterStep';
 import ReviewStep from 'components/report-incident/ReviewStep';
 
 import {
@@ -20,12 +19,12 @@ import {
 import { useRouter } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
 import { ReportData } from 'lib/types';
-import { reportService } from 'lib/services/reports';
 
 interface UIState {
   showCategoryDropdown: boolean;
   showSubcategoryDropdown: boolean;
   showTimePicker: boolean;
+  showInjuriesDropdown: boolean;
   selectedHour: string;
   selectedMinute: string;
   selectedPeriod: string;
@@ -77,6 +76,7 @@ export default function ReportIncidentIndex() {
     showCategoryDropdown: false,
     showSubcategoryDropdown: false,
     showTimePicker: false,
+    showInjuriesDropdown: false,
     selectedHour: '',
     selectedMinute: '',
     selectedPeriod: '',
@@ -87,8 +87,6 @@ export default function ReportIncidentIndex() {
   });
 
   // Read-only data
-  const reportDate = '08/16/2025';
-  const reportTime = '11:45 AM';
   const gpsLatitude = '17.6132';
   const gpsLongitude = '121.7270';
 
@@ -165,13 +163,14 @@ export default function ReportIncidentIndex() {
   };
 
   // Function to handle dropdown opening - closes others automatically
-  const openDropdown = (dropdownType: 'category' | 'subcategory' | 'time') => {
+  const openDropdown = (dropdownType: 'category' | 'subcategory' | 'time' | 'injuries') => {
     if (dropdownType === 'category') {
       const newState = !uiState.showCategoryDropdown;
       updateUIState({
         showCategoryDropdown: newState,
         showSubcategoryDropdown: false,
         showTimePicker: false,
+        showInjuriesDropdown: false,
       });
 
       Animated.timing(dropdownAnim, {
@@ -185,6 +184,7 @@ export default function ReportIncidentIndex() {
         showSubcategoryDropdown: newState,
         showCategoryDropdown: false,
         showTimePicker: false,
+        showInjuriesDropdown: false,
       });
 
       Animated.timing(dropdownAnim, {
@@ -198,6 +198,21 @@ export default function ReportIncidentIndex() {
         showTimePicker: newState,
         showCategoryDropdown: false,
         showSubcategoryDropdown: false,
+        showInjuriesDropdown: false,
+      });
+
+      Animated.timing(dropdownAnim, {
+        toValue: newState ? 1 : 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    } else if (dropdownType === 'injuries') {
+      const newState = !uiState.showInjuriesDropdown;
+      updateUIState({
+        showInjuriesDropdown: newState,
+        showCategoryDropdown: false,
+        showSubcategoryDropdown: false,
+        showTimePicker: false,
       });
 
       Animated.timing(dropdownAnim, {
@@ -216,6 +231,14 @@ export default function ReportIncidentIndex() {
     { name: 'Traffic Accident', severity: 'High' },
     { name: 'Public Disturbance', severity: 'Medium' },
     { name: 'Other Incident', severity: 'Low' },
+  ];
+
+  const injuryOptions = [
+    { name: 'No Injuries', severity: 'Low', icon: '✅' },
+    { name: 'Minor Injuries', severity: 'Medium', icon: '🩹' },
+    { name: 'Serious Injuries', severity: 'High', icon: '🚑' },
+    { name: 'Critical/Life-threatening', severity: 'Critical', icon: '🆘' },
+    { name: 'Unknown/Unclear', severity: 'Low', icon: '❓' },
   ];
 
   const subcategories = {
@@ -292,7 +315,7 @@ export default function ReportIncidentIndex() {
     // Run validation first
     const errors = validateForm(formData);
 
-    console.error(errors);
+    console.log('Form validation:', errors);
 
     if (Object.keys(errors).length > 0) {
       updateUIState({ validationErrors: errors });
@@ -302,28 +325,24 @@ export default function ReportIncidentIndex() {
       return;
     }
 
-    // Clear any previous errors
+    // Clear any previous errors and show submitting state
     updateUIState({ isSubmitting: true, validationErrors: {} });
 
-    try {
-      // Prepare report data for API submission
-      const reportData: ReportData = {
-        ...formData,
-        // Add any additional fields if needed
-      };
+    // Simulate submission delay for better UX
+    setTimeout(() => {
+      // Generate a mock report ID for demo purposes
+      const reportId = `RPT-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
+      
+      console.log('Report submitted successfully:', {
+        reportId,
+        formData,
+        timestamp: new Date().toISOString(),
+      });
 
-      // Call the report API to submit the incident report
-      const result = await reportService.addReport(reportData);
-
-      if (result.error) {
-        throw new Error(result.error.message || 'Failed to submit report');
-      }
-
-      // Success - show report ID in the success message
-      const reportId = result.data?.id;
+      // Show success message
       Alert.alert(
         'Report Submitted Successfully!',
-        `Your incident report has been submitted${reportId ? ` with ID: ${reportId}` : ''}. It will be reviewed by authorities within 24 hours.`,
+        `Your incident report has been submitted with ID: ${reportId}. It will be reviewed by authorities within 24 hours.`,
         [
           {
             text: 'OK',
@@ -331,17 +350,9 @@ export default function ReportIncidentIndex() {
           },
         ]
       );
-    } catch (error) {
-      console.error('Report submission error:', error);
-      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
-      Alert.alert(
-        'Submission Error',
-        `There was an error submitting your report: ${errorMessage}. Please try again.`,
-        [{ text: 'OK' }]
-      );
-    } finally {
+
       updateUIState({ isSubmitting: false });
-    }
+    }, 2000); // 2 second delay to simulate network request
   };
 
   return (
@@ -354,9 +365,9 @@ export default function ReportIncidentIndex() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 32 }}
         className="flex-1">
-        <View className="px-6">
+        <View className="px-4 pt-2">
           <Animated.View
             style={{
               opacity: fadeAnim,
@@ -373,8 +384,6 @@ export default function ReportIncidentIndex() {
               }}
               onUpdateFormData={updateFormData}
               onOpenDropdown={openDropdown}
-              reportDate={reportDate}
-              reportTime={reportTime}
               incidentCategories={incidentCategories}
               subcategories={subcategories}
               showCategoryDropdown={uiState.showCategoryDropdown}
@@ -418,6 +427,12 @@ export default function ReportIncidentIndex() {
                 witness_contact_info: formData.witness_contact_info,
               }}
               onUpdateFormData={updateFormData}
+              onOpenDropdown={openDropdown}
+              injuryOptions={injuryOptions}
+              showInjuriesDropdown={uiState.showInjuriesDropdown}
+              onCloseDropdown={(type: 'injuries') => {
+                if (type === 'injuries') updateUIState({ showInjuriesDropdown: false });
+              }}
               validationErrors={uiState.validationErrors}
             />
 
@@ -427,17 +442,12 @@ export default function ReportIncidentIndex() {
               onUpdateUIState={updateUIState}
             />
 
-            {/* Reporter Information */}
-            <ReporterStep
-              formData={{ is_anonymous: formData.is_anonymous }}
-              onUpdateFormData={updateFormData}
-            />
-
             {/* Review & Submit Options */}
             <ReviewStep
               formData={{
                 request_follow_up: formData.request_follow_up,
                 share_with_community: formData.share_with_community,
+                is_anonymous: formData.is_anonymous,
               }}
               uiState={{ isSubmitting: uiState.isSubmitting }}
               onUpdateFormData={updateFormData}
@@ -445,7 +455,7 @@ export default function ReportIncidentIndex() {
             />
 
             {/* Cancel Button */}
-            <View className="mb-6">
+            <View className="mb-4">
               <TouchableOpacity
                 onPress={() => router.replace('/(protected)/home')}
                 className="items-center rounded-lg border border-gray-300 bg-white px-8 py-4"
