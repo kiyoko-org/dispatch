@@ -95,7 +95,7 @@ export default function LocationStep({
           </View>
           
           <View>
-            <Text className="mb-2 font-medium text-slate-700">Nearby Landmark (Optional)</Text>
+            <Text className="mb-2 font-medium text-slate-700">Nearby Landmark</Text>
             <TextInput
               placeholder="Notable landmark or building"
               value={formData.nearby_landmark}
