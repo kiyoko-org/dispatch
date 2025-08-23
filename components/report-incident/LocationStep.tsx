@@ -4,11 +4,11 @@ import { Card } from '../ui/Card';
 
 interface LocationStepProps {
   formData: {
-    streetAddress: string;
-    nearbyLandmark: string;
+    street_address: string;
+    nearby_landmark: string;
     city: string;
     province: string;
-    briefDescription: string;
+    brief_description: string;
   };
   onUpdateFormData: (updates: Partial<LocationStepProps['formData']>) => void;
   gpsLatitude: string;
@@ -38,13 +38,13 @@ export default function LocationStep({
           <Text className="mb-2 font-medium text-slate-700">Street Address</Text>
           <TextInput
             placeholder="Complete street address"
-            value={formData.streetAddress}
-            onChangeText={(value) => onUpdateFormData({ streetAddress: value })}
+            value={formData.street_address}
+            onChangeText={(value) => onUpdateFormData({ street_address: value })}
             className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
             placeholderTextColor="#9CA3AF"
           />
-          {validationErrors.streetAddress && (
-            <Text className="mt-1 text-sm text-red-600">{validationErrors.streetAddress}</Text>
+          {validationErrors.street_address && (
+            <Text className="mt-1 text-sm text-red-600">{validationErrors.street_address}</Text>
           )}
         </View>
 
@@ -53,8 +53,8 @@ export default function LocationStep({
           <Text className="mb-2 font-medium text-slate-700">Nearby Landmark</Text>
           <TextInput
             placeholder="Notable landmark or building"
-            value={formData.nearbyLandmark}
-            onChangeText={(value) => onUpdateFormData({ nearbyLandmark: value })}
+            value={formData.nearby_landmark}
+            onChangeText={(value) => onUpdateFormData({ nearby_landmark: value })}
             className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
             placeholderTextColor="#9CA3AF"
           />
@@ -114,16 +114,16 @@ export default function LocationStep({
           <Text className="mb-2 font-medium text-slate-700">Brief Description</Text>
           <TextInput
             placeholder="Provide a brief overview of what happened..."
-            value={formData.briefDescription}
-            onChangeText={(value) => onUpdateFormData({ briefDescription: value })}
+            value={formData.brief_description}
+            onChangeText={(value) => onUpdateFormData({ brief_description: value })}
             multiline
             numberOfLines={4}
             className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
             placeholderTextColor="#9CA3AF"
             textAlignVertical="top"
           />
-          {validationErrors.briefDescription && (
-            <Text className="mt-1 text-sm text-red-600">{validationErrors.briefDescription}</Text>
+          {validationErrors.brief_description && (
+            <Text className="mt-1 text-sm text-red-600">{validationErrors.brief_description}</Text>
           )}
         </View>
       </View>

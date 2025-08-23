@@ -7,26 +7,26 @@ import { Alert, View } from 'react-native';
 
 export function ExampleReport() {
   const [formData, setFormData] = useState<ReportData>({
-    incidentCategory: '',
-    incidentSubcategory: '',
-    incidentTitle: '',
-    incidentDate: '',
-    incidentTime: '',
-    streetAddress: '',
-    nearbyLandmark: '',
+    incident_category: '',
+    incident_subcategory: '',
+    incident_title: '',
+    incident_date: '',
+    incident_time: '',
+    street_address: '',
+    nearby_landmark: '',
     city: 'Tuguegarao City',
     province: 'Cagayan',
-    briefDescription: '',
-    whatHappened: '',
-    whoWasInvolved: '',
-    numberOfWitnesses: '',
-    injuriesReported: '',
-    propertyDamage: '',
-    suspectDescription: '',
-    witnessContactInfo: '',
-    requestFollowUp: true,
-    shareWithCommunity: false,
-    isAnonymous: false,
+    brief_description: '',
+    what_happened: '',
+    who_was_involved: '',
+    number_of_witnesses: '',
+    injuries_reported: '',
+    property_damage: '',
+    suspect_description: '',
+    witness_contact_info: '',
+    request_follow_up: true,
+    share_with_community: false,
+    is_anonymous: false,
   });
 
   const [submitting, setSubmitting] = useState(false);
@@ -51,13 +51,13 @@ export function ExampleReport() {
     <View>
       <TextInput
         label="Incident Title"
-        value={formData.incidentTitle}
-        onChangeText={(value) => updateFormData('incidentTitle', value)}
+        value={formData.incident_title}
+        onChangeText={(value) => updateFormData('incident_title', value)}
       />
       <TextInput
         label="What Happened"
-        value={formData.whatHappened}
-        onChangeText={(value) => updateFormData('whatHappened', value)}
+        value={formData.what_happened}
+        onChangeText={(value) => updateFormData('what_happened', value)}
       />
 
       <Button onPress={handleSubmit} label="Submit" loading={submitting} />

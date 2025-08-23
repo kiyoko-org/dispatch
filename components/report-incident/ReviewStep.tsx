@@ -4,8 +4,8 @@ import { Card } from '../ui/Card';
 
 interface ReviewStepProps {
   formData: {
-    requestFollowUp: boolean;
-    shareWithCommunity: boolean;
+    request_follow_up: boolean;
+    share_with_community: boolean;
   };
   uiState: {
     isSubmitting: boolean;
@@ -41,9 +41,9 @@ export default function ReviewStep({
                 <Text className="font-medium text-slate-700">Request follow-up updates</Text>
               </View>
               <TouchableOpacity
-                onPress={() => onUpdateFormData({ requestFollowUp: !formData.requestFollowUp })}
+                onPress={() => onUpdateFormData({ request_follow_up: !formData.request_follow_up })}
                 className={`h-6 w-12 items-center rounded-full px-1 ${
-                  formData.requestFollowUp
+                  formData.request_follow_up
                     ? 'justify-end bg-slate-600'
                     : 'justify-start bg-gray-300'
                 }`}>
@@ -66,10 +66,10 @@ export default function ReviewStep({
               </View>
               <TouchableOpacity
                 onPress={() =>
-                  onUpdateFormData({ shareWithCommunity: !formData.shareWithCommunity })
+                  onUpdateFormData({ share_with_community: !formData.share_with_community })
                 }
                 className={`h-6 w-12 items-center rounded-full px-1 ${
-                  formData.shareWithCommunity
+                  formData.share_with_community
                     ? 'justify-end bg-slate-600'
                     : 'justify-start bg-gray-300'
                 }`}>

@@ -6,11 +6,11 @@ import TimePicker from '../TimePicker';
 
 interface BasicInfoStepProps {
   formData: {
-    incidentCategory: string;
-    incidentSubcategory: string;
-    incidentTitle: string;
-    incidentDate: string;
-    incidentTime: string;
+    incident_category: string;
+    incident_subcategory: string;
+    incident_title: string;
+    incident_date: string;
+    incident_time: string;
   };
   onUpdateFormData: (updates: Partial<BasicInfoStepProps['formData']>) => void;
   onOpenDropdown: (dropdownType: 'category' | 'subcategory' | 'time') => void;
@@ -63,18 +63,18 @@ export default function BasicInfoStep({
           <TouchableOpacity
             onPress={() => onOpenDropdown('category')}
             className="flex-row items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3">
-            <Text className={formData.incidentCategory ? 'text-slate-900' : 'text-gray-500'}>
-              {formData.incidentCategory || 'Select incident category'}
+            <Text className={formData.incident_category ? 'text-slate-900' : 'text-gray-500'}>
+              {formData.incident_category || 'Select incident category'}
             </Text>
             <Text className="text-gray-400">▼</Text>
           </TouchableOpacity>
-          {validationErrors.incidentCategory && (
-            <Text className="mt-1 text-sm text-red-600">{validationErrors.incidentCategory}</Text>
+          {validationErrors.incident_category && (
+            <Text className="mt-1 text-sm text-red-600">{validationErrors.incident_category}</Text>
           )}
         </View>
 
         {/* Incident Subcategory */}
-        {formData.incidentCategory && (
+        {formData.incident_category && (
           <View>
             <Text className="mb-2 font-medium text-slate-700">
               Subcategory <Text className="text-red-600">*</Text>
@@ -82,8 +82,8 @@ export default function BasicInfoStep({
             <TouchableOpacity
               onPress={() => onOpenDropdown('subcategory')}
               className="flex-row items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3">
-              <Text className={formData.incidentSubcategory ? 'text-slate-900' : 'text-gray-500'}>
-                {formData.incidentSubcategory || 'Select subcategory'}
+              <Text className={formData.incident_subcategory ? 'text-slate-900' : 'text-gray-500'}>
+                {formData.incident_subcategory || 'Select subcategory'}
               </Text>
               <Text className="text-gray-400">▼</Text>
             </TouchableOpacity>
@@ -97,13 +97,13 @@ export default function BasicInfoStep({
           </Text>
           <TextInput
             placeholder="Brief, clear title describing the incident"
-            value={formData.incidentTitle}
-            onChangeText={(value) => onUpdateFormData({ incidentTitle: value })}
+            value={formData.incident_title}
+            onChangeText={(value) => onUpdateFormData({ incident_title: value })}
             className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
             placeholderTextColor="#9CA3AF"
           />
-          {validationErrors.incidentTitle && (
-            <Text className="mt-1 text-sm text-red-600">{validationErrors.incidentTitle}</Text>
+          {validationErrors.incident_title && (
+            <Text className="mt-1 text-sm text-red-600">{validationErrors.incident_title}</Text>
           )}
         </View>
 
@@ -114,16 +114,16 @@ export default function BasicInfoStep({
           </Text>
           <TouchableOpacity
             onPress={() => {
-              onUpdateFormData({ incidentDate: '08/15/2025' });
+              onUpdateFormData({ incident_date: '08/15/2025' });
             }}
             className="flex-row items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3">
-            <Text className={formData.incidentDate ? 'text-slate-900' : 'text-gray-500'}>
-              {formData.incidentDate || 'mm/dd/yyyy'}
+            <Text className={formData.incident_date ? 'text-slate-900' : 'text-gray-500'}>
+              {formData.incident_date || 'mm/dd/yyyy'}
             </Text>
             <Calendar size={20} color="#64748B" />
           </TouchableOpacity>
-          {validationErrors.incidentDate && (
-            <Text className="mt-1 text-sm text-red-600">{validationErrors.incidentDate}</Text>
+          {validationErrors.incident_date && (
+            <Text className="mt-1 text-sm text-red-600">{validationErrors.incident_date}</Text>
           )}
         </View>
 
@@ -135,13 +135,13 @@ export default function BasicInfoStep({
           <TouchableOpacity
             onPress={() => onOpenDropdown('time')}
             className="flex-row items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3">
-            <Text className={formData.incidentTime ? 'text-slate-900' : 'text-gray-500'}>
-              {formData.incidentTime || 'Select time'}
+            <Text className={formData.incident_time ? 'text-slate-900' : 'text-gray-500'}>
+              {formData.incident_time || 'Select time'}
             </Text>
             <Text className="text-gray-400">▼</Text>
           </TouchableOpacity>
-          {validationErrors.incidentTime && (
-            <Text className="mt-1 text-sm text-red-600">{validationErrors.incidentTime}</Text>
+          {validationErrors.incident_time && (
+            <Text className="mt-1 text-sm text-red-600">{validationErrors.incident_time}</Text>
           )}
         </View>
 
@@ -167,7 +167,7 @@ export default function BasicInfoStep({
         isVisible={showCategoryDropdown}
         onClose={() => onCloseDropdown('category')}
         onSelect={(item) =>
-          onUpdateFormData({ incidentCategory: item.name, incidentSubcategory: '' })
+          onUpdateFormData({ incident_category: item.name, incident_subcategory: '' })
         }
         data={incidentCategories}
         keyExtractor={(item) => item.name}
@@ -207,8 +207,8 @@ export default function BasicInfoStep({
       <Dropdown
         isVisible={showSubcategoryDropdown}
         onClose={() => onCloseDropdown('subcategory')}
-        onSelect={(item) => onUpdateFormData({ incidentSubcategory: item })}
-        data={subcategories[formData.incidentCategory as keyof typeof subcategories] || []}
+        onSelect={(item) => onUpdateFormData({ incident_subcategory: item })}
+        data={subcategories[formData.incident_category as keyof typeof subcategories] || []}
         keyExtractor={(item, index) => index.toString()}
         renderItem={({ item }) => (
           <View className="px-4 py-3">
@@ -221,7 +221,7 @@ export default function BasicInfoStep({
       <TimePicker
         isVisible={showTimePicker}
         onClose={() => onCloseDropdown('time')}
-        onSelectTime={(timeString) => onUpdateFormData({ incidentTime: timeString })}
+        onSelectTime={(timeString) => onUpdateFormData({ incident_time: timeString })}
         initialHour={selectedHour}
         initialMinute={selectedMinute}
         initialPeriod={selectedPeriod}

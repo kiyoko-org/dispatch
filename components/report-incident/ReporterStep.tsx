@@ -4,7 +4,7 @@ import { Card } from '../ui/Card';
 
 interface ReporterStepProps {
   formData: {
-    isAnonymous: boolean;
+    is_anonymous: boolean;
   };
   onUpdateFormData: (updates: Partial<ReporterStepProps['formData']>) => void;
 }
@@ -56,13 +56,13 @@ export default function ReporterStep({ formData, onUpdateFormData }: ReporterSte
             <Text className="font-medium text-slate-700">Submit as Anonymous Report</Text>
           </View>
           <TouchableOpacity
-            onPress={() => onUpdateFormData({ isAnonymous: !formData.isAnonymous })}
+            onPress={() => onUpdateFormData({ is_anonymous: !formData.is_anonymous })}
             className={`h-6 w-12 rounded-full ${
-              formData.isAnonymous ? 'bg-slate-600' : 'bg-gray-300'
+              formData.is_anonymous ? 'bg-slate-600' : 'bg-gray-300'
             }`}>
             <View
               className={`m-0.5 h-5 w-5 rounded-full bg-white ${
-                formData.isAnonymous ? 'ml-auto' : 'mr-auto'
+                formData.is_anonymous ? 'ml-auto' : 'mr-auto'
               }`}
             />
           </TouchableOpacity>

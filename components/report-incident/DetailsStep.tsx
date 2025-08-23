@@ -4,13 +4,13 @@ import { Card } from '../ui/Card';
 
 interface DetailsStepProps {
   formData: {
-    whatHappened: string;
-    whoWasInvolved: string;
-    numberOfWitnesses: string;
-    injuriesReported: string;
-    propertyDamage: string;
-    suspectDescription: string;
-    witnessContactInfo: string;
+    what_happened: string;
+    who_was_involved: string;
+    number_of_witnesses: string;
+    injuries_reported: string;
+    property_damage: string;
+    suspect_description: string;
+    witness_contact_info: string;
   };
   onUpdateFormData: (updates: Partial<DetailsStepProps['formData']>) => void;
   validationErrors: Record<string, string>;
@@ -38,16 +38,16 @@ export default function DetailsStep({
           </Text>
           <TextInput
             placeholder="Provide a detailed, chronological account of the incident. Include specific actions, times, and sequence of events..."
-            value={formData.whatHappened}
-            onChangeText={(value) => onUpdateFormData({ whatHappened: value })}
+            value={formData.what_happened}
+            onChangeText={(value) => onUpdateFormData({ what_happened: value })}
             multiline
             numberOfLines={4}
             className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
             placeholderTextColor="#9CA3AF"
             textAlignVertical="top"
           />
-          {validationErrors.whatHappened && (
-            <Text className="mt-1 text-sm text-red-600">{validationErrors.whatHappened}</Text>
+          {validationErrors.what_happened && (
+            <Text className="mt-1 text-sm text-red-600">{validationErrors.what_happened}</Text>
           )}
         </View>
 
@@ -56,8 +56,8 @@ export default function DetailsStep({
           <Text className="mb-2 font-medium text-slate-700">Who Was Involved?</Text>
           <TextInput
             placeholder="Describe people involved (suspects, victims, witnesses). Include physical descriptions, clothing, behavior, etc."
-            value={formData.whoWasInvolved}
-            onChangeText={(value) => onUpdateFormData({ whoWasInvolved: value })}
+            value={formData.who_was_involved}
+            onChangeText={(value) => onUpdateFormData({ who_was_involved: value })}
             multiline
             numberOfLines={4}
             className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
@@ -72,8 +72,8 @@ export default function DetailsStep({
             <Text className="mb-2 font-medium text-slate-700">Number of Witnesses</Text>
             <TextInput
               placeholder="Enter number"
-              value={formData.numberOfWitnesses}
-              onChangeText={(value) => onUpdateFormData({ numberOfWitnesses: value })}
+              value={formData.number_of_witnesses}
+              onChangeText={(value) => onUpdateFormData({ number_of_witnesses: value })}
               className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
               placeholderTextColor="#9CA3AF"
               keyboardType="numeric"
@@ -83,8 +83,8 @@ export default function DetailsStep({
             <Text className="mb-2 font-medium text-slate-700">Injuries Reported</Text>
             <TextInput
               placeholder="None, Minor, Serious"
-              value={formData.injuriesReported}
-              onChangeText={(value) => onUpdateFormData({ injuriesReported: value })}
+              value={formData.injuries_reported}
+              onChangeText={(value) => onUpdateFormData({ injuries_reported: value })}
               className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
               placeholderTextColor="#9CA3AF"
             />
@@ -96,8 +96,8 @@ export default function DetailsStep({
           <Text className="mb-2 font-medium text-slate-700">Property Damage</Text>
           <TextInput
             placeholder="Describe any property damage, estimated costs, affected items or structures..."
-            value={formData.propertyDamage}
-            onChangeText={(value) => onUpdateFormData({ propertyDamage: value })}
+            value={formData.property_damage}
+            onChangeText={(value) => onUpdateFormData({ property_damage: value })}
             multiline
             numberOfLines={3}
             className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
@@ -113,8 +113,8 @@ export default function DetailsStep({
           </Text>
           <TextInput
             placeholder="Physical description, clothing, vehicle"
-            value={formData.suspectDescription}
-            onChangeText={(value) => onUpdateFormData({ suspectDescription: value })}
+            value={formData.suspect_description}
+            onChangeText={(value) => onUpdateFormData({ suspect_description: value })}
             className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
             placeholderTextColor="#9CA3AF"
           />
@@ -125,8 +125,8 @@ export default function DetailsStep({
           <Text className="mb-2 font-medium text-slate-700">Witness Contact Information</Text>
           <TextInput
             placeholder="Names and contact information of witnesses (if available and consented)"
-            value={formData.witnessContactInfo}
-            onChangeText={(value) => onUpdateFormData({ witnessContactInfo: value })}
+            value={formData.witness_contact_info}
+            onChangeText={(value) => onUpdateFormData({ witness_contact_info: value })}
             multiline
             numberOfLines={3}
             className="rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"

@@ -7,7 +7,6 @@ import ReporterStep from 'components/report-incident/ReporterStep';
 import ReviewStep from 'components/report-incident/ReviewStep';
 
 import {
-  StyleSheet,
   Text,
   View,
   TouchableOpacity,
@@ -21,6 +20,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
 import { ReportData } from 'lib/types';
+import { reportService } from 'lib/services/reports';
 
 interface UIState {
   showCategoryDropdown: boolean;
@@ -44,32 +44,32 @@ export default function ReportIncidentIndex() {
   // Consolidated form data state - replaces 28 individual useState calls
   const [formData, setFormData] = useState<ReportData>({
     // Basic Information
-    incidentCategory: '',
-    incidentSubcategory: '',
-    incidentTitle: '',
-    incidentDate: '',
-    incidentTime: '',
+    incident_category: '',
+    incident_subcategory: '',
+    incident_title: '',
+    incident_date: '',
+    incident_time: '',
 
     // Location Information
-    streetAddress: '',
-    nearbyLandmark: '',
+    street_address: '',
+    nearby_landmark: '',
     city: 'Tuguegarao City',
     province: 'Cagayan',
-    briefDescription: '',
+    brief_description: '',
 
     // Detailed Information
-    whatHappened: '',
-    whoWasInvolved: '',
-    numberOfWitnesses: '',
-    injuriesReported: '',
-    propertyDamage: '',
-    suspectDescription: '',
-    witnessContactInfo: '',
+    what_happened: '',
+    who_was_involved: '',
+    number_of_witnesses: '',
+    injuries_reported: '',
+    property_damage: '',
+    suspect_description: '',
+    witness_contact_info: '',
 
     // Options
-    requestFollowUp: true,
-    shareWithCommunity: false,
-    isAnonymous: false,
+    request_follow_up: true,
+    share_with_community: false,
+    is_anonymous: false,
   });
 
   // UI state - separate from form data
@@ -106,20 +106,20 @@ export default function ReportIncidentIndex() {
     const errors: Record<string, string> = {};
 
     // Required field validations
-    if (!data.incidentCategory.trim()) {
-      errors.incidentCategory = 'Please select an incident category';
+    if (!data.incident_category.trim()) {
+      errors.incident_category = 'Please select an incident category';
     }
-    if (!data.incidentTitle.trim()) {
-      errors.incidentTitle = 'Please enter a title for the incident';
+    if (!data.incident_title.trim()) {
+      errors.incident_title = 'Please enter a title for the incident';
     }
-    if (!data.incidentDate.trim()) {
-      errors.incidentDate = 'Please select the incident date';
+    if (!data.incident_date.trim()) {
+      errors.incident_date = 'Please select the incident date';
     }
-    if (!data.incidentTime.trim()) {
-      errors.incidentTime = 'Please select the incident time';
+    if (!data.incident_time.trim()) {
+      errors.incident_time = 'Please select the incident time';
     }
-    if (!data.streetAddress.trim()) {
-      errors.streetAddress = 'Please enter the street address';
+    if (!data.street_address.trim()) {
+      errors.street_address = 'Please enter the street address';
     }
     if (!data.city.trim()) {
       errors.city = 'Please enter the city';
@@ -127,38 +127,38 @@ export default function ReportIncidentIndex() {
     if (!data.province.trim()) {
       errors.province = 'Please enter the province';
     }
-    if (!data.briefDescription.trim()) {
-      errors.briefDescription = 'Please provide a brief description';
+    if (!data.brief_description.trim()) {
+      errors.brief_description = 'Please provide a brief description';
     }
-    if (!data.whatHappened.trim()) {
-      errors.whatHappened = 'Please describe what happened';
+    if (!data.what_happened.trim()) {
+      errors.what_happened = 'Please describe what happened';
     }
 
     // Format validations using regex
     const dateRegex = /^(0[1-9]|1[0-2])\/(0[1-9]|[12][0-9]|3[01])\/\d{4}$/;
-    if (data.incidentDate && !dateRegex.test(data.incidentDate)) {
-      errors.incidentDate = 'Please enter date in MM/DD/YYYY format';
+    if (data.incident_date && !dateRegex.test(data.incident_date)) {
+      errors.incident_date = 'Please enter date in MM/DD/YYYY format';
     }
 
     const timeRegex = /^(0?[1-9]|1[0-2]):[0-5][0-9] (AM|PM)$/;
-    if (data.incidentTime && !timeRegex.test(data.incidentTime)) {
-      errors.incidentTime = 'Please enter time in HH:MM AM/PM format';
+    if (data.incident_time && !timeRegex.test(data.incident_time)) {
+      errors.incident_time = 'Please enter time in HH:MM AM/PM format';
     }
 
     // Length validations
-    if (data.incidentTitle.length > 100) {
-      errors.incidentTitle = 'Title must be 100 characters or less';
+    if (data.incident_title.length > 100) {
+      errors.incident_title = 'Title must be 100 characters or less';
     }
-    if (data.briefDescription.length > 500) {
-      errors.briefDescription = 'Brief description must be 500 characters or less';
+    if (data.brief_description.length > 500) {
+      errors.brief_description = 'Brief description must be 500 characters or less';
     }
-    if (data.whatHappened.length > 2000) {
-      errors.whatHappened = 'Description must be 2000 characters or less';
+    if (data.what_happened.length > 2000) {
+      errors.what_happened = 'Description must be 2000 characters or less';
     }
 
     // Numeric validations
-    if (data.numberOfWitnesses && isNaN(Number(data.numberOfWitnesses))) {
-      errors.numberOfWitnesses = 'Number of witnesses must be a valid number';
+    if (data.number_of_witnesses && isNaN(Number(data.number_of_witnesses))) {
+      errors.number_of_witnesses = 'Number of witnesses must be a valid number';
     }
 
     return errors;
@@ -292,6 +292,8 @@ export default function ReportIncidentIndex() {
     // Run validation first
     const errors = validateForm(formData);
 
+    console.error(errors);
+
     if (Object.keys(errors).length > 0) {
       updateUIState({ validationErrors: errors });
       Alert.alert('Validation Error', 'Please fix the errors in the form before submitting.', [
@@ -304,12 +306,24 @@ export default function ReportIncidentIndex() {
     updateUIState({ isSubmitting: true, validationErrors: {} });
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      // Prepare report data for API submission
+      const reportData: ReportData = {
+        ...formData,
+        // Add any additional fields if needed
+      };
 
+      // Call the report API to submit the incident report
+      const result = await reportService.addReport(reportData);
+
+      if (result.error) {
+        throw new Error(result.error.message || 'Failed to submit report');
+      }
+
+      // Success - show report ID in the success message
+      const reportId = result.data?.id;
       Alert.alert(
         'Report Submitted Successfully!',
-        'Your incident report has been submitted and will be reviewed by authorities within 24 hours.',
+        `Your incident report has been submitted${reportId ? ` with ID: ${reportId}` : ''}. It will be reviewed by authorities within 24 hours.`,
         [
           {
             text: 'OK',
@@ -318,9 +332,11 @@ export default function ReportIncidentIndex() {
         ]
       );
     } catch (error) {
+      console.error('Report submission error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
       Alert.alert(
         'Submission Error',
-        'There was an error submitting your report. Please try again.',
+        `There was an error submitting your report: ${errorMessage}. Please try again.`,
         [{ text: 'OK' }]
       );
     } finally {
@@ -349,11 +365,11 @@ export default function ReportIncidentIndex() {
             {/* Step 1: Basic Incident Information */}
             <BasicInfoStep
               formData={{
-                incidentCategory: formData.incidentCategory,
-                incidentSubcategory: formData.incidentSubcategory,
-                incidentTitle: formData.incidentTitle,
-                incidentDate: formData.incidentDate,
-                incidentTime: formData.incidentTime,
+                incident_category: formData.incident_category,
+                incident_subcategory: formData.incident_subcategory,
+                incident_title: formData.incident_title,
+                incident_date: formData.incident_date,
+                incident_time: formData.incident_time,
               }}
               onUpdateFormData={updateFormData}
               onOpenDropdown={openDropdown}
@@ -378,11 +394,11 @@ export default function ReportIncidentIndex() {
             {/* Step 2: Location Information */}
             <LocationStep
               formData={{
-                streetAddress: formData.streetAddress,
-                nearbyLandmark: formData.nearbyLandmark,
+                street_address: formData.street_address,
+                nearby_landmark: formData.nearby_landmark,
                 city: formData.city,
                 province: formData.province,
-                briefDescription: formData.briefDescription,
+                brief_description: formData.brief_description,
               }}
               onUpdateFormData={updateFormData}
               gpsLatitude={gpsLatitude}
@@ -393,13 +409,13 @@ export default function ReportIncidentIndex() {
             {/* Step 3: Detailed Incident Information */}
             <DetailsStep
               formData={{
-                whatHappened: formData.whatHappened,
-                whoWasInvolved: formData.whoWasInvolved,
-                numberOfWitnesses: formData.numberOfWitnesses,
-                injuriesReported: formData.injuriesReported,
-                propertyDamage: formData.propertyDamage,
-                suspectDescription: formData.suspectDescription,
-                witnessContactInfo: formData.witnessContactInfo,
+                what_happened: formData.what_happened,
+                who_was_involved: formData.who_was_involved,
+                number_of_witnesses: formData.number_of_witnesses,
+                injuries_reported: formData.injuries_reported,
+                property_damage: formData.property_damage,
+                suspect_description: formData.suspect_description,
+                witness_contact_info: formData.witness_contact_info,
               }}
               onUpdateFormData={updateFormData}
               validationErrors={uiState.validationErrors}
@@ -413,15 +429,15 @@ export default function ReportIncidentIndex() {
 
             {/* Reporter Information */}
             <ReporterStep
-              formData={{ isAnonymous: formData.isAnonymous }}
+              formData={{ is_anonymous: formData.is_anonymous }}
               onUpdateFormData={updateFormData}
             />
 
             {/* Review & Submit Options */}
             <ReviewStep
               formData={{
-                requestFollowUp: formData.requestFollowUp,
-                shareWithCommunity: formData.shareWithCommunity,
+                request_follow_up: formData.request_follow_up,
+                share_with_community: formData.share_with_community,
               }}
               uiState={{ isSubmitting: uiState.isSubmitting }}
               onUpdateFormData={updateFormData}
