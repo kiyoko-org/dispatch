@@ -1,1 +1,1 @@
-- [ ] report-incident - Remove report-date and time components (the data is still kept in the db
+- [X] report-incident - Remove report-date and time components (the data is still kept in the db
