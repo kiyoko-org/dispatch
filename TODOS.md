@@ -1,2 +1,2 @@
 - [X] report-incident - Remove report-date and time components (the data is still kept in the db
-- [ ] home - query recent reports from db
+- [X] home - query recent reports from db
