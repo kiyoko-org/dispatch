@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import { MapPin } from 'lucide-react-native';
 import { Card } from '../ui/Card';
 
@@ -11,17 +11,17 @@ interface LocationStepProps {
     brief_description: string;
   };
   onUpdateFormData: (updates: Partial<LocationStepProps['formData']>) => void;
-  gpsLatitude: string;
-  gpsLongitude: string;
   validationErrors: Record<string, string>;
+  onUseCurrentLocation: () => void;
+  isGettingLocation: boolean;
 }
 
 export default function LocationStep({
   formData,
   onUpdateFormData,
-  gpsLatitude,
-  gpsLongitude,
   validationErrors,
+  onUseCurrentLocation,
+  isGettingLocation,
 }: LocationStepProps) {
   return (
     <Card className="mb-5">
@@ -46,17 +46,30 @@ export default function LocationStep({
             placeholderTextColor="#9CA3AF"
           />
           {validationErrors.street_address && (
-            <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.street_address}</Text>
+            <Text className="mb-3 mt-1 text-sm text-red-600">
+              {validationErrors.street_address}
+            </Text>
           )}
         </View>
 
         {/* GPS Quick Action */}
-        <TouchableOpacity className="mb-3 flex-row items-center justify-between rounded-lg border border-gray-300 bg-gray-50 px-4 py-3">
+        <TouchableOpacity
+          onPress={onUseCurrentLocation}
+          disabled={isGettingLocation}
+          className="mb-3 flex-row items-center justify-between rounded-lg border border-gray-300 bg-gray-50 px-4 py-3"
+          activeOpacity={0.8}>
           <View className="flex-row items-center">
-            <MapPin size={16} color="#475569" className="mr-2" />
-            <Text className="font-medium text-slate-700">Use Current Location</Text>
+            {isGettingLocation ? (
+              <ActivityIndicator size="small" color="#475569" className="mr-2" />
+            ) : (
+              <MapPin size={16} color="#475569" className="mr-2" />
+            )}
+            <Text
+              className={`font-medium ${isGettingLocation ? 'text-slate-500' : 'text-slate-700'}`}>
+              {isGettingLocation ? 'Getting Location...' : 'Use Current Location'}
+            </Text>
           </View>
-          <Text className="text-slate-600 text-sm">→</Text>
+          <Text className="text-sm text-slate-600">{isGettingLocation ? '...' : '→'}</Text>
         </TouchableOpacity>
 
         {/* Area Details */}
@@ -74,7 +87,7 @@ export default function LocationStep({
                 placeholderTextColor="#9CA3AF"
               />
               {validationErrors.city && (
-                <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.city}</Text>
+                <Text className="mb-3 mt-1 text-sm text-red-600">{validationErrors.city}</Text>
               )}
             </View>
             <View className="flex-1">
@@ -89,11 +102,11 @@ export default function LocationStep({
                 placeholderTextColor="#9CA3AF"
               />
               {validationErrors.province && (
-                <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.province}</Text>
+                <Text className="mb-3 mt-1 text-sm text-red-600">{validationErrors.province}</Text>
               )}
             </View>
           </View>
-          
+
           <View>
             <Text className="mb-2 font-medium text-slate-700">Nearby Landmark</Text>
             <TextInput
@@ -122,7 +135,9 @@ export default function LocationStep({
             textAlignVertical="top"
           />
           {validationErrors.brief_description && (
-            <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.brief_description}</Text>
+            <Text className="mb-3 mt-1 text-sm text-red-600">
+              {validationErrors.brief_description}
+            </Text>
           )}
         </View>
       </View>
