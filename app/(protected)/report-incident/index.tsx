@@ -26,6 +26,7 @@ interface UIState {
   showCategoryDropdown: boolean;
   showSubcategoryDropdown: boolean;
   showTimePicker: boolean;
+  showDatePicker: boolean;
   showInjuriesDropdown: boolean;
   selectedHour: string;
   selectedMinute: string;
@@ -79,6 +80,7 @@ export default function ReportIncidentIndex() {
     showCategoryDropdown: false,
     showSubcategoryDropdown: false,
     showTimePicker: false,
+    showDatePicker: false,
     showInjuriesDropdown: false,
     selectedHour: '',
     selectedMinute: '',
@@ -241,13 +243,14 @@ export default function ReportIncidentIndex() {
   };
 
   // Function to handle dropdown opening - closes others automatically
-  const openDropdown = (dropdownType: 'category' | 'subcategory' | 'time' | 'injuries') => {
+  const openDropdown = (dropdownType: 'category' | 'subcategory' | 'time' | 'date' | 'injuries') => {
     if (dropdownType === 'category') {
       const newState = !uiState.showCategoryDropdown;
       updateUIState({
         showCategoryDropdown: newState,
         showSubcategoryDropdown: false,
         showTimePicker: false,
+        showDatePicker: false,
         showInjuriesDropdown: false,
       });
 
@@ -262,6 +265,7 @@ export default function ReportIncidentIndex() {
         showSubcategoryDropdown: newState,
         showCategoryDropdown: false,
         showTimePicker: false,
+        showDatePicker: false,
         showInjuriesDropdown: false,
       });
 
@@ -276,6 +280,22 @@ export default function ReportIncidentIndex() {
         showTimePicker: newState,
         showCategoryDropdown: false,
         showSubcategoryDropdown: false,
+        showDatePicker: false,
+        showInjuriesDropdown: false,
+      });
+
+      Animated.timing(dropdownAnim, {
+        toValue: newState ? 1 : 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    } else if (dropdownType === 'date') {
+      const newState = !uiState.showDatePicker;
+      updateUIState({
+        showDatePicker: newState,
+        showCategoryDropdown: false,
+        showSubcategoryDropdown: false,
+        showTimePicker: false,
         showInjuriesDropdown: false,
       });
 
@@ -291,6 +311,7 @@ export default function ReportIncidentIndex() {
         showCategoryDropdown: false,
         showSubcategoryDropdown: false,
         showTimePicker: false,
+        showDatePicker: false,
       });
 
       Animated.timing(dropdownAnim, {
@@ -393,9 +414,8 @@ export default function ReportIncidentIndex() {
     // Run validation first
     const errors = validateForm(formData);
 
-    console.error(errors);
-
     if (Object.keys(errors).length > 0) {
+      console.error(errors);
       updateUIState({ validationErrors: errors });
       Alert.alert('Validation Error', 'Please fix the errors in the form before submitting.', [
         { text: 'OK' },
@@ -479,10 +499,12 @@ export default function ReportIncidentIndex() {
               showCategoryDropdown={uiState.showCategoryDropdown}
               showSubcategoryDropdown={uiState.showSubcategoryDropdown}
               showTimePicker={uiState.showTimePicker}
+              showDatePicker={uiState.showDatePicker}
               onCloseDropdown={(type) => {
                 if (type === 'category') updateUIState({ showCategoryDropdown: false });
                 else if (type === 'subcategory') updateUIState({ showSubcategoryDropdown: false });
                 else if (type === 'time') updateUIState({ showTimePicker: false });
+                else if (type === 'date') updateUIState({ showDatePicker: false });
               }}
               selectedHour={uiState.selectedHour}
               selectedMinute={uiState.selectedMinute}
