@@ -3,6 +3,7 @@ import { Calendar } from 'lucide-react-native';
 import { Card } from '../ui/Card';
 import Dropdown from '../Dropdown';
 import TimePicker from '../TimePicker';
+import DatePicker from '../DatePicker';
 
 interface BasicInfoStepProps {
   formData: {
@@ -13,13 +14,14 @@ interface BasicInfoStepProps {
     incident_time: string;
   };
   onUpdateFormData: (updates: Partial<BasicInfoStepProps['formData']>) => void;
-  onOpenDropdown: (dropdownType: 'category' | 'subcategory' | 'time') => void;
+  onOpenDropdown: (dropdownType: 'category' | 'subcategory' | 'time' | 'date') => void;
   incidentCategories: Array<{ name: string; severity: string }>;
   subcategories: Record<string, string[]>;
   showCategoryDropdown: boolean;
   showSubcategoryDropdown: boolean;
   showTimePicker: boolean;
-  onCloseDropdown: (type: 'category' | 'subcategory' | 'time') => void;
+  showDatePicker: boolean;
+  onCloseDropdown: (type: 'category' | 'subcategory' | 'time' | 'date') => void;
   selectedHour: string;
   selectedMinute: string;
   selectedPeriod: string;
@@ -35,6 +37,7 @@ export default function BasicInfoStep({
   showCategoryDropdown,
   showSubcategoryDropdown,
   showTimePicker,
+  showDatePicker,
   onCloseDropdown,
   selectedHour,
   selectedMinute,
@@ -109,9 +112,7 @@ export default function BasicInfoStep({
             Incident Date <Text className="text-red-600">*</Text>
           </Text>
           <TouchableOpacity
-            onPress={() => {
-              onUpdateFormData({ incident_date: '08/15/2025' });
-            }}
+            onPress={() => onOpenDropdown('date')}
             className="mb-3 flex-row items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3">
             <Text className={formData.incident_date ? 'text-slate-900' : 'text-gray-500'}>
               {formData.incident_date || 'mm/dd/yyyy'}
@@ -207,6 +208,13 @@ export default function BasicInfoStep({
         initialHour={selectedHour}
         initialMinute={selectedMinute}
         initialPeriod={selectedPeriod}
+      />
+
+      <DatePicker
+        isVisible={showDatePicker}
+        onClose={() => onCloseDropdown('date')}
+        onSelectDate={(dateString) => onUpdateFormData({ incident_date: dateString })}
+        initialDate={formData.incident_date}
       />
     </Card>
   );
