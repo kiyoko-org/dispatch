@@ -1,6 +1,6 @@
 import { StatusBar, StyleSheet, Text, View, TouchableOpacity, TextInput, Alert, Animated } from 'react-native';
 import { Shield, AlertTriangle, Phone, MessageCircle, Video, X, User } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
 import { Container } from 'components/ui/Container';
 import { ScreenContent } from 'components/ui/ScreenContent';
@@ -9,10 +9,18 @@ import HeaderWithSidebar from 'components/HeaderWithSidebar';
 
 export default function EmergencyScreen() {
 	const router = useRouter()
+	const params = useLocalSearchParams()
 	const [emergencyNumber, setEmergencyNumber] = useState('')
 	const [emergencyProtocolActive, setEmergencyProtocolActive] = useState(false)
 	const [pressedButtons, setPressedButtons] = useState<Set<string>>(new Set())
 	const flashAnim = useRef(new Animated.Value(0)).current
+
+	// Handle prefilled number from navigation params
+	useEffect(() => {
+		if (params.prefilledNumber && typeof params.prefilledNumber === 'string') {
+			setEmergencyNumber(params.prefilledNumber)
+		}
+	}, [params.prefilledNumber])
 
 	useEffect(() => {
 		const flash = () => {
@@ -266,11 +274,11 @@ export default function EmergencyScreen() {
 					<Card className="mb-6">
 						<View className="space-y-4">
 							{dialPadNumbers.map((row, rowIndex) => (
-								<View key={rowIndex} className="flex-row justify-center space-x-4">
+								<View key={rowIndex} className="flex-row justify-center">
 									{row.map((number) => (
 										<TouchableOpacity
 											key={number}
-											className="w-16 h-16 items-center justify-center"
+											className="w-16 h-16 items-center justify-center mx-2"
 											onPress={() => handleNumberPress(number)}
 											activeOpacity={1}
 											onPressIn={() => handleButtonPressIn(`number-${number}`)}
@@ -289,7 +297,7 @@ export default function EmergencyScreen() {
 
 					{/* Call Type Icons */}
 					<Card className="mb-6">
-						<View className="flex-row justify-center space-x-8">
+						<View className="flex-row justify-center">
 							<TouchableOpacity
 								className="items-center"
 								activeOpacity={1}
@@ -297,12 +305,12 @@ export default function EmergencyScreen() {
 								onPressOut={() => handleButtonPressOut('message')}
 							>
 								<View
-									className="w-14 h-14 items-center justify-center mb-3"
+									className="w-14 h-14 items-center justify-center mx-3"
 									style={getActionButtonStyle('#3B82F6', '#60A5FA', pressedButtons.has('message'))}
 								>
 									<MessageCircle size={26} color="white" />
 								</View>
-								<Text className="text-sm text-gray-700 font-medium">Message</Text>
+								<Text className="text-sm text-gray-700 font-medium mt-2">Message</Text>
 							</TouchableOpacity>
 
 							<TouchableOpacity
@@ -313,12 +321,12 @@ export default function EmergencyScreen() {
 								onPressOut={() => handleButtonPressOut('call')}
 							>
 								<View
-									className="w-14 h-14 items-center justify-center mb-3"
+									className="w-14 h-14 items-center justify-center mx-3"
 									style={getActionButtonStyle('#10B981', '#34D399', pressedButtons.has('call'))}
 								>
 									<Phone size={26} color="white" />
 								</View>
-								<Text className="text-sm text-gray-700 font-medium">Call</Text>
+								<Text className="text-sm text-gray-700 font-medium mt-2">Call</Text>
 							</TouchableOpacity>
 
 							<TouchableOpacity
@@ -328,12 +336,12 @@ export default function EmergencyScreen() {
 								onPressOut={() => handleButtonPressOut('video')}
 							>
 								<View
-									className="w-14 h-14 items-center justify-center mb-3"
+									className="w-14 h-14 items-center justify-center mx-3"
 									style={getActionButtonStyle('#8B5CF6', '#A78BFA', pressedButtons.has('video'))}
 								>
 									<Video size={26} color="white" />
 								</View>
-								<Text className="text-sm text-gray-700 font-medium">Video</Text>
+								<Text className="text-sm text-gray-700 font-medium mt-2">Video</Text>
 							</TouchableOpacity>
 						</View>
 					</Card>
@@ -344,6 +352,7 @@ export default function EmergencyScreen() {
 						<TouchableOpacity
 							className="flex-row justify-between items-center py-4 px-4 bg-red-50 rounded-xl border border-red-200"
 							activeOpacity={1}
+							onPress={() => setEmergencyNumber('911')}
 							onPressIn={() => handleButtonPressIn('contact')}
 							onPressOut={() => handleButtonPressOut('contact')}
 							style={[

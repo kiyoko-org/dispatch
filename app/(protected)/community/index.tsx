@@ -77,11 +77,11 @@ export default function CommunityIndex() {
     },
     {
       service: 'Fire Department',
-      number: '911'
+      number: '9602955055'
     },
     {
       service: 'Ambulance',
-      number: '911'
+      number: '69420'
     }
   ];
 
@@ -99,6 +99,14 @@ export default function CommunityIndex() {
       action: 'Join'
     }
   ];
+
+  // Handler for emergency contact navigation
+  const handleEmergencyContactPress = (phoneNumber: string) => {
+    router.push({
+      pathname: '/(protected)/emergency',
+      params: { prefilledNumber: phoneNumber }
+    });
+  };
 
   // Forums Page Data
   const forumCategories = ['All', 'General', 'Safety', 'Events', 'Support', 'Ideas'];
@@ -228,10 +236,26 @@ export default function CommunityIndex() {
         
         <View className="space-y-3">
           {emergencyContacts.map((contact, index) => (
-            <View key={index} className="flex-row items-center justify-between py-2">
-              <Text className="text-slate-700 font-medium">{contact.service}</Text>
-              <Text className="text-slate-900 font-bold text-lg">{contact.number}</Text>
-            </View>
+            <TouchableOpacity 
+              key={index} 
+              className="flex-row items-center justify-between py-3 px-3 bg-red-50 rounded-xl border border-red-200"
+              onPress={() => handleEmergencyContactPress(contact.number)}
+              style={{
+                shadowColor: '#EF4444',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 4,
+              }}
+            >
+              <View className="flex-row items-center">
+                <View className="w-10 h-10 bg-red-100 rounded-full items-center justify-center mr-3">
+                  <Phone size={20} color="#DC2626" />
+                </View>
+                <Text className="text-slate-700 font-medium">{contact.service}</Text>
+              </View>
+              <Text className="text-red-600 font-bold text-lg">{contact.number}</Text>
+            </TouchableOpacity>
           ))}
         </View>
       </Card>
