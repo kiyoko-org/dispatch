@@ -181,16 +181,7 @@ export default function EmergencyScreen() {
 						</View>
 					</Card>
 
-					{/* Emergency Protocol Alert */}
-					{emergencyProtocolActive && (
-						<View className="bg-red-500 rounded-xl p-4 mb-6 flex-row items-center">
-							<AlertTriangle size={24} color="white" />
-							<View className="ml-3 flex-1">
-								<Text className="text-white font-bold text-lg">Emergency Protocol Active</Text>
-								<Text className="text-white text-sm">Tap 3 times to alert nearest authorities with your GPS location.</Text>
-							</View>
-						</View>
-					)}
+
 
 					{/* Emergency Button */}
 					<Animated.View
