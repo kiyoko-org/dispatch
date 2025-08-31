@@ -3,6 +3,7 @@ import { MapPin } from 'lucide-react-native';
 import { Card } from '../ui/Card';
 import { Camera, MapView, MarkerView } from '@maplibre/maplibre-react-native';
 import { useState } from 'react';
+import { reverseGeocodeAsync } from 'expo-location';
 
 interface LocationStepProps {
 	formData: {
@@ -27,9 +28,47 @@ export default function LocationStep({
 	onUseCurrentLocation,
 	isGettingLocation,
 }: LocationStepProps) {
-
 	const [coordinate, setCoordinate] = useState<number[]>([121.6765444, 17.6028048]);
-	const [zoom, setZoom] = useState<number>(8)
+	const [zoom, setZoom] = useState<number>(8);
+	const [controller, setController] = useState<AbortController | null>(null);
+	const [isFetchingAddress, setIsFetchingAddress] = useState<boolean>(false);
+
+	function handleMapOnPress(lat: number, lon: number) {
+		setCoordinate([lon, lat]);
+
+		if (controller) {
+			controller.abort()
+		}
+
+		const newController = new AbortController();
+		setController(newController);
+
+		setIsFetchingAddress(true)
+
+		reverseGeocodeAsync({
+			latitude: lat,
+			longitude: lon,
+		}).then((address) => {
+			if (!newController.signal.aborted) {
+				onUpdateFormData({
+					latitude: lat,
+					longitude: lon,
+					street_address: address[0]?.street ? `${address[0].street} ${address[0].name}` : address[0]?.name || '',
+					city: address[0]?.city || address[0]?.region || '',
+					province: address[0]?.region || '',
+				})
+
+				setIsFetchingAddress(false)
+			}
+		}).catch((error) => {
+			if (!newController.signal.aborted) {
+				console.error("Reverse geocoding error:", error);
+				setIsFetchingAddress(false)
+			}
+		})
+	}
+
+
 
 	return (
 		<Card className="mb-5">
@@ -38,6 +77,8 @@ export default function LocationStep({
 					<MapPin size={20} color="#475569" />
 				</View>
 				<Text className="text-xl font-bold text-slate-900">Location Information</Text>
+				<View className='flex-1'/>
+				<ActivityIndicator animating={isFetchingAddress} />
 			</View>
 
 			<View className="space-y-4">
@@ -46,17 +87,25 @@ export default function LocationStep({
 					<Text className="mb-2 font-medium text-slate-700">
 						Where did this happen? <Text className="text-red-600">*</Text>
 					</Text>
-					<View className='' style={{ height: 200, borderRadius: 12, overflow: 'hidden', marginBottom: 16 }}>
-						<MapView onPress={it => {
-							if (it.type == 'Feature') {
-								setCoordinate(it.geometry.coordinates as [number, number]);
-							}
-						}} style={{ flex: 1 }} mapStyle={"https://tiles.openfreemap.org/styles/liberty"} >
-							{coordinate &&
+					<View
+						className=""
+						style={{ height: 200, borderRadius: 12, overflow: 'hidden', marginBottom: 16 }}>
+						<MapView
+							onPress={(it) => {
+								if (it.type == 'Feature' && it.geometry.type === 'Point') {
+									handleMapOnPress(it.geometry.coordinates[1], it.geometry.coordinates[0])
+								}
+							}}
+							onRegionDidChange={(it) => {
+								setZoom(it.properties.zoomLevel);
+							}}
+							style={{ flex: 1 }}
+							mapStyle={'https://tiles.openfreemap.org/styles/liberty'}>
+							{coordinate && (
 								<MarkerView coordinate={coordinate}>
 									<MapPin size={24} color={'red'} />
 								</MarkerView>
-							}
+							)}
 							<Camera zoomLevel={zoom} centerCoordinate={coordinate} />
 						</MapView>
 					</View>
