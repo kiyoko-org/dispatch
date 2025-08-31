@@ -8,6 +8,8 @@ interface LocationStepProps {
     nearby_landmark: string;
     city: string;
     province: string;
+    latitude?: number;
+    longitude?: number;
     brief_description: string;
   };
   onUpdateFormData: (updates: Partial<LocationStepProps['formData']>) => void;
