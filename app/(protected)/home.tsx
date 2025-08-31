@@ -7,6 +7,7 @@ import {
   AlertTriangle,
   Bell,
   Users,
+  User,
   Search,
   Coins,
   Newspaper,
@@ -370,12 +371,13 @@ export default function Home() {
 
             <TouchableOpacity
               className="rounded-lg border border-gray-200 bg-gray-50 p-4 sm:p-5"
-              style={{ width: '31%' }}>
+              style={{ width: '31%' }}
+              onPress={() => router.push('/profile')}>
               <View className="items-center">
                 <View className="mb-3 h-10 w-10 items-center justify-center rounded-lg bg-slate-100 sm:h-12 sm:w-12">
-                  <MapPin size={24} color="#475569" />
+                  <User size={24} color="#475569" />
                 </View>
-                <Text className="text-center text-sm font-semibold text-slate-700">Cases</Text>
+                <Text className="text-center text-sm font-semibold text-slate-700">Profile</Text>
               </View>
             </TouchableOpacity>
           </View>

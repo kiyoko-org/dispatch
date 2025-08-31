@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Animated, Dimensions } from 'react-native';
-import { 
-  ArrowLeft, 
-  User, 
+import {
+  ArrowLeft,
+  User,
   Home,
   AlertTriangle,
   FileText,
@@ -12,10 +12,10 @@ import {
   Coins,
   Newspaper,
   MapPin,
-  Settings,
   LogOut
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
+import { useTheme } from './ThemeContext';
 
 interface HeaderWithSidebarProps {
   title: string;
@@ -41,6 +41,7 @@ export default function HeaderWithSidebar({
   logoutPressed,
 }: HeaderWithSidebarProps) {
   const router = useRouter();
+  const { colors } = useTheme();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const sidebarAnim = useRef(new Animated.Value(-300)).current;
@@ -161,19 +162,13 @@ export default function HeaderWithSidebar({
       ]
     },
     {
-      title: 'Profile Settings & Logout',
+      title: 'Profile & Logout',
       items: [
         {
           id: 'profile',
           label: 'Profile',
           icon: User,
-          route: null
-        },
-        {
-          id: 'settings',
-          label: 'Settings',
-          icon: Settings,
-          route: null
+          route: '/(protected)/profile'
         },
         {
           id: 'logout',
@@ -219,61 +214,92 @@ export default function HeaderWithSidebar({
   return (
     <>
       {/* Header */}
-      <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
+      <Animated.View
+        style={[
+          styles.header,
+          {
+            opacity: fadeAnim,
+            backgroundColor: colors.surface,
+            borderBottomColor: colors.border,
+          }
+        ]}
+      >
         <View className="w-full flex-row items-center px-6">
           {/* User Profile / Sidebar Button - Moved to Left */}
           <TouchableOpacity
             onPress={toggleSidebar}
-            className="h-10 w-10 items-center justify-center rounded-full bg-blue-600 mr-4"
+            className="h-10 w-10 items-center justify-center rounded-full mr-4"
+            style={{ backgroundColor: colors.primary }}
             activeOpacity={0.7}>
-            <User size={20} color="white" />
+            <User size={20} color={colors.surface} />
           </TouchableOpacity>
 
           <View className="flex-1 flex-row items-center">
             {showBackButton && (
               <TouchableOpacity
                 onPress={handleBackPress}
-                className="mr-4 h-10 w-10 items-center justify-center rounded-lg bg-gray-100"
+                className="mr-4 h-10 w-10 items-center justify-center rounded-lg"
+                style={{ backgroundColor: colors.surfaceVariant }}
                 activeOpacity={0.7}>
-                <ArrowLeft size={20} color="#374151" />
+                <ArrowLeft size={20} color={colors.text} />
               </TouchableOpacity>
             )}
-            <Text className="flex-1 text-xl font-bold text-slate-900">{title}</Text>
+            <Text
+              className="flex-1 text-xl font-bold"
+              style={{ color: colors.text }}
+            >
+              {title}
+            </Text>
           </View>
         </View>
       </Animated.View>
 
       {/* Step Progress Indicator - Below Header */}
       {showStepProgress && stepProgressData && (
-        <Animated.View style={[{ opacity: fadeAnim }, styles.stepProgress]}>
+        <Animated.View
+          style={[
+            { opacity: fadeAnim },
+            styles.stepProgress,
+            {
+              backgroundColor: colors.surface,
+              borderBottomColor: colors.border,
+            }
+          ]}
+        >
           <View className="flex-row items-center px-6 py-3">
             {stepProgressData.steps.map((step, index) => (
               <View key={step.number} className="mr-4 flex-row items-center">
                 <View
-                  className={`h-6 w-6 items-center justify-center rounded-full ${
-                    step.status === 'completed'
-                      ? 'bg-green-600'
+                  className="h-6 w-6 items-center justify-center rounded-full"
+                  style={{
+                    backgroundColor: step.status === 'completed'
+                      ? colors.success
                       : step.status === 'active'
-                        ? 'bg-blue-600'
-                        : 'bg-gray-300'
-                  }`}>
+                        ? colors.primary
+                        : colors.surfaceVariant
+                  }}
+                >
                   <Text
-                    className={`text-xs font-bold ${
-                      step.status === 'completed' || step.status === 'active'
-                        ? 'text-white'
-                        : 'text-gray-600'
-                    }`}>
+                    className="text-xs font-bold"
+                    style={{
+                      color: step.status === 'completed' || step.status === 'active'
+                        ? colors.surface
+                        : colors.textSecondary
+                    }}
+                  >
                     {step.number}
                   </Text>
                 </View>
                 <Text
-                  className={`ml-1 text-xs font-medium ${
-                    step.status === 'completed'
-                      ? 'text-green-600'
+                  className="ml-1 text-xs font-medium"
+                  style={{
+                    color: step.status === 'completed'
+                      ? colors.success
                       : step.status === 'active'
-                        ? 'text-blue-600'
-                        : 'text-gray-500'
-                  }`}>
+                        ? colors.primary
+                        : colors.textSecondary
+                  }}
+                >
                   {step.label}
                 </Text>
               </View>
@@ -284,7 +310,11 @@ export default function HeaderWithSidebar({
 
       {/* Sidebar Overlay */}
       {isSidebarOpen && (
-        <TouchableOpacity style={styles.overlay} onPress={closeSidebar} activeOpacity={1} />
+        <TouchableOpacity
+          style={[styles.overlay, { backgroundColor: colors.overlay }]}
+          onPress={closeSidebar}
+          activeOpacity={1}
+        />
       )}
 
       {/* Sidebar */}
@@ -294,14 +324,28 @@ export default function HeaderWithSidebar({
           {
             transform: [{ translateX: sidebarAnim }],
             zIndex: 1000,
+            backgroundColor: colors.surface,
           },
         ]}>
-        <View className="border-b border-gray-200 p-4 mb-4">
+        <View
+          className="p-4 mb-4"
+          style={{ borderBottomColor: colors.border, borderBottomWidth: 1 }}
+        >
           <View className="flex-row items-center">
-            <Shield size={24} color="#1E40AF" />
+            <Shield size={24} color={colors.primary} />
             <View className="ml-3">
-              <Text className="text-lg font-bold text-slate-900">DISPATCH</Text>
-              <Text className="text-xs text-slate-600">Security Suite</Text>
+              <Text
+                className="text-lg font-bold"
+                style={{ color: colors.text }}
+              >
+                DISPATCH
+              </Text>
+              <Text
+                className="text-xs"
+                style={{ color: colors.textSecondary }}
+              >
+                Security Suite
+              </Text>
             </View>
           </View>
         </View>
@@ -311,10 +355,18 @@ export default function HeaderWithSidebar({
           {navigationSections.map((section, sectionIndex) => (
             <View key={section.title} className="mb-4">
               {/* Section Separator */}
-              {sectionIndex > 0 && <View className="h-px bg-gray-200 mx-4 mb-4" />}
-              
+              {sectionIndex > 0 && (
+                <View
+                  className="h-px mx-4 mb-4"
+                  style={{ backgroundColor: colors.border }}
+                />
+              )}
+
               {/* Section Title */}
-              <Text className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3 mx-4">
+              <Text
+                className="text-xs font-semibold uppercase tracking-wider mb-3 mx-4"
+                style={{ color: colors.textSecondary }}
+              >
                 {section.title}
               </Text>
               
@@ -324,26 +376,42 @@ export default function HeaderWithSidebar({
                   <TouchableOpacity
                     key={item.id}
                     className="flex-row items-center px-3 py-3 rounded-lg mb-1 mx-2"
+                    style={{
+                      backgroundColor: (!item.route && item.id !== 'logout')
+                        ? colors.surfaceVariant
+                        : 'transparent'
+                    }}
                     onPress={() => handleSidebarNavigation(item.id)}
                     disabled={!item.route && item.id !== 'logout'}
                   >
                     <item.icon
                       size={20}
-                      color={(!item.route && item.id !== 'logout') ? '#9CA3AF' : '#475569'}
+                      color={(!item.route && item.id !== 'logout')
+                        ? colors.textSecondary
+                        : item.id === 'logout'
+                          ? colors.error
+                          : colors.text
+                      }
                     />
                     <Text
-                      className={`ml-3 font-medium ${
-                        (!item.route && item.id !== 'logout') 
-                          ? 'text-gray-400' 
+                      className="ml-3 font-medium"
+                      style={{
+                        color: (!item.route && item.id !== 'logout')
+                          ? colors.textSecondary
                           : item.id === 'logout'
-                            ? 'text-red-600'
-                            : 'text-slate-700'
-                      }`}
+                            ? colors.error
+                            : colors.text
+                      }}
                     >
                       {item.label}
                     </Text>
                     {(!item.route && item.id !== 'logout') && (
-                      <Text className="ml-auto text-xs text-gray-400">Soon</Text>
+                      <Text
+                        className="ml-auto text-xs"
+                        style={{ color: colors.textSecondary }}
+                      >
+                        Soon
+                      </Text>
                     )}
                   </TouchableOpacity>
                 ))}
@@ -353,14 +421,30 @@ export default function HeaderWithSidebar({
         </View>
 
         {/* User Profile Footer */}
-        <View className="p-4 border-t border-gray-200">
+        <View
+          className="p-4"
+          style={{ borderTopColor: colors.border, borderTopWidth: 1 }}
+        >
           <View className="flex-row items-center">
-            <View className="w-10 h-10 bg-blue-600 rounded-full items-center justify-center">
-              <User size={20} color="white" />
+            <View
+              className="w-10 h-10 rounded-full items-center justify-center"
+              style={{ backgroundColor: colors.primary }}
+            >
+              <User size={20} color={colors.surface} />
             </View>
             <View className="ml-3">
-              <Text className="text-sm font-medium text-slate-900">Juan Dela Cruz</Text>
-              <Text className="text-xs text-slate-500">Trust Score: 87%</Text>
+              <Text
+                className="text-sm font-medium"
+                style={{ color: colors.text }}
+              >
+                Juan Dela Cruz
+              </Text>
+              <Text
+                className="text-xs"
+                style={{ color: colors.textSecondary }}
+              >
+                Trust Score: 87%
+              </Text>
             </View>
           </View>
         </View>
@@ -373,9 +457,7 @@ const styles = StyleSheet.create({
   header: {
     padding: 20,
     width: '100%',
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -383,9 +465,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   stepProgress: {
-    backgroundColor: 'white',
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
   },
   overlay: {
     position: 'absolute',
@@ -393,7 +473,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     zIndex: 999,
   },
   sidebar: {
@@ -402,7 +481,6 @@ const styles = StyleSheet.create({
     left: 0,
     width: 300,
     height: '100%',
-    backgroundColor: 'white',
     shadowColor: '#000',
     shadowOffset: { width: 2, height: 0 },
     shadowOpacity: 0.25,
