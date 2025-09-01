@@ -653,8 +653,7 @@ export default function Home() {
                 borderColor: currentColors.cardBorder,
                 backgroundColor: currentColors.cardBg,
                 padding: 16
-              }}
-              onPress={() => router.push('/profile')}>
+              }}>
               <View style={{ alignItems: 'center' }}>
                 <View style={{ 
                   marginBottom: 12, 
@@ -665,9 +664,9 @@ export default function Home() {
                   borderRadius: 8, 
                   backgroundColor: currentColors.cardIconBg 
                 }}>
-                  <User size={24} color={currentColors.cardIcon} />
+                  <FileText size={24} color={currentColors.cardIcon} />
                 </View>
-                <Text style={{ textAlign: 'center', fontSize: 14, fontWeight: '600', color: currentColors.cardText }}>Profile</Text>
+                <Text style={{ textAlign: 'center', fontSize: 14, fontWeight: '600', color: currentColors.cardText }}>Cases</Text>
               </View>
             </TouchableOpacity>
           </View>

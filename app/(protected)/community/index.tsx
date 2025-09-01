@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, ScrollView, StatusBar, TextInput } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StatusBar, TextInput, Alert } from 'react-native';
 import { 
   MapPin, 
   Bell, 
@@ -7,18 +7,22 @@ import {
   Scale,
   Phone,
   Plus,
-  Search
+  Search,
+  Trash2
 } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { Card } from 'components/ui/Card';
 import HeaderWithSidebar from 'components/HeaderWithSidebar';
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+import { ContactsService } from 'lib/services/contacts';
+import { EmergencyContact } from 'lib/types';
 
 export default function CommunityIndex() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState('Watch');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeForumCategory, setActiveForumCategory] = useState('All');
+  const [communityContacts, setCommunityContacts] = useState<EmergencyContact[]>([]);
 
   // Watch Page Data
   const recentActivities = [
@@ -84,6 +88,53 @@ export default function CommunityIndex() {
       number: '69420'
     }
   ];
+
+  // Load community contacts when component mounts
+  const loadCommunityContacts = useCallback(async () => {
+    const contacts = await ContactsService.getContacts('community');
+    setCommunityContacts(contacts);
+  }, []);
+
+  // Refresh contacts when screen comes into focus or when Resources tab is active
+  useFocusEffect(
+    useCallback(() => {
+      loadCommunityContacts();
+    }, [loadCommunityContacts])
+  );
+
+  // Also load contacts when Resources tab becomes active
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    if (tab === 'Resources') {
+      loadCommunityContacts();
+    }
+  };
+
+  const handleDeleteCommunityContact = (contactId: string, phoneNumber: string) => {
+    Alert.alert(
+      "Delete Contact",
+      `Are you sure you want to remove ${phoneNumber} from Community Resources?`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            const success = await ContactsService.deleteContact(contactId, 'community');
+            if (success) {
+              loadCommunityContacts(); // Refresh the contacts list
+              Alert.alert("Contact Deleted", `${phoneNumber} has been removed from Community Resources.`);
+            } else {
+              Alert.alert("Error", "There was an error deleting the contact.");
+            }
+          }
+        }
+      ]
+    );
+  };
 
   const communityGroups = [
     {
@@ -235,9 +286,10 @@ export default function CommunityIndex() {
         </View>
         
         <View className="space-y-3">
+          {/* Default Emergency Services */}
           {emergencyContacts.map((contact, index) => (
             <TouchableOpacity 
-              key={index} 
+              key={`default-${index}`} 
               className="flex-row items-center justify-between py-3 px-3 bg-red-50 rounded-xl border border-red-200"
               onPress={() => handleEmergencyContactPress(contact.number)}
               style={{
@@ -256,6 +308,32 @@ export default function CommunityIndex() {
               </View>
               <Text className="text-red-600 font-bold text-lg">{contact.number}</Text>
             </TouchableOpacity>
+          ))}
+          
+          {/* Community Saved Contacts */}
+          {communityContacts.map((contact) => (
+            <View key={`community-${contact.id}`} className="flex-row items-center justify-between py-3 px-3 bg-blue-50 rounded-xl border border-blue-200">
+              <TouchableOpacity
+                className="flex-1 flex-row items-center"
+                onPress={() => handleEmergencyContactPress(contact.phoneNumber)}
+                activeOpacity={0.7}
+              >
+                <View className="w-10 h-10 bg-blue-100 rounded-full items-center justify-center mr-3">
+                  <Phone size={20} color="#3B82F6" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-slate-700 font-medium">{contact.name || 'Community Contact'}</Text>
+                  <Text className="text-blue-600 font-bold text-lg">{contact.phoneNumber}</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                className="ml-3 p-2"
+                onPress={() => handleDeleteCommunityContact(contact.id, contact.phoneNumber)}
+                activeOpacity={0.7}
+              >
+                <Trash2 size={18} color="#3B82F6" />
+              </TouchableOpacity>
+            </View>
           ))}
         </View>
       </Card>
@@ -382,7 +460,7 @@ export default function CommunityIndex() {
             className={`flex-1 rounded-lg py-3 px-2 mr-2 items-center ${
               activeTab === 'Watch' ? 'bg-yellow-500' : 'bg-gray-200'
             }`}
-            onPress={() => setActiveTab('Watch')}
+            onPress={() => handleTabChange('Watch')}
           >
             <Text className={`font-semibold text-sm ${
               activeTab === 'Watch' ? 'text-slate-900' : 'text-slate-600'
@@ -394,7 +472,7 @@ export default function CommunityIndex() {
             className={`flex-1 rounded-lg py-3 px-2 mx-1 items-center ${
               activeTab === 'Resources' ? 'bg-yellow-500' : 'bg-gray-200'
             }`}
-            onPress={() => setActiveTab('Resources')}
+            onPress={() => handleTabChange('Resources')}
           >
             <Text className={`font-semibold text-sm ${
               activeTab === 'Resources' ? 'text-slate-900' : 'text-slate-600'
@@ -406,7 +484,7 @@ export default function CommunityIndex() {
             className={`flex-1 rounded-lg py-3 px-2 ml-2 items-center ${
               activeTab === 'Forums' ? 'bg-yellow-500' : 'bg-gray-200'
             }`}
-            onPress={() => setActiveTab('Forums')}
+            onPress={() => handleTabChange('Forums')}
           >
             <Text className={`font-semibold text-sm ${
               activeTab === 'Forums' ? 'text-slate-900' : 'text-slate-600'

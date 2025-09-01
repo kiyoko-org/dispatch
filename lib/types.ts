@@ -31,3 +31,14 @@ export interface ReportData {
   share_with_community: boolean;
   is_anonymous: boolean;
 }
+
+// Emergency Contact types
+export interface EmergencyContact {
+  id: string;
+  name?: string;
+  phoneNumber: string;
+  type: 'quick' | 'community';
+  createdAt: string;
+}
+
+export type ContactStorageType = 'quick' | 'community';
