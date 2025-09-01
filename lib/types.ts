@@ -15,6 +15,8 @@ export interface ReportData {
   nearby_landmark: string;
   city: string;
   province: string;
+  latitude?: number;
+  longitude?: number;
   brief_description: string;
 
   // Detailed Information
