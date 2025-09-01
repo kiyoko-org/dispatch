@@ -31,6 +31,7 @@ import {
   Palette,
   Sun,
   Smartphone,
+  RotateCcw,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useAuthContext } from 'components/AuthProvider';
@@ -657,12 +658,31 @@ export default function ProfilePage() {
             borderWidth: 1,
           }}
         >
-          <Text
-            className="text-xl font-bold mb-2"
-            style={{ color: colors.text }}
-          >
-            Color Theme
-          </Text>
+          <View className="flex-row items-center justify-between mb-2">
+            <Text
+              className="text-xl font-bold"
+              style={{ color: colors.text }}
+            >
+              Color Theme
+            </Text>
+            <TouchableOpacity
+              onPress={() => setSelectedColorTheme('blue')}
+              className="flex-row items-center px-3 py-2 rounded-lg"
+              style={{
+                backgroundColor: colors.primaryLight,
+                borderWidth: 1,
+                borderColor: colors.primary,
+              }}
+            >
+              <RotateCcw size={16} color={colors.primary} />
+              <Text
+                className="ml-2 text-sm font-medium"
+                style={{ color: colors.primary }}
+              >
+                Reset to Default
+              </Text>
+            </TouchableOpacity>
+          </View>
           <Text
             className="mb-6"
             style={{ color: colors.textSecondary }}

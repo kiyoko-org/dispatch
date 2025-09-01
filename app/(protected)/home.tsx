@@ -19,10 +19,44 @@ import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback } from 'react';
 import HeaderWithSidebar from '../../components/HeaderWithSidebar';
 import { useAuthContext } from 'components/AuthProvider';
+import { useTheme } from 'components/ThemeContext';
 import { useEffect, useState } from 'react';
 import { supabase } from 'lib/supabase';
 import { db, Report } from 'lib/database';
 import Splash from 'components/ui/Splash';
+
+// Default theme colors (current design)
+const defaultColors = {
+  headerBg: '#1E293B', // slate-800
+  headerText: '#FFFFFF',
+  headerSubtext: '#CBD5E1', // slate-300
+  headerCardBg: 'rgba(255, 255, 255, 0.1)',
+  headerCardBorder: 'rgba(255, 255, 255, 0.2)',
+  headerCardIconBg: 'rgba(255, 255, 255, 0.2)',
+  headerCardIcon: '#E2E8F0',
+  headerTagBg: '#475569', // slate-600
+  headerProgressBg: 'rgba(255, 255, 255, 0.2)',
+  headerProgressFill: '#94A3B8', // slate-400
+  sectionHeading: '#1E293B', // slate-900
+  cardBg: '#F8FAFC', // gray-50
+  cardBorder: '#E2E8F0', // gray-200
+  cardIconBg: '#F1F5F9', // slate-100
+  cardIcon: '#475569',
+  cardText: '#1E293B', // slate-900
+  cardSubtext: '#64748B', // slate-600
+  emergencyRed: '#DC2626', // red-700
+  emergencyRedLight: '#EF4444', // red-600
+  emergencyText: '#FFFFFF',
+  emergencyIconBg: 'rgba(255, 255, 255, 0.2)',
+  reportBg: '#374151', // slate-700
+  reportBorder: 'rgba(75, 85, 99, 0.2)',
+  reportText: '#FFFFFF',
+  reportIconBg: 'rgba(255, 255, 255, 0.2)',
+  background: '#FFFFFF',
+  statusBarStyle: 'dark-content' as const,
+  primary: '#3B82F6', // blue-500
+  primaryLight: '#DBEAFE', // blue-100
+};
 
 type Profile = {
   first_name: string;
@@ -31,10 +65,51 @@ type Profile = {
 export default function Home() {
   const router = useRouter();
   const { session, signOut } = useAuthContext();
+  const { colors, selectedColorTheme, setSelectedColorTheme, isDark } = useTheme();
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<Profile>();
   const [recentReports, setRecentReports] = useState<Report[]>([]);
   const [reportsLoading, setReportsLoading] = useState(false);
+
+  // Get current theme colors or fall back to default
+  const getCurrentColors = () => {
+    if (selectedColorTheme === 'blue' && !isDark) {
+      return defaultColors;
+    }
+    return {
+      headerBg: colors.surface,
+      headerText: colors.text,
+      headerSubtext: colors.textSecondary,
+      headerCardBg: colors.surfaceVariant,
+      headerCardBorder: colors.border,
+      headerCardIconBg: colors.primaryLight,
+      headerCardIcon: colors.primary,
+      headerTagBg: colors.primary,
+      headerProgressBg: colors.surfaceVariant,
+      headerProgressFill: colors.primary,
+      sectionHeading: colors.text,
+      cardBg: colors.card,
+      cardBorder: colors.border,
+      cardIconBg: colors.surfaceVariant,
+      cardIcon: colors.textSecondary,
+      cardText: colors.text,
+      cardSubtext: colors.textSecondary,
+      emergencyRed: colors.error,
+      emergencyRedLight: colors.error,
+      emergencyText: colors.card,
+      emergencyIconBg: colors.overlay,
+      reportBg: colors.surface,
+      reportBorder: colors.border,
+      reportText: colors.text,
+      reportIconBg: colors.surfaceVariant,
+      background: colors.background,
+      statusBarStyle: isDark ? 'light-content' as const : 'dark-content' as const,
+      primary: colors.primary,
+      primaryLight: colors.primaryLight,
+    };
+  };
+
+  const currentColors = getCurrentColors();
 
   const handleLogout = () => {
     // TODO: add a loading indicator when signingout
@@ -152,8 +227,8 @@ export default function Home() {
   };
 
   return (
-    <View className="flex-1 bg-white">
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+    <View style={{ flex: 1, backgroundColor: currentColors.background }}>
+      <StatusBar barStyle={currentColors.statusBarStyle} backgroundColor={currentColors.background} />
 
       <HeaderWithSidebar
         title="Dispatch Dashboard"
@@ -164,104 +239,200 @@ export default function Home() {
       {/* Main Content */}
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Welcome Banner */}
-        <View className="bg-slate-800 p-6 sm:p-8">
+        <View style={{ padding: 24, backgroundColor: currentColors.headerBg }}>
           <View className="mb-6">
-            <Text className="mb-2 text-2xl font-bold text-white sm:text-3xl">
+            <Text style={{ marginBottom: 8, fontSize: 24, fontWeight: 'bold', color: currentColors.headerText }}>
               Welcome back, {profile?.first_name}
             </Text>
-            <Text className="text-base text-slate-300 sm:text-lg">
+            <Text style={{ fontSize: 16, color: currentColors.headerSubtext }}>
               Your community safety dashboard
             </Text>
           </View>
 
-          <View className="rounded-xl border border-white/20 bg-white/10 p-4">
+          <View style={{ 
+            borderRadius: 12, 
+            borderWidth: 1, 
+            borderColor: currentColors.headerCardBorder, 
+            backgroundColor: currentColors.headerCardBg, 
+            padding: 16 
+          }}>
             <View className="mb-4 flex-row items-center justify-between">
               <View className="flex-row items-center">
-                <View className="mr-3 h-10 w-10 items-center justify-center rounded-lg bg-white/20">
-                  <Shield size={22} color="#E2E8F0" />
+                <View style={{ 
+                  marginRight: 12, 
+                  height: 40, 
+                  width: 40, 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  borderRadius: 8, 
+                  backgroundColor: currentColors.headerCardIconBg 
+                }}>
+                  <Shield size={22} color={currentColors.headerCardIcon} />
                 </View>
-                <Text className="text-lg font-semibold text-white">Security Status</Text>
+                <Text style={{ fontSize: 18, fontWeight: '600', color: currentColors.headerText }}>Security Status</Text>
               </View>
-              <View className="rounded-lg bg-slate-600 px-3 py-1.5">
-                <Text className="text-xs font-medium text-white">Active</Text>
+              <View style={{ 
+                borderRadius: 8, 
+                backgroundColor: currentColors.headerTagBg, 
+                paddingHorizontal: 12, 
+                paddingVertical: 6 
+              }}>
+                <Text style={{ fontSize: 12, fontWeight: '500', color: currentColors.headerText }}>Active</Text>
               </View>
             </View>
-            <View className="mb-3 h-3 rounded-full bg-white/20">
-              <View className="h-3 w-4/5 rounded-full bg-slate-400" />
+            <View style={{ 
+              marginBottom: 12, 
+              height: 12, 
+              borderRadius: 6, 
+              backgroundColor: currentColors.headerProgressBg 
+            }}>
+              <View style={{ 
+                height: 12, 
+                width: '80%', 
+                borderRadius: 6, 
+                backgroundColor: currentColors.headerProgressFill 
+              }} />
             </View>
-            <Text className="text-sm font-medium text-slate-300">
+            <Text style={{ fontSize: 14, fontWeight: '500', color: currentColors.headerSubtext }}>
               System Status: 87% Operational
             </Text>
           </View>
         </View>
 
         {/* Key Metrics */}
-        <View className="mb-8 mt-6 px-4 sm:px-6">
-          <Text className="mb-4 text-lg font-bold text-slate-900 sm:mb-6 sm:text-xl">
+        <View style={{ marginBottom: 32, marginTop: 24, paddingHorizontal: 16 }}>
+          <Text style={{ marginBottom: 16, fontSize: 18, fontWeight: 'bold', color: currentColors.sectionHeading }}>
             Key Metrics
           </Text>
-          <View className="flex-row flex-wrap gap-3">
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
             <View
-              className="rounded-lg border border-gray-200 bg-gray-50 p-3 sm:p-4"
-              style={{ width: '48%' }}>
-              <View className="items-center">
-                <View className="mb-2 h-8 w-8 items-center justify-center rounded-lg bg-slate-100 sm:h-10 sm:w-10">
-                  <Shield size={20} color="#475569" />
+              style={{ 
+                width: '48%',
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: currentColors.cardBorder,
+                backgroundColor: currentColors.cardBg,
+                padding: 12
+              }}>
+              <View style={{ alignItems: 'center' }}>
+                <View style={{ 
+                  marginBottom: 8, 
+                  height: 32, 
+                  width: 32, 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  borderRadius: 8, 
+                  backgroundColor: currentColors.cardIconBg 
+                }}>
+                  <Shield size={20} color={currentColors.cardIcon} />
                 </View>
-                <Text className="text-xl font-bold text-slate-900 sm:text-2xl">87%</Text>
-                <Text className="text-center text-xs font-medium text-slate-600">Trust Score</Text>
+                <Text style={{ fontSize: 20, fontWeight: 'bold', color: currentColors.cardText }}>87%</Text>
+                <Text style={{ textAlign: 'center', fontSize: 12, fontWeight: '500', color: currentColors.cardSubtext }}>Trust Score</Text>
               </View>
             </View>
             <View
-              className="rounded-lg border border-gray-200 bg-gray-50 p-3 sm:p-4"
-              style={{ width: '48%' }}>
-              <View className="items-center">
-                <View className="mb-2 h-8 w-8 items-center justify-center rounded-lg bg-slate-100 sm:h-10 sm:w-10">
-                  <FileText size={20} color="#475569" />
+              style={{ 
+                width: '48%',
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: currentColors.cardBorder,
+                backgroundColor: currentColors.cardBg,
+                padding: 12
+              }}>
+              <View style={{ alignItems: 'center' }}>
+                <View style={{ 
+                  marginBottom: 8, 
+                  height: 32, 
+                  width: 32, 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  borderRadius: 8, 
+                  backgroundColor: currentColors.cardIconBg 
+                }}>
+                  <FileText size={20} color={currentColors.cardIcon} />
                 </View>
-                <Text className="text-xl font-bold text-slate-900 sm:text-2xl">47</Text>
-                <Text className="text-center text-xs font-medium text-slate-600">Reports</Text>
+                <Text style={{ fontSize: 20, fontWeight: 'bold', color: currentColors.cardText }}>47</Text>
+                <Text style={{ textAlign: 'center', fontSize: 12, fontWeight: '500', color: currentColors.cardSubtext }}>Reports</Text>
               </View>
             </View>
             <View
-              className="rounded-lg border border-gray-200 bg-gray-50 p-3 sm:p-4"
-              style={{ width: '48%' }}>
-              <View className="items-center">
-                <View className="mb-2 h-8 w-8 items-center justify-center rounded-lg bg-slate-100 sm:h-10 sm:w-10">
-                  <CheckCircle size={20} color="#475569" />
+              style={{ 
+                width: '48%',
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: currentColors.cardBorder,
+                backgroundColor: currentColors.cardBg,
+                padding: 12
+              }}>
+              <View style={{ alignItems: 'center' }}>
+                <View style={{ 
+                  marginBottom: 8, 
+                  height: 32, 
+                  width: 32, 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  borderRadius: 8, 
+                  backgroundColor: currentColors.cardIconBg 
+                }}>
+                  <CheckCircle size={20} color={currentColors.cardIcon} />
                 </View>
-                <Text className="text-xl font-bold text-slate-900 sm:text-2xl">42</Text>
-                <Text className="text-center text-xs font-medium text-slate-600">Verified</Text>
+                <Text style={{ fontSize: 20, fontWeight: 'bold', color: currentColors.cardText }}>42</Text>
+                <Text style={{ textAlign: 'center', fontSize: 12, fontWeight: '500', color: currentColors.cardSubtext }}>Verified</Text>
               </View>
             </View>
             <View
-              className="rounded-lg border border-gray-200 bg-gray-50 p-3 sm:p-4"
-              style={{ width: '48%' }}>
-              <View className="items-center">
-                <View className="mb-2 h-8 w-8 items-center justify-center rounded-lg bg-slate-100 sm:h-10 sm:w-10">
-                  <Zap size={20} color="#475569" />
+              style={{ 
+                width: '48%',
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: currentColors.cardBorder,
+                backgroundColor: currentColors.cardBg,
+                padding: 12
+              }}>
+              <View style={{ alignItems: 'center' }}>
+                <View style={{ 
+                  marginBottom: 8, 
+                  height: 32, 
+                  width: 32, 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  borderRadius: 8, 
+                  backgroundColor: currentColors.cardIconBg 
+                }}>
+                  <Zap size={20} color={currentColors.cardIcon} />
                 </View>
-                <Text className="text-xl font-bold text-slate-900 sm:text-2xl">2.3min</Text>
-                <Text className="text-center text-xs font-medium text-slate-600">Response</Text>
+                <Text style={{ fontSize: 20, fontWeight: 'bold', color: currentColors.cardText }}>2.3min</Text>
+                <Text style={{ textAlign: 'center', fontSize: 12, fontWeight: '500', color: currentColors.cardSubtext }}>Response</Text>
               </View>
             </View>
           </View>
         </View>
 
         {/* Emergency Actions */}
-        <View className="mb-8 px-4 sm:px-6">
-          <View className="mb-4 flex-row items-center">
-            <AlertTriangle size={24} color="#475569" />
-            <Text className="ml-3 text-lg font-bold text-slate-900 sm:text-xl">Quick Actions</Text>
-            <View className="ml-3 rounded-md bg-slate-600 px-2 py-1 sm:px-3">
-              <Text className="text-xs font-medium text-white">Active</Text>
+        <View style={{ marginBottom: 32, paddingHorizontal: 16 }}>
+          <View style={{ marginBottom: 16, flexDirection: 'row', alignItems: 'center' }}>
+            <AlertTriangle size={24} color={currentColors.cardIcon} />
+            <Text style={{ marginLeft: 12, fontSize: 18, fontWeight: 'bold', color: currentColors.sectionHeading }}>Quick Actions</Text>
+            <View style={{ 
+              marginLeft: 12, 
+              borderRadius: 6, 
+              backgroundColor: currentColors.headerTagBg, 
+              paddingHorizontal: 8, 
+              paddingVertical: 4 
+            }}>
+              <Text style={{ fontSize: 12, fontWeight: '500', color: currentColors.headerText }}>Active</Text>
             </View>
           </View>
 
-          <View className="flex-row gap-4">
+          <View style={{ flexDirection: 'row', gap: 16 }}>
             <TouchableOpacity
-              className="flex-1 rounded-lg border border-red-700/20 bg-red-600 p-4"
               style={{
+                flex: 1,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: '#DC2626',
+                backgroundColor: '#EF4444',
+                padding: 16,
                 elevation: 2,
                 shadowColor: '#000000',
                 shadowOffset: { width: 0, height: 2 },
@@ -269,20 +440,41 @@ export default function Home() {
                 shadowRadius: 4,
               }}
               onPress={handleEmergency}>
-              <View className="items-center">
-                <View className="mb-3 h-12 w-12 items-center justify-center rounded-lg bg-white/20">
+              <View style={{ alignItems: 'center' }}>
+                <View style={{ 
+                  marginBottom: 12, 
+                  height: 48, 
+                  width: 48, 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  borderRadius: 8, 
+                  backgroundColor: 'rgba(255, 255, 255, 0.2)' 
+                }}>
                   <AlertTriangle size={24} color="white" />
                 </View>
-                <Text className="mb-1 text-center text-lg font-bold text-white">
+                <Text style={{ 
+                  marginBottom: 4, 
+                  textAlign: 'center', 
+                  fontSize: 18, 
+                  fontWeight: 'bold', 
+                  color: 'white' 
+                }}>
                   Emergency Alert
                 </Text>
-                <Text className="text-center text-xs text-red-100">Immediate response</Text>
+                <Text style={{ textAlign: 'center', fontSize: 12, color: 'white' }}>
+                  Immediate response
+                </Text>
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity
-              className="flex-1 rounded-lg border border-slate-600/20 bg-slate-700 p-4"
               style={{
+                flex: 1,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: currentColors.reportBorder,
+                backgroundColor: currentColors.reportBg,
+                padding: 16,
                 elevation: 2,
                 shadowColor: '#000000',
                 shadowOffset: { width: 0, height: 2 },
@@ -290,120 +482,236 @@ export default function Home() {
                 shadowRadius: 4,
               }}
               onPress={handleReportIncident}>
-              <View className="items-center">
-                <View className="mb-3 h-12 w-12 items-center justify-center rounded-lg bg-white/20">
-                  <Bell size={24} color="white" />
+              <View style={{ alignItems: 'center' }}>
+                <View style={{ 
+                  marginBottom: 12, 
+                  height: 48, 
+                  width: 48, 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  borderRadius: 8, 
+                  backgroundColor: currentColors.reportIconBg 
+                }}>
+                  <Bell size={24} color={currentColors.reportText} />
                 </View>
-                <Text className="mb-1 text-center text-lg font-bold text-white">
+                <Text style={{ 
+                  marginBottom: 4, 
+                  textAlign: 'center', 
+                  fontSize: 18, 
+                  fontWeight: 'bold', 
+                  color: currentColors.reportText 
+                }}>
                   Report Incident
                 </Text>
-                <Text className="text-center text-xs text-slate-200">Submit new report</Text>
+                <Text style={{ textAlign: 'center', fontSize: 12, color: currentColors.reportText }}>
+                  Submit new report
+                </Text>
               </View>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Quick Access */}
-        <View className="mb-8 px-4 sm:px-6">
-          <Text className="mb-4 text-lg font-bold text-slate-900 sm:mb-6 sm:text-xl">
+        <View style={{ marginBottom: 32, paddingHorizontal: 16 }}>
+          <Text style={{ marginBottom: 16, fontSize: 18, fontWeight: 'bold', color: currentColors.sectionHeading }}>
             Quick Access
           </Text>
 
-          <View className="flex-row flex-wrap gap-3">
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
             <TouchableOpacity
-              className="rounded-lg border border-gray-200 bg-gray-50 p-4 sm:p-5"
-              style={{ width: '31%' }}>
-              <View className="items-center">
-                <View className="mb-3 h-10 w-10 items-center justify-center rounded-lg bg-slate-100 sm:h-12 sm:w-12">
-                  <Shield size={24} color="#475569" />
+              style={{ 
+                width: '31%',
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: currentColors.cardBorder,
+                backgroundColor: currentColors.cardBg,
+                padding: 16
+              }}>
+              <View style={{ alignItems: 'center' }}>
+                <View style={{ 
+                  marginBottom: 12, 
+                  height: 40, 
+                  width: 40, 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  borderRadius: 8, 
+                  backgroundColor: currentColors.cardIconBg 
+                }}>
+                  <Shield size={24} color={currentColors.cardIcon} />
                 </View>
-                <Text className="text-center text-sm font-semibold text-slate-700">Anonymity</Text>
+                <Text style={{ textAlign: 'center', fontSize: 14, fontWeight: '600', color: currentColors.cardText }}>Anonymity</Text>
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity
-              className="rounded-lg border border-gray-200 bg-gray-50 p-4 sm:p-5"
-              style={{ width: '31%' }}
+              style={{ 
+                width: '31%',
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: currentColors.cardBorder,
+                backgroundColor: currentColors.cardBg,
+                padding: 16
+              }}
               onPress={() => router.push('/lost-and-found')}>
-              <View className="items-center">
-                <View className="mb-3 h-10 w-10 items-center justify-center rounded-lg bg-slate-100 sm:h-12 sm:w-12">
-                  <Search size={24} color="#475569" />
+              <View style={{ alignItems: 'center' }}>
+                <View style={{ 
+                  marginBottom: 12, 
+                  height: 40, 
+                  width: 40, 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  borderRadius: 8, 
+                  backgroundColor: currentColors.cardIconBg 
+                }}>
+                  <Search size={24} color={currentColors.cardIcon} />
                 </View>
-                <Text className="text-center text-sm font-semibold text-slate-700">
-                  Lost & Found
-                </Text>
+                <Text style={{ textAlign: 'center', fontSize: 14, fontWeight: '600', color: currentColors.cardText }}>Lost & Found</Text>
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity
-              className="rounded-lg border border-gray-200 bg-gray-50 p-4 sm:p-5"
-              style={{ width: '31%' }}
+              style={{ 
+                width: '31%',
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: currentColors.cardBorder,
+                backgroundColor: currentColors.cardBg,
+                padding: 16
+              }}
               onPress={() => router.push('/community')}>
-              <View className="items-center">
-                <View className="mb-3 h-10 w-10 items-center justify-center rounded-lg bg-slate-100 sm:h-12 sm:w-12">
-                  <Users size={24} color="#475569" />
+              <View style={{ alignItems: 'center' }}>
+                <View style={{ 
+                  marginBottom: 12, 
+                  height: 40, 
+                  width: 40, 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  borderRadius: 8, 
+                  backgroundColor: currentColors.cardIconBg 
+                }}>
+                  <Users size={24} color={currentColors.cardIcon} />
                 </View>
-                <Text className="text-center text-sm font-semibold text-slate-700">Community</Text>
+                <Text style={{ textAlign: 'center', fontSize: 14, fontWeight: '600', color: currentColors.cardText }}>Community</Text>
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity
-              className="rounded-lg border border-gray-200 bg-gray-50 p-4 sm:p-5"
-              style={{ width: '31%' }}>
-              <View className="items-center">
-                <View className="mb-3 h-10 w-10 items-center justify-center rounded-lg bg-slate-100 sm:h-12 sm:w-12">
-                  <Coins size={24} color="#475569" />
+              style={{ 
+                width: '31%',
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: currentColors.cardBorder,
+                backgroundColor: currentColors.cardBg,
+                padding: 16
+              }}>
+              <View style={{ alignItems: 'center' }}>
+                <View style={{ 
+                  marginBottom: 12, 
+                  height: 40, 
+                  width: 40, 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  borderRadius: 8, 
+                  backgroundColor: currentColors.cardIconBg 
+                }}>
+                  <Coins size={24} color={currentColors.cardIcon} />
                 </View>
-                <Text className="text-center text-sm font-semibold text-slate-700">Bounties</Text>
+                <Text style={{ textAlign: 'center', fontSize: 14, fontWeight: '600', color: currentColors.cardText }}>Bounties</Text>
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity
-              className="rounded-lg border border-gray-200 bg-gray-50 p-4 sm:p-5"
-              style={{ width: '31%' }}>
-              <View className="items-center">
-                <View className="mb-3 h-10 w-10 items-center justify-center rounded-lg bg-slate-100 sm:h-12 sm:w-12">
-                  <Newspaper size={24} color="#475569" />
+              style={{ 
+                width: '31%',
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: currentColors.cardBorder,
+                backgroundColor: currentColors.cardBg,
+                padding: 16
+              }}>
+              <View style={{ alignItems: 'center' }}>
+                <View style={{ 
+                  marginBottom: 12, 
+                  height: 40, 
+                  width: 40, 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  borderRadius: 8, 
+                  backgroundColor: currentColors.cardIconBg 
+                }}>
+                  <Newspaper size={24} color={currentColors.cardIcon} />
                 </View>
-                <Text className="text-center text-sm font-semibold text-slate-700">News Feed</Text>
+                <Text style={{ textAlign: 'center', fontSize: 14, fontWeight: '600', color: currentColors.cardText }}>News Feed</Text>
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity
-              className="rounded-lg border border-gray-200 bg-gray-50 p-4 sm:p-5"
-              style={{ width: '31%' }}
+              style={{ 
+                width: '31%',
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: currentColors.cardBorder,
+                backgroundColor: currentColors.cardBg,
+                padding: 16
+              }}
               onPress={() => router.push('/profile')}>
-              <View className="items-center">
-                <View className="mb-3 h-10 w-10 items-center justify-center rounded-lg bg-slate-100 sm:h-12 sm:w-12">
-                  <User size={24} color="#475569" />
+              <View style={{ alignItems: 'center' }}>
+                <View style={{ 
+                  marginBottom: 12, 
+                  height: 40, 
+                  width: 40, 
+                  alignItems: 'center', 
+                  justifyContent: 'center', 
+                  borderRadius: 8, 
+                  backgroundColor: currentColors.cardIconBg 
+                }}>
+                  <User size={24} color={currentColors.cardIcon} />
                 </View>
-                <Text className="text-center text-sm font-semibold text-slate-700">Profile</Text>
+                <Text style={{ textAlign: 'center', fontSize: 14, fontWeight: '600', color: currentColors.cardText }}>Profile</Text>
               </View>
             </TouchableOpacity>
           </View>
         </View>
 
         {/* Recent Activity */}
-        <View className="mb-8 px-4 sm:px-6">
-          <View className="mb-4 flex-row items-center justify-between sm:mb-6">
-            <Text className="text-lg font-bold text-slate-900 sm:text-xl">Recent Activity</Text>
+        <View style={{ marginBottom: 32, paddingHorizontal: 16 }}>
+          <View style={{ marginBottom: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <Text style={{ fontSize: 18, fontWeight: 'bold', color: currentColors.sectionHeading }}>Recent Activity</Text>
             <TouchableOpacity
               onPress={fetchRecentReports}
               disabled={reportsLoading}
-              className="rounded-lg bg-slate-100 p-2">
-              <Clock size={16} color={reportsLoading ? '#9CA3AF' : '#475569'} />
+              style={{
+                borderRadius: 8,
+                backgroundColor: currentColors.cardIconBg,
+                padding: 8
+              }}>
+              <Clock size={16} color={reportsLoading ? currentColors.cardSubtext : currentColors.cardIcon} />
             </TouchableOpacity>
           </View>
 
-          <View className="space-y-3 sm:space-y-4">
+          <View style={{ gap: 12 }}>
             {reportsLoading ? (
-              <View className="rounded-lg border border-gray-200 bg-gray-50 p-3 sm:p-4 sm:p-5">
-                <View className="flex-row items-center">
-                  <View className="mr-3 h-8 w-8 items-center justify-center rounded-lg bg-slate-100 sm:mr-4 sm:h-10 sm:w-10">
-                    <Clock size={20} color="#6B7280" />
+              <View style={{
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: currentColors.cardBorder,
+                backgroundColor: currentColors.cardBg,
+                padding: 16
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{
+                    marginRight: 12,
+                    height: 32,
+                    width: 32,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 8,
+                    backgroundColor: currentColors.cardIconBg
+                  }}>
+                    <Clock size={20} color={currentColors.cardSubtext} />
                   </View>
-                  <View className="flex-1">
-                    <Text className="text-sm font-semibold text-slate-900 sm:text-base">
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: currentColors.cardText }}>
                       Loading recent activity...
                     </Text>
                   </View>
@@ -416,23 +724,37 @@ export default function Home() {
                 return (
                   <View
                     key={report.id}
-                    className="rounded-lg border border-gray-200 bg-gray-50 p-3 sm:p-4 sm:p-5">
-                    <View className="flex-row items-center">
-                      <View className="mr-3 h-8 w-8 items-center justify-center rounded-lg bg-slate-100 sm:mr-4 sm:h-10 sm:w-10">
+                    style={{
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: currentColors.cardBorder,
+                      backgroundColor: currentColors.cardBg,
+                      padding: 16
+                    }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                      <View style={{
+                        marginRight: 12,
+                        height: 32,
+                        width: 32,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: 8,
+                        backgroundColor: currentColors.cardIconBg
+                      }}>
                         <IconComponent size={20} color={activityIcon.color} />
                       </View>
-                      <View className="flex-1">
-                        <Text className="text-sm font-semibold text-slate-900 sm:text-base">
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '600', color: currentColors.cardText }}>
                           {report.incident_title || 'Incident Report'}
                           {report.id && (
-                            <Text className="text-xs text-slate-500"> #{report.id}</Text>
+                            <Text style={{ fontSize: 12, color: currentColors.cardSubtext }}> #{report.id}</Text>
                           )}
                         </Text>
-                        <Text className="text-xs text-slate-600 sm:text-sm">
+                        <Text style={{ fontSize: 12, color: currentColors.cardSubtext }}>
                           {report.incident_category || 'General Incident'}
                         </Text>
                       </View>
-                      <Text className="text-xs text-slate-500">
+                      <Text style={{ fontSize: 12, color: currentColors.cardSubtext }}>
                         {report.created_at ? formatTimeAgo(report.created_at) : 'Recently'}
                       </Text>
                     </View>
@@ -440,16 +762,30 @@ export default function Home() {
                 );
               })
             ) : (
-              <View className="rounded-lg border border-gray-200 bg-gray-50 p-3 sm:p-4 sm:p-5">
-                <View className="flex-row items-center">
-                  <View className="mr-3 h-8 w-8 items-center justify-center rounded-lg bg-slate-100 sm:mr-4 sm:h-10 sm:w-10">
-                    <Bell size={20} color="#6B7280" />
+              <View style={{
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: currentColors.cardBorder,
+                backgroundColor: currentColors.cardBg,
+                padding: 16
+              }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={{
+                    marginRight: 12,
+                    height: 32,
+                    width: 32,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 8,
+                    backgroundColor: currentColors.cardIconBg
+                  }}>
+                    <Bell size={20} color={currentColors.cardSubtext} />
                   </View>
-                  <View className="flex-1">
-                    <Text className="text-sm font-semibold text-slate-900 sm:text-base">
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '600', color: currentColors.cardText }}>
                       No recent activity
                     </Text>
-                    <Text className="text-xs text-slate-600 sm:text-sm">
+                    <Text style={{ fontSize: 12, color: currentColors.cardSubtext }}>
                       Your recent reports will appear here
                     </Text>
                   </View>
@@ -460,7 +796,7 @@ export default function Home() {
         </View>
 
         {/* Bottom Spacing */}
-        <View className="h-8" />
+        <View style={{ height: 32 }} />
       </ScrollView>
     </View>
   );
