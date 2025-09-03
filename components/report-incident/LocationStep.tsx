@@ -1,6 +1,9 @@
-import { View, Text, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { MapPin } from 'lucide-react-native';
 import { Card } from '../ui/Card';
+import { useState } from 'react';
+import * as Location from 'expo-location';
+import MapView, { LatLng, Marker } from 'react-native-maps';
 
 interface LocationStepProps {
   formData: {
@@ -8,6 +11,8 @@ interface LocationStepProps {
     nearby_landmark: string;
     city: string;
     province: string;
+    latitude?: number;
+    longitude?: number;
     brief_description: string;
   };
   onUpdateFormData: (updates: Partial<LocationStepProps['formData']>) => void;
@@ -23,6 +28,61 @@ export default function LocationStep({
   onUseCurrentLocation,
   isGettingLocation,
 }: LocationStepProps) {
+  const [coordinate, setCoordinate] = useState<LatLng>({
+    latitude: formData.latitude || 17.6028048,
+    longitude: formData.longitude || 121.6765444,
+  });
+  const [controller, setController] = useState<AbortController | null>(null);
+  const [isFetchingAddress, setIsFetchingAddress] = useState<boolean>(false);
+
+  async function handleMapOnPress(coordinate: LatLng) {
+    if (controller) {
+      controller.abort();
+    }
+
+    const newController = new AbortController();
+    setController(newController);
+
+    setIsFetchingAddress(true);
+
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Denied',
+          'Location permission is required to get address from coordinates.'
+        );
+        setIsFetchingAddress(false);
+        return;
+      }
+
+      const address = await Location.reverseGeocodeAsync({
+        latitude: coordinate.latitude,
+        longitude: coordinate.longitude,
+      });
+
+      if (!newController.signal.aborted) {
+        setCoordinate(coordinate);
+        onUpdateFormData({
+          latitude: coordinate.latitude,
+          longitude: coordinate.longitude,
+          street_address: address[0]?.street
+            ? `${address[0].street} ${address[0].name}`
+            : address[0]?.name || '',
+          city: address[0]?.city || address[0]?.region || '',
+          province: address[0]?.region || '',
+        });
+
+        setIsFetchingAddress(false);
+      }
+    } catch (error) {
+      if (!newController.signal.aborted) {
+        console.error('Reverse geocoding error:', error);
+        setIsFetchingAddress(false);
+      }
+    }
+  }
+
   return (
     <Card className="mb-5">
       <View className="mb-4 flex-row items-center">
@@ -30,6 +90,8 @@ export default function LocationStep({
           <MapPin size={20} color="#475569" />
         </View>
         <Text className="text-xl font-bold text-slate-900">Location Information</Text>
+        <View className="flex-1" />
+        <ActivityIndicator animating={isFetchingAddress} />
       </View>
 
       <View className="space-y-4">
@@ -38,6 +100,48 @@ export default function LocationStep({
           <Text className="mb-2 font-medium text-slate-700">
             Where did this happen? <Text className="text-red-600">*</Text>
           </Text>
+          <View
+            className=""
+            style={{ height: 200, borderRadius: 12, overflow: 'hidden', marginBottom: 16 }}>
+            {/* Map */}
+            <MapView
+              initialRegion={{
+                longitude: coordinate.longitude,
+                latitude: coordinate.latitude,
+                latitudeDelta: 0.0,
+                longitudeDelta: 0.0421,
+              }}
+              style={{ width: '100%', height: 200 }}
+              onPress={(it) => {
+                console.log(it.nativeEvent.coordinate);
+                handleMapOnPress(it.nativeEvent.coordinate);
+              }}>
+              <Marker coordinate={coordinate} draggable>
+                <MapPin size={32} color={'red'} />
+              </Marker>
+            </MapView>
+            {/* Map
+						// <MapView
+						// 	onPress={(it) => {
+						// 		if (it.type == 'Feature' && it.geometry.type === 'Point') {
+						// 			handleMapOnPress(it.geometry.coordinates[1], it.geometry.coordinates[0])
+						// 		}
+						// 	}}
+						// 	onRegionDidChange={(it) => {
+						// 		setZoom(it.properties.zoomLevel);
+						// 	}}
+						// 	style={{ flex: 1 }}
+						// 	mapStyle={'https://tiles.openfreemap.org/styles/liberty'}>
+						// 	{coordinate && (
+						// 		<MarkerView coordinate={coordinate}>
+						// 			<MapPin size={24} color={'red'} />
+						// 		</MarkerView>
+						// 	)}
+						// 	<Camera zoomLevel={zoom} centerCoordinate={coordinate} />
+						// </MapView>
+						// */}
+            //
+          </View>
           <TextInput
             placeholder="Street address or location"
             value={formData.street_address}
