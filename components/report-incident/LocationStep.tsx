@@ -4,6 +4,7 @@ import { Card } from '../ui/Card';
 import { useState } from 'react';
 import * as Location from 'expo-location';
 import MapView, { LatLng, Marker } from 'react-native-maps';
+import { geocodingService } from '../../lib/services/geocoding';
 
 interface LocationStepProps {
   formData: {
@@ -56,28 +57,45 @@ export default function LocationStep({
         return;
       }
 
-      const address = await Location.reverseGeocodeAsync({
-        latitude: coordinate.latitude,
-        longitude: coordinate.longitude,
-      });
+      try {
+        const address = await geocodingService.reverseGeocode(
+          coordinate.latitude,
+          coordinate.longitude
+        );
 
-      if (!newController.signal.aborted) {
-        setCoordinate(coordinate);
-        onUpdateFormData({
-          latitude: coordinate.latitude,
-          longitude: coordinate.longitude,
-          street_address: address[0]?.street
-            ? `${address[0].street} ${address[0].name}`
-            : address[0]?.name || '',
-          city: address[0]?.city || address[0]?.region || '',
-          province: address[0]?.region || '',
-        });
+        if (!newController.signal.aborted) {
+          setCoordinate(coordinate);
+          onUpdateFormData({
+            latitude: coordinate.latitude,
+            longitude: coordinate.longitude,
+            street_address:
+              address[0]?.streetNumber && address[0]?.street
+                ? `${address[0].streetNumber} ${address[0].street}`
+                : address[0]?.street || address[0]?.name || '',
+            city: address[0]?.city || address[0]?.subregion || 'Unknown City',
+            province: address[0]?.region || address[0]?.subregion || 'Unknown Province',
+          });
 
-        setIsFetchingAddress(false);
+          setIsFetchingAddress(false);
+        }
+      } catch (geocodeError) {
+        if (!newController.signal.aborted) {
+          console.error('Map geocoding error:', geocodeError);
+          // Fallback to coordinates if geocoding fails
+          setCoordinate(coordinate);
+          onUpdateFormData({
+            latitude: coordinate.latitude,
+            longitude: coordinate.longitude,
+            street_address: `Lat: ${coordinate.latitude.toFixed(6)}, Lng: ${coordinate.longitude.toFixed(6)}`,
+            city: 'Unknown City',
+            province: 'Unknown Province',
+          });
+          setIsFetchingAddress(false);
+        }
       }
     } catch (error) {
       if (!newController.signal.aborted) {
-        console.error('Reverse geocoding error:', error);
+        console.error('Location permission error:', error);
         setIsFetchingAddress(false);
       }
     }

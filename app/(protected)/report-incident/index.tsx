@@ -21,6 +21,7 @@ import { useState, useEffect, useRef } from 'react';
 import * as Location from 'expo-location';
 import { ReportData } from 'lib/types';
 import { reportService } from 'lib/services/reports';
+import { geocodingService } from 'lib/services/geocoding';
 
 interface UIState {
   showCategoryDropdown: boolean;
@@ -130,33 +131,43 @@ export default function ReportIncidentIndex() {
         accuracy: Location.Accuracy.High,
       });
 
-      // Reverse geocode to get address
-      const address = await Location.reverseGeocodeAsync({
-        latitude: location.coords.latitude,
-        longitude: location.coords.longitude,
-      });
-
       // Update current location coordinates
       setCurrentLocation({
         latitude: location.coords.latitude.toString(),
         longitude: location.coords.longitude.toString(),
       });
 
-      if (address.length > 0) {
-        const place = address[0];
-        const streetAddress =
-          [place.streetNumber, place.street].filter(Boolean).join(' ') ||
-          place.name ||
-          'Current Location';
+      try {
+        // Reverse geocode to get address
+        const address = await geocodingService.reverseGeocode(
+          location.coords.latitude,
+          location.coords.longitude
+        );
 
-        updateFormData({
-          street_address: streetAddress,
-          city: place.city || place.subregion || 'Unknown City',
-          province: place.region || 'Unknown Province',
-          nearby_landmark: place.name || '',
-        });
-      } else {
-        // Fallback to coordinates if reverse geocoding fails
+        if (address.length > 0) {
+          const place = address[0];
+          const streetAddress =
+            [place.streetNumber, place.street].filter(Boolean).join(' ') ||
+            place.name ||
+            'Current Location';
+
+          updateFormData({
+            street_address: streetAddress,
+            city: place.city || place.subregion || 'Unknown City',
+            province: place.region || 'Unknown Province',
+            nearby_landmark: place.name || '',
+          });
+        } else {
+          // Fallback to coordinates if reverse geocoding fails
+          updateFormData({
+            street_address: `Lat: ${location.coords.latitude.toFixed(6)}, Lng: ${location.coords.longitude.toFixed(6)}`,
+            city: 'Unknown City',
+            province: 'Unknown Province',
+          });
+        }
+      } catch (geocodeError) {
+        console.error('Geocoding error:', geocodeError);
+        // Fallback to coordinates if geocoding fails
         updateFormData({
           street_address: `Lat: ${location.coords.latitude.toFixed(6)}, Lng: ${location.coords.longitude.toFixed(6)}`,
           city: 'Unknown City',
@@ -243,7 +254,9 @@ export default function ReportIncidentIndex() {
   };
 
   // Function to handle dropdown opening - closes others automatically
-  const openDropdown = (dropdownType: 'category' | 'subcategory' | 'time' | 'date' | 'injuries') => {
+  const openDropdown = (
+    dropdownType: 'category' | 'subcategory' | 'time' | 'date' | 'injuries'
+  ) => {
     if (dropdownType === 'category') {
       const newState = !uiState.showCategoryDropdown;
       updateUIState({
