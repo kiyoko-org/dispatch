@@ -1,4 +1,5 @@
 import { View } from 'react-native';
+import type { DimensionValue } from 'react-native';
 
 type StepProgress = {
 	max?: number
@@ -9,7 +10,7 @@ type StepProgress = {
 export default function StepProgress({ max = 100, current = 0 }: StepProgress) {
 	const m = Math.max(1, Math.floor(max))
 	const c = Math.min(Math.max(0, Math.floor(current)), m)
-	const width = `${(c / m) * 100}%`
+	const width: DimensionValue = `${(c / m) * 100}%`
 
 	return (
 		<View
