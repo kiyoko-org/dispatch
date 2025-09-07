@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Linking, TextInput, StatusBar } from 'react-native';
+import { useState } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, Linking, TextInput, StatusBar, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import HeaderWithSidebar from 'components/HeaderWithSidebar';
@@ -295,7 +295,16 @@ export default function LostAndFoundScreen() {
                   <Text className="text-sm text-blue-600 ml-1">{item.contact}</Text>
                 </TouchableOpacity>
                 
-                <TouchableOpacity className="bg-gray-900 px-4 py-2 rounded-lg">
+                <TouchableOpacity 
+                  className="bg-gray-900 px-4 py-2 rounded-lg"
+                  onPress={() => {
+                    if (item.type === 'lost') {
+                      router.push('/(protected)/lost-and-found/report-found');
+                    } else {
+                      router.push('/(protected)/lost-and-found/claim-item');
+                    }
+                  }}
+                >
                   <Text className="text-white text-sm font-medium">
                     {item.type === 'lost' ? 'Report Found' : 'Claim Item'}
                   </Text>
@@ -310,7 +319,10 @@ export default function LostAndFoundScreen() {
       <View className="mx-4 mt-6 mb-4">
         <Text className="text-lg font-semibold text-gray-900 mb-3">Quick Actions</Text>
         <View className="flex-row">
-          <TouchableOpacity className="flex-1 bg-white border border-red-200 rounded-lg p-4 mr-2">
+          <TouchableOpacity 
+            className="flex-1 bg-white border border-red-200 rounded-lg p-4 mr-2"
+            onPress={() => router.push('/(protected)/lost-and-found/report-lost-item')}
+          >
             <View className="items-center">
               <View className="w-10 h-10 bg-red-100 rounded-full items-center justify-center mb-2">
                 <Ionicons name="add" size={20} color="#dc2626" />
@@ -319,7 +331,10 @@ export default function LostAndFoundScreen() {
             </View>
           </TouchableOpacity>
           
-          <TouchableOpacity className="flex-1 bg-white border border-green-200 rounded-lg p-4 ml-2">
+          <TouchableOpacity 
+            className="flex-1 bg-white border border-green-200 rounded-lg p-4 ml-2"
+            onPress={() => router.push('/(protected)/lost-and-found/report-found-item')}
+          >
             <View className="items-center">
               <View className="w-10 h-10 bg-green-100 rounded-full items-center justify-center mb-2">
                 <Ionicons name="checkmark" size={20} color="#16a34a" />

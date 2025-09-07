@@ -18,7 +18,7 @@ export function TextInput({ className, placeholder, keyboardType, secureTextEntr
 	const [showPassword, setShowPassword] = useState(false)
 	const isPassword = secureTextEntry
 
-	const modifiedIcon = icon ? React.cloneElement(icon, {
+	const modifiedIcon = icon && React.isValidElement(icon) ? React.cloneElement(icon as React.ReactElement<any>, {
 		color: "#6B7280",
 		size: 18,
 	}) : null

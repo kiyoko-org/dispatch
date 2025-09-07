@@ -603,7 +603,8 @@ export default function Home() {
                 borderColor: currentColors.cardBorder,
                 backgroundColor: currentColors.cardBg,
                 padding: 16
-              }}>
+              }}
+              onPress={() => router.push('/bounty')}>
               <View style={{ alignItems: 'center' }}>
                 <View style={{ 
                   marginBottom: 12, 
