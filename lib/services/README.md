@@ -1,6 +1,6 @@
-# Dispatch App - Supabase Database Services
+# Dispatch App - Services
 
-This directory contains service modules for interacting with the Supabase database.
+This directory contains service modules for interacting with the Supabase database and file storage systems.
 
 ## Reports Service
 
@@ -20,8 +20,8 @@ Creates a new incident report.
 
 ```typescript
 async addReport(
-  subject: string, 
-  body: string, 
+  subject: string,
+  body: string,
   attachments?: string[]
 ): Promise<DbResponse<Report>>
 ```
@@ -34,6 +34,7 @@ async addReport(
 - **Returns**: Promise with the created report or error
 
 - **Example**:
+
   ```typescript
   const { data, error } = await reportService.addReport(
     'Broken water pipe',
@@ -59,6 +60,7 @@ async getMyReports(): Promise<DbResponse<Report[]>>
 - **Returns**: Promise with array of the user's reports or error
 
 - **Example**:
+
   ```typescript
   const { data, error } = await reportService.getMyReports();
 
@@ -83,6 +85,7 @@ async getReportById(id: number): Promise<DbResponse<Report>>
 - **Returns**: Promise with the report details or error
 
 - **Example**:
+
   ```typescript
   const { data, error } = await reportService.getReportById(123);
 
@@ -115,6 +118,7 @@ async updateReport(
 - **Returns**: Promise with the updated report or error
 
 - **Example**:
+
   ```typescript
   const { data, error } = await reportService.updateReport(
     123,
@@ -144,6 +148,7 @@ async deleteReport(id: number): Promise<DbResponse<Report>>
 - **Returns**: Promise with success status or error
 
 - **Example**:
+
   ```typescript
   const { error } = await reportService.deleteReport(123);
 
@@ -191,6 +196,7 @@ export type DbResponse<T> = {
 To integrate the reports functionality in your component:
 
 1. Import the service:
+
    ```typescript
    import { reportService } from '../lib/services/reports';
    ```
@@ -200,3 +206,90 @@ To integrate the reports functionality in your component:
 3. Handle errors and loading states in your UI
 
 4. Make sure users are authenticated before calling these functions
+
+## Storage Interface
+
+The storage interface provides a comprehensive solution for file uploading and management.
+
+### Overview
+
+The storage system supports multiple file types and provides both Supabase Storage and mock implementations for testing.
+
+### Services
+
+#### Storage Services
+
+- **SupabaseStorageService**: Production implementation using Supabase Storage
+- **MockStorageService**: Testing implementation with in-memory storage
+
+#### File Picker Services
+
+- **ExpoFilePickerService**: File picker implementation using Expo libraries
+
+#### Upload Management
+
+- **UploadManager**: Coordinates file picking and uploading operations
+
+### Basic Usage
+
+```typescript
+import { UploadManager, MockStorageService, ExpoFilePickerService } from './services';
+
+// Initialize services
+const storageService = new MockStorageService();
+const filePickerService = new ExpoFilePickerService();
+const uploadManager = new UploadManager(storageService, filePickerService);
+
+// Upload an image
+const result = await uploadManager.pickAndUploadImage({
+  maxSize: 10 * 1024 * 1024, // 10MB
+  allowedTypes: ['image/jpeg', 'image/png'],
+});
+```
+
+### File Types Supported
+
+- **Images**: JPEG, PNG, GIF, WebP, BMP, SVG
+- **Documents**: PDF, Word, Text, RTF, ODT
+- **Spreadsheets**: Excel, CSV, ODS
+- **Presentations**: PowerPoint, ODP
+- **Audio**: MP3, WAV, OGG, M4A, AAC
+- **Video**: MP4, AVI, MOV, WMV, FLV, WebM
+
+### Integration with EvidenceStep
+
+The EvidenceStep component has been updated to use the storage interface:
+
+```typescript
+import { UploadManager, FileUploadResult } from '../lib/services';
+
+const [uploadedFiles, setUploadedFiles] = useState<FileUploadResult[]>([]);
+
+const handleFileUpload = async (type: 'image' | 'photo' | 'document') => {
+  const uploadManager = new UploadManager(new MockStorageService(), new ExpoFilePickerService());
+
+  if (type === 'image') {
+    const result = await uploadManager.pickAndUploadImage();
+    if (result) {
+      setUploadedFiles([...uploadedFiles, result]);
+    }
+  }
+};
+```
+
+### Testing
+
+Use the mock storage service for testing:
+
+```typescript
+import { MockStorageService } from './services';
+
+const storageService = new MockStorageService();
+
+// Test file operations
+const result = await storageService.uploadFile('file:///test.jpg');
+const files = await storageService.listFiles();
+await storageService.deleteFile(result.path);
+```
+
+See `storage-examples.ts` for comprehensive test examples.

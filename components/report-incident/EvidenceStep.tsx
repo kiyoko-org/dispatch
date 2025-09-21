@@ -1,18 +1,94 @@
-import { View, Text, TouchableOpacity } from 'react-native';
-import { Mic, Upload, Camera, FileText } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { Mic, Upload, Camera, FileText, X } from 'lucide-react-native';
 import { Card } from '../ui/Card';
+import { UploadProgress } from '../ui/UploadProgress';
+import { UploadManager, FileUploadResult, FileUploadProgress } from '../../lib/services';
+import { MockStorageService, ExpoFilePickerService } from '../../lib/services';
+import { FileUtils } from '../../lib/services/file-utils';
 
 interface EvidenceStepProps {
   uiState: {
     isRecording: boolean;
   };
   onUpdateUIState: (updates: Partial<EvidenceStepProps['uiState']>) => void;
+  onFilesUploaded?: (files: FileUploadResult[]) => void;
 }
 
-export default function EvidenceStep({ uiState, onUpdateUIState }: EvidenceStepProps) {
+// Initialize services (in a real app, these would be provided via context or props)
+const storageService = new MockStorageService(); // Use MockStorageService for testing
+const filePickerService = new ExpoFilePickerService();
+const uploadManager = new UploadManager(storageService, filePickerService);
+
+export default function EvidenceStep({
+  uiState,
+  onUpdateUIState,
+  onFilesUploaded,
+}: EvidenceStepProps) {
+  const [uploadedFiles, setUploadedFiles] = useState<FileUploadResult[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<FileUploadProgress | null>(null);
+
   const handleVoiceRecording = () => {
     onUpdateUIState({ isRecording: !uiState.isRecording });
     // TODO: Implement actual voice recording functionality
+  };
+
+  const handleFileUpload = async (type: 'image' | 'photo' | 'document') => {
+    try {
+      setIsUploading(true);
+      let result: FileUploadResult | null = null;
+
+      if (type === 'image') {
+        result = await uploadManager.pickAndUploadImage(
+          {
+            maxSize: 10 * 1024 * 1024, // 10MB
+            allowedTypes: FileUtils.getAllowedTypesForCategory('images'),
+          },
+          (progress) => {
+            setUploadProgress(progress);
+          }
+        );
+      } else if (type === 'photo') {
+        result = await uploadManager.takePhotoAndUpload(
+          {
+            maxSize: 10 * 1024 * 1024, // 10MB
+            allowedTypes: FileUtils.getAllowedTypesForCategory('images'),
+          },
+          (progress) => {
+            setUploadProgress(progress);
+          }
+        );
+      } else if (type === 'document') {
+        result = await uploadManager.pickDocumentAndUpload(
+          {
+            maxSize: 25 * 1024 * 1024, // 25MB
+            allowedTypes: FileUtils.getAllowedTypesForCategory('documents'),
+          },
+          (progress) => {
+            setUploadProgress(progress);
+          }
+        );
+      }
+
+      if (result) {
+        const newFiles = [...uploadedFiles, result];
+        setUploadedFiles(newFiles);
+        onFilesUploaded?.(newFiles);
+      }
+    } catch (error) {
+      console.error('Upload failed:', error);
+      Alert.alert('Upload Failed', 'Failed to upload file. Please try again.');
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(null);
+    }
+  };
+
+  const removeFile = (index: number) => {
+    const newFiles = uploadedFiles.filter((_, i) => i !== index);
+    setUploadedFiles(newFiles);
+    onFilesUploaded?.(newFiles);
   };
 
   return (
@@ -29,8 +105,40 @@ export default function EvidenceStep({ uiState, onUpdateUIState }: EvidenceStepP
           Record a voice statement or attach evidence to provide additional details.
         </Text>
 
+        {/* Upload Progress */}
+        {isUploading && uploadProgress && (
+          <UploadProgress progress={uploadProgress} fileName="Uploading file..." />
+        )}
+
+        {/* Uploaded Files */}
+        {uploadedFiles.length > 0 && (
+          <View className="space-y-2">
+            <Text className="text-sm font-medium text-slate-700">Uploaded Files:</Text>
+            {uploadedFiles.map((file, index) => (
+              <View
+                key={index}
+                className="flex-row items-center justify-between rounded-lg bg-gray-50 p-3">
+                <View className="flex-1">
+                  <Text className="text-sm font-medium text-slate-900" numberOfLines={1}>
+                    {file.name}
+                  </Text>
+                  <Text className="text-xs text-slate-500">
+                    {FileUtils.formatFileSize(file.size)} • {file.type}
+                  </Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => removeFile(index)}
+                  className="ml-2 p-1"
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                  <X size={16} color="#EF4444" />
+                </TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
+
         {/* Voice Recording */}
-        <View className="items-center rounded-lg border-2 border-dashed border-gray-300 py-5 px-4">
+        <View className="items-center rounded-lg border-2 border-dashed border-gray-300 px-4 py-5">
           <TouchableOpacity
             onPress={handleVoiceRecording}
             className={`mb-3 h-14 w-14 items-center justify-center rounded-full ${
@@ -42,27 +150,48 @@ export default function EvidenceStep({ uiState, onUpdateUIState }: EvidenceStepP
           <Text className="mb-1 text-base font-medium text-slate-700">
             {uiState.isRecording ? 'Stop Recording' : 'Start Recording'}
           </Text>
-          <Text className="text-sm text-slate-500 text-center">
+          <Text className="text-center text-sm text-slate-500">
             Click to {uiState.isRecording ? 'stop' : 'start'} voice recording
           </Text>
         </View>
 
         {/* Evidence Attachments */}
-        <View className="flex-row space-x-2">
-          <TouchableOpacity className="flex-1 items-center rounded-lg border-2 border-dashed border-gray-300 py-4 px-2">
-            <Upload size={22} color="#64748B" />
-            <Text className="mt-2 text-xs font-medium text-slate-700 text-center">Upload Files</Text>
-          </TouchableOpacity>
+        <View className="space-y-3">
+          <Text className="text-sm font-medium text-slate-700">Attach Evidence:</Text>
+          <View className="flex-row space-x-2">
+            <TouchableOpacity
+              className="flex-1 items-center rounded-lg border-2 border-dashed border-gray-300 px-2 py-4"
+              onPress={() => handleFileUpload('image')}
+              disabled={isUploading}>
+              <Upload size={22} color={isUploading ? '#9CA3AF' : '#64748B'} />
+              <Text
+                className={`mt-2 text-center text-xs font-medium ${isUploading ? 'text-gray-400' : 'text-slate-700'}`}>
+                Upload Files
+              </Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity className="flex-1 items-center rounded-lg border-2 border-dashed border-gray-300 py-4 px-2">
-            <Camera size={22} color="#64748B" />
-            <Text className="mt-2 text-xs font-medium text-slate-700 text-center">Take Photo</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              className="flex-1 items-center rounded-lg border-2 border-dashed border-gray-300 px-2 py-4"
+              onPress={() => handleFileUpload('photo')}
+              disabled={isUploading}>
+              <Camera size={22} color={isUploading ? '#9CA3AF' : '#64748B'} />
+              <Text
+                className={`mt-2 text-center text-xs font-medium ${isUploading ? 'text-gray-400' : 'text-slate-700'}`}>
+                Take Photo
+              </Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity className="flex-1 items-center rounded-lg border-2 border-dashed border-gray-300 py-4 px-2">
-            <FileText size={22} color="#64748B" />
-            <Text className="mt-2 text-xs font-medium text-slate-700 text-center">Documents</Text>
-          </TouchableOpacity>
+            <TouchableOpacity
+              className="flex-1 items-center rounded-lg border-2 border-dashed border-gray-300 px-2 py-4"
+              onPress={() => handleFileUpload('document')}
+              disabled={isUploading}>
+              <FileText size={22} color={isUploading ? '#9CA3AF' : '#64748B'} />
+              <Text
+                className={`mt-2 text-center text-xs font-medium ${isUploading ? 'text-gray-400' : 'text-slate-700'}`}>
+                Documents
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </Card>
