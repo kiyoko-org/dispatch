@@ -201,6 +201,40 @@ export class UploadManager implements IUploadManager {
   }
 
   /**
+   * Upload recorded audio file
+   */
+  async uploadRecordedAudio(
+    recorder: any, // AudioRecorder from expo-audio
+    options: FileUploadOptions & {
+      stopRecording?: boolean;
+    } = {},
+    onProgress?: (progress: FileUploadProgress) => void
+  ): Promise<FileUploadResult | null> {
+    try {
+      let uri: string | null = null;
+
+      if (options.stopRecording !== false) {
+        // Stop recording first
+        await recorder.stop();
+        uri = recorder.uri;
+      } else {
+        // Recording is already stopped, just get the URI
+        uri = recorder.uri;
+      }
+
+      if (!uri) {
+        throw new Error('No audio file URI available');
+      }
+
+      // Upload the recorded file
+      return this.upload(uri, options, onProgress) as Promise<FileUploadResult>;
+    } catch (error) {
+      console.error('Error uploading recorded audio:', error);
+      throw error;
+    }
+  }
+
+  /**
    * Get all active uploads
    */
   getActiveUploads(): Array<{ id: string; status: string }> {

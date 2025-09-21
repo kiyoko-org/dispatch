@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, TouchableOpacity, Alert } from 'react-native';
 import { Mic, Upload, Camera, FileText, X } from 'lucide-react-native';
 import { Card } from '../ui/Card';
@@ -6,6 +6,7 @@ import { UploadProgress } from '../ui/UploadProgress';
 import { UploadManager, FileUploadResult, FileUploadProgress } from '../../lib/services';
 import { MockStorageService, ExpoFilePickerService } from '../../lib/services';
 import { FileUtils } from '../../lib/services/file-utils';
+import { AudioRecorder } from 'expo-audio';
 
 interface EvidenceStepProps {
   uiState: {
@@ -28,10 +29,78 @@ export default function EvidenceStep({
   const [uploadedFiles, setUploadedFiles] = useState<FileUploadResult[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<FileUploadProgress | null>(null);
+  const [recorder, setRecorder] = useState<AudioRecorder | null>(null);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-  const handleVoiceRecording = () => {
-    onUpdateUIState({ isRecording: !uiState.isRecording });
-    // TODO: Implement actual voice recording functionality
+  // Cleanup recording interval on unmount
+  useEffect(() => {
+    return () => {
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+    };
+  }, []);
+
+  const handleVoiceRecording = async () => {
+    if (uiState.isRecording) {
+      // Stop recording
+      if (recorder) {
+        try {
+          setIsUploading(true);
+          const result = await uploadManager.uploadRecordedAudio(
+            recorder,
+            {
+              stopRecording: true,
+              maxSize: 25 * 1024 * 1024, // 25MB for audio
+              allowedTypes: FileUtils.getFileTypeGroups().audio,
+            },
+            (progress) => {
+              setUploadProgress(progress);
+            }
+          );
+
+          if (result) {
+            const newFiles = [...uploadedFiles, result];
+            setUploadedFiles(newFiles);
+            onFilesUploaded?.(newFiles);
+          }
+        } catch (error) {
+          console.error('Error uploading recorded audio:', error);
+          Alert.alert('Upload Failed', 'Failed to upload recorded audio. Please try again.');
+        } finally {
+          setIsUploading(false);
+          setUploadProgress(null);
+          setRecorder(null);
+        }
+      }
+
+      // Clear recording timer
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+        recordingIntervalRef.current = null;
+      }
+      setRecordingDuration(0);
+      onUpdateUIState({ isRecording: false });
+    } else {
+      // Start recording
+      try {
+        const newRecorder = await filePickerService.startRecording();
+        if (newRecorder) {
+          setRecorder(newRecorder);
+          onUpdateUIState({ isRecording: true });
+
+          // Start recording duration timer
+          setRecordingDuration(0);
+          recordingIntervalRef.current = setInterval(() => {
+            setRecordingDuration((prev) => prev + 1);
+          }, 1000);
+        }
+      } catch (error) {
+        console.error('Error starting recording:', error);
+        Alert.alert('Recording Failed', 'Failed to start audio recording. Please try again.');
+      }
+    }
   };
 
   const handleFileUpload = async (type: 'image' | 'photo' | 'document') => {
@@ -166,6 +235,12 @@ export default function EvidenceStep({
           <Text className="mb-1 text-base font-medium text-slate-700">
             {uiState.isRecording ? 'Stop Recording' : 'Start Recording'}
           </Text>
+          {uiState.isRecording && (
+            <Text className="mb-1 text-sm font-medium text-red-600">
+              Recording: {Math.floor(recordingDuration / 60)}:
+              {(recordingDuration % 60).toString().padStart(2, '0')}
+            </Text>
+          )}
           <Text className="text-center text-sm text-slate-500">
             Click to {uiState.isRecording ? 'stop' : 'start'} voice recording
           </Text>

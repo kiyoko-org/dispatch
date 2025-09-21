@@ -1,5 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
+import { AudioModule, requestRecordingPermissionsAsync } from 'expo-audio';
 import { Alert } from 'react-native';
 import { IFilePickerService } from '../types';
 
@@ -166,19 +167,93 @@ export class ExpoFilePickerService implements IFilePickerService {
   }
 
   /**
-   * Record audio (placeholder - would need expo-audio for actual implementation)
+   * Start audio recording and return the recorder instance
+   */
+  async startRecording(
+    options: {
+      maxDuration?: number;
+    } = {}
+  ): Promise<any | null> {
+    try {
+      // Request recording permissions
+      const { status } = await requestRecordingPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Permission to access microphone is required to record audio.'
+        );
+        return null;
+      }
+
+      // Create recorder with default options
+      const recordingOptions = {
+        extension: '.m4a',
+        sampleRate: 44100,
+        numberOfChannels: 2,
+        bitRate: 128000,
+        android: {
+          extension: '.m4a',
+          outputFormat: 'mpeg4' as const,
+          audioEncoder: 'aac' as const,
+        },
+        ios: {
+          extension: '.m4a',
+          outputFormat: 'mpeg4aac' as const,
+          audioQuality: 0x60, // High quality
+        },
+        web: {},
+      };
+
+      const recorder = new AudioModule.AudioRecorder(recordingOptions);
+
+      // Prepare for recording
+      await recorder.prepareToRecordAsync();
+
+      // Start recording
+      recorder.record();
+
+      return recorder;
+    } catch (error) {
+      console.error('Error starting audio recording:', error);
+      Alert.alert('Error', 'Failed to start audio recording. Please try again.');
+      return null;
+    }
+  }
+
+  /**
+   * Stop recording and return the recorded file URI
+   */
+  async stopRecording(recorder: any): Promise<string | null> {
+    try {
+      // Stop recording
+      await recorder.stop();
+
+      // Get the URI of the recorded file
+      const uri = recorder.uri;
+
+      return uri;
+    } catch (error) {
+      console.error('Error stopping audio recording:', error);
+      Alert.alert('Error', 'Failed to stop audio recording. Please try again.');
+      return null;
+    }
+  }
+
+  /**
+   * Record audio (legacy method for compatibility - starts and immediately stops recording)
    */
   async recordAudio(
     options: {
       maxDuration?: number;
     } = {}
   ): Promise<string | null> {
-    // This is a placeholder implementation
-    // In a real implementation, you would use expo-audio to record audio
-    Alert.alert(
-      'Not Implemented',
-      'Audio recording is not yet implemented. This would require expo-audio integration.'
-    );
-    return null;
+    const recorder = await this.startRecording(options);
+    if (!recorder) return null;
+
+    // For immediate recording, wait a bit then stop
+    // In practice, this method should be replaced with start/stop pattern
+    await new Promise((resolve) => setTimeout(resolve, 1000)); // Record for 1 second as example
+
+    return this.stopRecording(recorder);
   }
 }
