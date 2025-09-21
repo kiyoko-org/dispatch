@@ -57,15 +57,29 @@ export class ExpoFilePickerService implements IFilePickerService {
     } = {}
   ): Promise<string | null> {
     try {
+      // Use a broader type filter to ensure .txt files are included
+      // If specific types are provided, include 'text/plain' for .txt files
+      let typeFilter = options.type || ['*/*'];
+      if (options.type && options.type.length > 0 && !options.type.includes('*/*')) {
+        // Add 'text/plain' if it's not already included and we're filtering by specific types
+        if (!typeFilter.includes('text/plain')) {
+          typeFilter.push('text/plain');
+        }
+      }
+
+      console.log('Document picker type filter:', typeFilter);
+
       const result = await DocumentPicker.getDocumentAsync({
-        type: options.type || ['*/*'],
+        type: typeFilter,
         copyToCacheDirectory: true,
       });
 
-      if (result.canceled === false && 'uri' in result) {
-        return result.uri as string;
+      if (result.canceled === false && result.assets && result.assets.length > 0) {
+        console.log('Document picked successfully:', result.assets[0].uri);
+        return result.assets[0].uri;
       }
 
+      console.log('Document picker was cancelled or no URI found', result);
       return null;
     } catch (error) {
       console.error('Error picking document:', error);
