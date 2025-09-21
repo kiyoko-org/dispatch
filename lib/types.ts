@@ -44,3 +44,127 @@ export interface EmergencyContact {
 }
 
 export type ContactStorageType = 'quick' | 'community' | 'emergency';
+
+// Storage Interface Types
+export interface FileUploadOptions {
+  bucket?: string;
+  folder?: string;
+  maxSize?: number; // in bytes
+  allowedTypes?: string[];
+  compressImages?: boolean;
+  quality?: number; // 0-1 for images
+}
+
+export interface FileUploadResult {
+  id: string;
+  url: string;
+  path: string;
+  size: number;
+  type: string;
+  name: string;
+  uploadedAt: string;
+}
+
+export interface FileUploadProgress {
+  loaded: number;
+  total: number;
+  percentage: number;
+}
+
+export interface FileUploadError {
+  code: 'PERMISSION_DENIED' | 'FILE_TOO_LARGE' | 'INVALID_TYPE' | 'UPLOAD_FAILED' | 'NETWORK_ERROR';
+  message: string;
+  details?: any;
+}
+
+export interface StorageFile {
+  id: string;
+  name: string;
+  path: string;
+  url: string;
+  size: number;
+  type: string;
+  uploadedAt: string;
+  uploadedBy: string;
+}
+
+export interface StorageBucket {
+  id: string;
+  name: string;
+  public: boolean;
+  createdAt: string;
+}
+
+// Storage Service Interface
+export interface IStorageService {
+  // File Upload Operations
+  uploadFile(
+    fileUri: string,
+    options?: FileUploadOptions,
+    onProgress?: (progress: FileUploadProgress) => void
+  ): Promise<FileUploadResult>;
+
+  uploadMultipleFiles(
+    fileUris: string[],
+    options?: FileUploadOptions,
+    onProgress?: (progress: FileUploadProgress, index: number) => void
+  ): Promise<FileUploadResult[]>;
+
+  // File Management Operations
+  deleteFile(path: string): Promise<boolean>;
+  deleteMultipleFiles(paths: string[]): Promise<boolean[]>;
+  getFileInfo(path: string): Promise<StorageFile | null>;
+  listFiles(folder?: string): Promise<StorageFile[]>;
+
+  // URL Operations
+  getPublicUrl(path: string): string;
+  getSignedUrl(path: string, expiresIn?: number): Promise<string>;
+
+  // Bucket Operations
+  createBucket(name: string, options?: { public?: boolean }): Promise<StorageBucket>;
+  listBuckets(): Promise<StorageBucket[]>;
+  deleteBucket(name: string): Promise<boolean>;
+
+  // Utility Operations
+  validateFile(fileUri: string, options?: FileUploadOptions): Promise<boolean>;
+  getFileSize(fileUri: string): Promise<number>;
+  getFileType(fileUri: string): Promise<string>;
+}
+
+// File Picker Interface
+export interface IFilePickerService {
+  pickImage(options?: {
+    allowsEditing?: boolean;
+    aspect?: [number, number];
+    quality?: number;
+  }): Promise<string | null>;
+
+  pickDocument(options?: { type?: string[] }): Promise<string | null>;
+
+  pickMultipleImages(options?: { maxCount?: number }): Promise<string[]>;
+
+  takePhoto(options?: {
+    allowsEditing?: boolean;
+    aspect?: [number, number];
+    quality?: number;
+  }): Promise<string | null>;
+
+  recordAudio(options?: { maxDuration?: number }): Promise<string | null>;
+}
+
+// Upload Manager Interface
+export interface IUploadManager {
+  upload(
+    files: string | string[],
+    options?: FileUploadOptions,
+    onProgress?: (progress: FileUploadProgress, index?: number) => void
+  ): Promise<FileUploadResult | FileUploadResult[]>;
+
+  cancel(uploadId: string): boolean;
+  pause(uploadId: string): boolean;
+  resume(uploadId: string): boolean;
+
+  getUploadStatus(
+    uploadId: string
+  ): 'pending' | 'uploading' | 'paused' | 'completed' | 'cancelled' | 'failed';
+}
