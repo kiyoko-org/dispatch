@@ -166,7 +166,7 @@ export class ExpoFilePickerService implements IFilePickerService {
   }
 
   /**
-   * Record audio (placeholder - would need expo-av for actual implementation)
+   * Record audio (placeholder - would need expo-audio for actual implementation)
    */
   async recordAudio(
     options: {
@@ -174,10 +174,10 @@ export class ExpoFilePickerService implements IFilePickerService {
     } = {}
   ): Promise<string | null> {
     // This is a placeholder implementation
-    // In a real implementation, you would use expo-av to record audio
+    // In a real implementation, you would use expo-audio to record audio
     Alert.alert(
       'Not Implemented',
-      'Audio recording is not yet implemented. This would require expo-av integration.'
+      'Audio recording is not yet implemented. This would require expo-audio integration.'
     );
     return null;
   }
