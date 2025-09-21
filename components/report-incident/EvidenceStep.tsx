@@ -36,49 +36,65 @@ export default function EvidenceStep({
 
   const handleFileUpload = async (type: 'image' | 'photo' | 'document') => {
     try {
+      console.log('Starting file upload for type:', type);
       setIsUploading(true);
       let result: FileUploadResult | null = null;
 
       if (type === 'image') {
+        console.log('Uploading image...');
         result = await uploadManager.pickAndUploadImage(
           {
             maxSize: 10 * 1024 * 1024, // 10MB
             allowedTypes: FileUtils.getAllowedTypesForCategory('images'),
           },
           (progress) => {
+            console.log('Image upload progress:', progress);
             setUploadProgress(progress);
           }
         );
       } else if (type === 'photo') {
+        console.log('Taking photo...');
         result = await uploadManager.takePhotoAndUpload(
           {
             maxSize: 10 * 1024 * 1024, // 10MB
             allowedTypes: FileUtils.getAllowedTypesForCategory('images'),
           },
           (progress) => {
+            console.log('Photo upload progress:', progress);
             setUploadProgress(progress);
           }
         );
       } else if (type === 'document') {
+        console.log('Uploading document...');
+        console.log('Allowed document types:', FileUtils.getAllowedTypesForCategory('documents'));
         result = await uploadManager.pickDocumentAndUpload(
           {
             maxSize: 25 * 1024 * 1024, // 25MB
             allowedTypes: FileUtils.getAllowedTypesForCategory('documents'),
+            type: FileUtils.getAllowedTypesForCategory('documents'), // Pass type for file picker filtering
           },
           (progress) => {
+            console.log('Document upload progress:', progress);
             setUploadProgress(progress);
           }
         );
       }
 
+      console.log('Upload result:', result);
+
       if (result) {
         const newFiles = [...uploadedFiles, result];
         setUploadedFiles(newFiles);
         onFilesUploaded?.(newFiles);
+        console.log('File uploaded successfully:', result.name);
+      } else {
+        console.log('No result returned from upload');
+        Alert.alert('Upload Failed', 'No file was uploaded. Please try again.');
       }
     } catch (error) {
       console.error('Upload failed:', error);
-      Alert.alert('Upload Failed', 'Failed to upload file. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      Alert.alert('Upload Failed', `Failed to upload file: ${errorMessage}. Please try again.`);
     } finally {
       setIsUploading(false);
       setUploadProgress(null);

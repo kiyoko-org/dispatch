@@ -183,14 +183,20 @@ export class UploadManager implements IUploadManager {
     } = {},
     onProgress?: (progress: FileUploadProgress) => void
   ): Promise<FileUploadResult | null> {
+    console.log('UploadManager: Picking document with options:', options);
+
     const fileUri = await this.filePickerService.pickDocument({
       type: options.type,
     });
 
+    console.log('UploadManager: Document picker returned URI:', fileUri);
+
     if (!fileUri) {
+      console.log('UploadManager: No file URI returned from picker');
       return null;
     }
 
+    console.log('UploadManager: Starting upload for URI:', fileUri);
     return this.upload(fileUri, options, onProgress) as Promise<FileUploadResult>;
   }
 
