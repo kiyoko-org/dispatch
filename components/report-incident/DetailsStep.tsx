@@ -15,7 +15,7 @@ interface DetailsStepProps {
   };
   onUpdateFormData: (updates: Partial<DetailsStepProps['formData']>) => void;
   onOpenDropdown: (dropdownType: 'injuries') => void;
-  injuryOptions: Array<{ name: string; severity: string; icon: string }>;
+  injuryOptions: { name: string; severity: string; icon: string }[];
   showInjuriesDropdown: boolean;
   onCloseDropdown: (type: 'injuries') => void;
   validationErrors: Record<string, string>;

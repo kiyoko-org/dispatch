@@ -35,7 +35,7 @@ export function UploadProgress({ progress, fileName, showDetails = true }: Uploa
 }
 
 interface MultipleUploadProgressProps {
-  progresses: Array<FileUploadProgress & { fileName?: string }>;
+  progresses: (FileUploadProgress & { fileName?: string })[];
   title?: string;
 }
 

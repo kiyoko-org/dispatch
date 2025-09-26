@@ -16,11 +16,10 @@ import {
   AlertCircle,
 } from 'lucide-react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { useCallback } from 'react';
+import { useCallback , useEffect, useState } from 'react';
 import HeaderWithSidebar from '../../components/HeaderWithSidebar';
 import { useAuthContext } from 'components/AuthProvider';
 import { useTheme } from 'components/ThemeContext';
-import { useEffect, useState } from 'react';
 import { supabase } from 'lib/supabase';
 import { db, Report } from 'lib/database';
 import Splash from 'components/ui/Splash';

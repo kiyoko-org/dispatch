@@ -1,5 +1,4 @@
-import { ReactNode, useState } from "react"
-import React from 'react'
+import React, { ReactNode, useState } from "react"
 import { KeyboardTypeOptions, TextInput as RNTextInput, View, Text, TouchableOpacity } from "react-native"
 import { Eye, EyeOff } from 'lucide-react-native'
 
