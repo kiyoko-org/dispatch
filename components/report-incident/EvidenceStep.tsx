@@ -1,10 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, TouchableOpacity, Alert } from 'react-native';
-import { Mic, Upload, Camera, FileText, X } from 'lucide-react-native';
+import { View, Text, TouchableOpacity, Alert, Image } from 'react-native';
+import { Mic, Upload, Camera, FileText, X, Music, File } from 'lucide-react-native';
 import { Card } from '../ui/Card';
 import { UploadProgress } from '../ui/UploadProgress';
-import { UploadManager, FileUploadResult, FileUploadProgress } from '../../lib/services';
-import { MockStorageService, ExpoFilePickerService } from '../../lib/services';
+import { 
+  UploadManager, 
+  FileUploadResult, 
+  FileUploadProgress,
+  MockStorageService, 
+  ExpoFilePickerService 
+} from '../../lib/services';
 import { FileUtils } from '../../lib/services/file-utils';
 import { AudioRecorder } from 'expo-audio';
 
@@ -180,6 +185,42 @@ export default function EvidenceStep({
     onFilesUploaded?.(newFiles);
   };
 
+  const renderFilePreview = (file: FileUploadResult) => {
+    if (FileUtils.isImageFile(file.type)) {
+      // Show thumbnail for images
+      return (
+        <View className="mr-3 h-12 w-12 overflow-hidden rounded-lg">
+          <Image
+            source={{ uri: file.url }}
+            style={{ width: 48, height: 48 }}
+            resizeMode="cover"
+          />
+        </View>
+      );
+    } else if (FileUtils.isAudioFile(file.type)) {
+      // Show music icon for audio files
+      return (
+        <View className="mr-3 h-12 w-12 items-center justify-center rounded-lg bg-blue-100">
+          <Music size={24} color="#3B82F6" />
+        </View>
+      );
+    } else if (FileUtils.isDocumentFile(file.type)) {
+      // Show document icon for documents
+      return (
+        <View className="mr-3 h-12 w-12 items-center justify-center rounded-lg bg-green-100">
+          <FileText size={24} color="#10B981" />
+        </View>
+      );
+    } else {
+      // Show generic file icon for other file types
+      return (
+        <View className="mr-3 h-12 w-12 items-center justify-center rounded-lg bg-gray-100">
+          <File size={24} color="#6B7280" />
+        </View>
+      );
+    }
+  };
+
   return (
     <Card className="mb-5">
       <View className="mb-4 flex-row items-center">
@@ -207,6 +248,7 @@ export default function EvidenceStep({
               <View
                 key={index}
                 className="flex-row items-center justify-between rounded-lg bg-gray-50 p-3">
+                {renderFilePreview(file)}
                 <View className="flex-1">
                   <Text className="text-sm font-medium text-slate-900" numberOfLines={1}>
                     {file.name}

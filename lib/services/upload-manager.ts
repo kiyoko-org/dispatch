@@ -244,7 +244,7 @@ export class UploadManager implements IUploadManager {
   /**
    * Get all active uploads
    */
-  getActiveUploads(): Array<{ id: string; status: string }> {
+  getActiveUploads(): { id: string; status: string }[] {
     return Array.from(this.activeUploads.entries()).map(([id, upload]) => ({
       id,
       status: upload.status,

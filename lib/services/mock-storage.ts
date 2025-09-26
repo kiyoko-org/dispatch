@@ -45,7 +45,7 @@ export class MockStorageService implements IStorageService {
 
     const result: FileUploadResult = {
       id: fileId,
-      url: `https://mock-storage.example.com/${fileId}`,
+      url: fileUri, // Use original file URI for local development thumbnails
       path: `${options.folder || 'uploads'}/${fileName}`,
       size: fileSize,
       type: fileType,
@@ -58,7 +58,7 @@ export class MockStorageService implements IStorageService {
       id: fileId,
       name: fileName,
       path: result.path,
-      url: result.url,
+      url: fileUri, // Use original file URI for local development
       size: fileSize,
       type: fileType,
       uploadedAt: result.uploadedAt,

@@ -23,11 +23,11 @@ interface HeaderWithSidebarProps {
   backRoute?: string;
   showStepProgress?: boolean;
   stepProgressData?: {
-    steps: Array<{
+    steps: {
       number: number;
       label: string;
       status: 'completed' | 'active' | 'pending';
-    }>;
+    }[];
   };
   logoutPressed?: () => void;
 }

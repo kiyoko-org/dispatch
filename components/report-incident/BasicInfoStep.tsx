@@ -15,7 +15,7 @@ interface BasicInfoStepProps {
   };
   onUpdateFormData: (updates: Partial<BasicInfoStepProps['formData']>) => void;
   onOpenDropdown: (dropdownType: 'category' | 'subcategory' | 'time' | 'date') => void;
-  incidentCategories: Array<{ name: string; severity: string }>;
+  incidentCategories: { name: string; severity: string }[];
   subcategories: Record<string, string[]>;
   showCategoryDropdown: boolean;
   showSubcategoryDropdown: boolean;
