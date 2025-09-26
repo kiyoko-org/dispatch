@@ -1,6 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import { AudioModule, requestRecordingPermissionsAsync } from 'expo-audio';
+import { AudioModule, requestRecordingPermissionsAsync, AudioRecorder } from 'expo-audio';
 import { Alert } from 'react-native';
 import { IFilePickerService } from '../types';
 
@@ -173,7 +173,7 @@ export class ExpoFilePickerService implements IFilePickerService {
     options: {
       maxDuration?: number;
     } = {}
-  ): Promise<any | null> {
+  ): Promise<AudioRecorder | null> {
     try {
       // Request recording permissions
       const { status } = await requestRecordingPermissionsAsync();
@@ -223,13 +223,15 @@ export class ExpoFilePickerService implements IFilePickerService {
   /**
    * Stop recording and return the recorded file URI
    */
-  async stopRecording(recorder: any): Promise<string | null> {
+  async stopRecording(recorder: AudioRecorder): Promise<string | null> {
     try {
+      console.log('Stopping audio recording...');
       // Stop recording
       await recorder.stop();
 
       // Get the URI of the recorded file
       const uri = recorder.uri;
+      console.log('Recording stopped, file URI:', uri);
 
       return uri;
     } catch (error) {

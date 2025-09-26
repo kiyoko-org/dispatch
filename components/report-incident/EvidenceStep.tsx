@@ -47,6 +47,7 @@ export default function EvidenceStep({
       // Stop recording
       if (recorder) {
         try {
+          console.log('Stopping voice recording...');
           setIsUploading(true);
           const result = await uploadManager.uploadRecordedAudio(
             recorder,
@@ -56,14 +57,17 @@ export default function EvidenceStep({
               allowedTypes: FileUtils.getFileTypeGroups().audio,
             },
             (progress) => {
+              console.log('Upload progress:', progress);
               setUploadProgress(progress);
             }
           );
 
+          console.log('Audio upload result:', result);
           if (result) {
             const newFiles = [...uploadedFiles, result];
             setUploadedFiles(newFiles);
             onFilesUploaded?.(newFiles);
+            console.log('Audio file added to evidence list');
           }
         } catch (error) {
           console.error('Error uploading recorded audio:', error);

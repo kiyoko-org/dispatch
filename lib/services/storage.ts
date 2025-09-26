@@ -1,4 +1,5 @@
 import { supabase } from '../supabase';
+import * as FileSystem from 'expo-file-system';
 import {
   IStorageService,
   FileUploadOptions,
@@ -297,20 +298,43 @@ export class SupabaseStorageService implements IStorageService {
    */
   async validateFile(fileUri: string, options: FileUploadOptions = {}): Promise<boolean> {
     try {
-      const fileSize = await this.getFileSize(fileUri);
+      // Check if URI is valid
+      if (!fileUri || fileUri.trim() === '') {
+        console.log('File validation failed: URI is null, undefined, or empty');
+        return false;
+      }
+
+      // Check if file exists
+      const fileInfo = await FileSystem.getInfoAsync(fileUri);
+      if (!fileInfo.exists) {
+        console.log('File validation failed: file does not exist at URI:', fileUri);
+        return false;
+      }
+
+      const fileSize = fileInfo.size || 0;
       const fileType = await this.getFileType(fileUri);
 
       console.log('Validating file:', {
         uri: fileUri,
+        exists: fileInfo.exists,
         size: fileSize,
         type: fileType,
         maxSize: options.maxSize,
         allowedTypes: options.allowedTypes,
       });
 
-      // Check file size (skip if fileSize is 0 for testing purposes)
-      if (options.maxSize && fileSize > options.maxSize && fileSize > 0) {
-        console.log('File validation failed: file too large');
+      // Check if file is empty
+      if (fileSize === 0) {
+        console.log('File validation failed: file is empty (0 bytes)');
+        return false;
+      }
+
+      // Check file size
+      if (options.maxSize && fileSize > options.maxSize) {
+        console.log('File validation failed: file too large', {
+          size: fileSize,
+          maxSize: options.maxSize,
+        });
         return false;
       }
 
@@ -335,14 +359,15 @@ export class SupabaseStorageService implements IStorageService {
    * Get file size from URI
    */
   async getFileSize(fileUri: string): Promise<number> {
-    // This would need to be implemented based on the platform
-    // For React Native, you might need to use react-native-fs or similar
-    // For now, return a placeholder - this might be causing validation issues
-    console.log('Getting file size for:', fileUri, '(returning placeholder: 1024 bytes)');
-
-    // For testing purposes, return a small size to avoid validation issues
-    // In production, you would implement proper file size detection
-    return 1024; // 1KB placeholder
+    try {
+      const fileInfo = await FileSystem.getInfoAsync(fileUri);
+      const size = fileInfo.exists ? fileInfo.size || 0 : 0;
+      console.log('Getting file size for:', fileUri, 'Size:', size, 'bytes');
+      return size;
+    } catch (error) {
+      console.error('Error getting file size for:', fileUri, error);
+      return 0;
+    }
   }
 
   /**
