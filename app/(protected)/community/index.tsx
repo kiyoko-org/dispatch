@@ -33,6 +33,49 @@ export default function CommunityIndex() {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [activeForumCategory, setActiveForumCategory] = useState('All');
 	const [communityContacts, setCommunityContacts] = useState<EmergencyContact[]>([]);
+
+	// Load community contacts when component mounts
+	const loadCommunityContacts = useCallback(async () => {
+		const contacts = await ContactsService.getContacts('community');
+		setCommunityContacts(contacts);
+	}, []);
+
+	// Handle deleting community contact
+	const handleDeleteCommunityContact = (contactId: string, phoneNumber: string) => {
+		Alert.alert(
+			'Delete Contact',
+			`Are you sure you want to remove ${phoneNumber} from Community Resources?`,
+			[
+				{
+					text: 'Cancel',
+					style: 'cancel',
+				},
+				{
+					text: 'Delete',
+					style: 'destructive',
+					onPress: async () => {
+						const success = await ContactsService.deleteContact(contactId, 'community');
+						if (success) {
+							loadCommunityContacts(); // Refresh the contacts list
+							Alert.alert(
+								'Contact Deleted',
+								`${phoneNumber} has been removed from Community Resources.`
+							);
+						} else {
+							Alert.alert('Error', 'There was an error deleting the contact.');
+						}
+					},
+				},
+			]
+		);
+	};
+
+	// Refresh community contacts when screen comes into focus
+	useFocusEffect(
+		useCallback(() => {
+			loadCommunityContacts();
+		}, [loadCommunityContacts])
+	);
 	const [heatmapPoints, setHeatmapPoints] = useState<
 		{ latitude: number; longitude: number; weight: number }[]
 	>([]);
@@ -71,42 +114,25 @@ export default function CommunityIndex() {
 			id: 1,
 			name: 'Therapists',
 			icon: Heart,
-			color: '#3B82F6',
+			color: '#64748B',
+			route: '/(protected)/community/therapists',
 		},
 		{
 			id: 2,
 			name: 'Hospitals',
 			icon: Heart,
-			color: '#3B82F6',
+			color: '#64748B',
+			route: '/(protected)/community/hospitals',
 		},
 		{
 			id: 3,
 			name: 'Legal Professionals',
 			icon: Scale,
-			color: '#3B82F6',
+			color: '#64748B',
+			route: '/(protected)/community/legal-professionals',
 		},
 	];
 
-	const emergencyContacts = [
-		{
-			service: 'Police',
-			number: '911',
-		},
-		{
-			service: 'Fire Department',
-			number: '9602955055',
-		},
-		{
-			service: 'Ambulance',
-			number: '69420',
-		},
-	];
-
-	// Load community contacts when component mounts
-	const loadCommunityContacts = useCallback(async () => {
-		const contacts = await ContactsService.getContacts('community');
-		setCommunityContacts(contacts);
-	}, []);
 
 	// Load heatmap data from reports
 	const loadHeatmapData = useCallback(async () => {
@@ -126,12 +152,6 @@ export default function CommunityIndex() {
 		}
 	}, []);
 
-	// Refresh contacts when screen comes into focus or when Resources tab is active
-	useFocusEffect(
-		useCallback(() => {
-			loadCommunityContacts();
-		}, [loadCommunityContacts])
-	);
 
 	// Load heatmap data when component mounts or when Watch tab becomes active
 	useEffect(() => {
@@ -149,34 +169,6 @@ export default function CommunityIndex() {
 		}
 	};
 
-	const handleDeleteCommunityContact = (contactId: string, phoneNumber: string) => {
-		Alert.alert(
-			'Delete Contact',
-			`Are you sure you want to remove ${phoneNumber} from Community Resources?`,
-			[
-				{
-					text: 'Cancel',
-					style: 'cancel',
-				},
-				{
-					text: 'Delete',
-					style: 'destructive',
-					onPress: async () => {
-						const success = await ContactsService.deleteContact(contactId, 'community');
-						if (success) {
-							loadCommunityContacts(); // Refresh the contacts list
-							Alert.alert(
-								'Contact Deleted',
-								`${phoneNumber} has been removed from Community Resources.`
-							);
-						} else {
-							Alert.alert('Error', 'There was an error deleting the contact.');
-						}
-					},
-				},
-			]
-		);
-	};
 
 	const communityGroups = [
 		{
@@ -193,13 +185,6 @@ export default function CommunityIndex() {
 		},
 	];
 
-	// Handler for emergency contact navigation
-	const handleEmergencyContactPress = (phoneNumber: string) => {
-		router.push({
-			pathname: '/(protected)/emergency',
-			params: { prefilledNumber: phoneNumber },
-		});
-	};
 
 	// Forums Page Data
 	const forumCategories = ['All', 'General', 'Safety', 'Events', 'Support', 'Ideas'];
@@ -292,11 +277,13 @@ export default function CommunityIndex() {
 			</Card>
 
 			{/* Report New Incident Button */}
-			<TouchableOpacity
-				className="mb-6 items-center rounded-lg bg-yellow-500 px-6 py-4"
-				onPress={() => router.push('/(protected)/report-incident')}>
-				<Text className="text-lg font-bold text-slate-900">Report New Incident</Text>
-			</TouchableOpacity>
+			<View className="mb-6 flex-row justify-center">
+				<TouchableOpacity
+					className="items-center rounded-lg bg-slate-700 px-8 py-3"
+					onPress={() => router.push('/(protected)/report-incident')}>
+					<Text className="text-base font-semibold text-white">Report New Incident</Text>
+				</TouchableOpacity>
+			</View>
 		</View>
 	);
 
@@ -310,83 +297,82 @@ export default function CommunityIndex() {
 
 				<View className="space-y-3">
 					{localServices.map((service) => (
-						<TouchableOpacity
-							key={service.id}
-							className="flex-row items-center border-b border-gray-100 py-3 last:border-b-0">
-							<View className="mr-3 h-8 w-8 items-center justify-center rounded-lg bg-slate-100">
-								<service.icon size={20} color={service.color} />
-							</View>
-							<Text className="flex-1 font-medium text-slate-900">{service.name}</Text>
-						</TouchableOpacity>
+					<TouchableOpacity
+						key={service.id}
+						className="flex-row items-center border-b border-gray-100 py-4 last:border-b-0"
+						onPress={() => router.push(service.route as any)}>
+						<View className="mr-4 h-10 w-10 items-center justify-center rounded-lg bg-slate-100">
+							<service.icon size={22} color={service.color} />
+						</View>
+						<Text className="flex-1 text-base font-medium text-slate-900">{service.name}</Text>
+					</TouchableOpacity>
 					))}
 				</View>
 			</Card>
 
-			{/* Contact Emergency Services Button */}
-			<TouchableOpacity className="mb-6 flex-row items-center justify-center rounded-lg bg-yellow-500 px-6 py-4">
-				<Phone size={24} color="#000000" />
-				<Text className="ml-2 text-lg font-bold text-slate-900">Contact Emergency Services</Text>
-			</TouchableOpacity>
-
-			{/* Emergency Contacts */}
+			{/* Community Emergency Contacts */}
 			<Card className="mb-6">
 				<View className="mb-4">
-					<Text className="text-xl font-bold text-slate-900">Emergency Contacts</Text>
+					<Text className="text-xl font-bold text-slate-900">Community Contacts</Text>
+					<Text className="text-sm text-slate-600 mt-1">
+						Emergency contacts shared by community members
+					</Text>
 				</View>
 
-				<View className="space-y-3">
-					{/* Default Emergency Services */}
-					{emergencyContacts.map((contact, index) => (
-						<TouchableOpacity
-							key={`default-${index}`}
-							className="flex-row items-center justify-between rounded-xl border border-red-200 bg-red-50 px-3 py-3"
-							onPress={() => handleEmergencyContactPress(contact.number)}
-							style={{
-								shadowColor: '#EF4444',
-								shadowOffset: { width: 0, height: 2 },
-								shadowOpacity: 0.1,
-								shadowRadius: 4,
-								elevation: 4,
-							}}>
-							<View className="flex-row items-center">
-								<View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-red-100">
-									<Phone size={20} color="#DC2626" />
-								</View>
-								<Text className="font-medium text-slate-700">{contact.service}</Text>
+				{communityContacts.length > 0 ? (
+					<View className="space-y-3">
+						{communityContacts.map((contact) => (
+							<View
+								key={contact.id}
+								className="flex-row items-center justify-between rounded-xl border border-green-200 bg-green-50 p-3">
+								<TouchableOpacity
+									className="flex-1 flex-row items-center"
+									onPress={() => router.push({
+										pathname: '/(protected)/emergency',
+										params: { prefilledNumber: contact.phoneNumber }
+									})}
+									activeOpacity={0.7}>
+									<View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-green-100">
+										<Phone size={20} color="#16A34A" />
+									</View>
+									<View className="flex-1">
+										<Text className="font-semibold text-slate-900">
+											{contact.name || contact.phoneNumber}
+										</Text>
+										<Text className="text-sm text-slate-600">
+											{contact.name ? contact.phoneNumber : 'Community Contact'}
+										</Text>
+									</View>
+								</TouchableOpacity>
+								<TouchableOpacity
+									className="ml-3 p-2"
+									onPress={() => handleDeleteCommunityContact(contact.id, contact.phoneNumber)}
+									activeOpacity={0.7}>
+									<Trash2 size={18} color="#16A34A" />
+								</TouchableOpacity>
 							</View>
-							<Text className="text-lg font-bold text-red-600">{contact.number}</Text>
-						</TouchableOpacity>
-					))}
-
-					{/* Community Saved Contacts */}
-					{communityContacts.map((contact) => (
-						<View
-							key={`community-${contact.id}`}
-							className="flex-row items-center justify-between rounded-xl border border-blue-200 bg-blue-50 px-3 py-3">
-							<TouchableOpacity
-								className="flex-1 flex-row items-center"
-								onPress={() => handleEmergencyContactPress(contact.phoneNumber)}
-								activeOpacity={0.7}>
-								<View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-blue-100">
-									<Phone size={20} color="#3B82F6" />
-								</View>
-								<View className="flex-1">
-									<Text className="font-medium text-slate-700">
-										{contact.name || 'Community Contact'}
-									</Text>
-									<Text className="text-lg font-bold text-blue-600">{contact.phoneNumber}</Text>
-								</View>
-							</TouchableOpacity>
-							<TouchableOpacity
-								className="ml-3 p-2"
-								onPress={() => handleDeleteCommunityContact(contact.id, contact.phoneNumber)}
-								activeOpacity={0.7}>
-								<Trash2 size={18} color="#3B82F6" />
-							</TouchableOpacity>
-						</View>
-					))}
-				</View>
+						))}
+					</View>
+				) : (
+					<View className="py-6">
+						<Text className="text-center text-base text-gray-500">
+							No community contacts shared yet.{'\n'}
+							Save contacts as "Community Resources" to share with others.
+						</Text>
+					</View>
+				)}
 			</Card>
+
+		{/* Contact Emergency Services Button */}
+		<View className="mb-6 flex-row justify-center">
+			<TouchableOpacity 
+				className="flex-row items-center rounded-lg bg-slate-700 px-8 py-3"
+				onPress={() => router.push('/(protected)/emergency')}>
+				<Phone size={20} color="#FFFFFF" />
+				<Text className="ml-3 text-base font-semibold text-white">Contact Emergency Services</Text>
+			</TouchableOpacity>
+		</View>
+
 
 			{/* Community Groups */}
 			<Card className="mb-6">
@@ -422,8 +408,8 @@ export default function CommunityIndex() {
 						className="flex-1 text-slate-900"
 						placeholderTextColor="#9CA3AF"
 					/>
-					<TouchableOpacity className="ml-2 rounded-lg bg-yellow-500 p-2">
-						<Search size={20} color="#000000" />
+				<TouchableOpacity className="ml-2 rounded-lg bg-slate-600 p-2">
+					<Search size={20} color="#FFFFFF" />
 					</TouchableOpacity>
 				</View>
 			</View>
@@ -468,10 +454,12 @@ export default function CommunityIndex() {
 			</View>
 
 			{/* Create New Thread Button */}
-			<TouchableOpacity className="mb-6 flex-row items-center justify-center rounded-lg bg-yellow-500 px-6 py-4">
-				<Plus size={24} color="#000000" />
-				<Text className="ml-2 text-lg font-bold text-slate-900">Create New Thread</Text>
-			</TouchableOpacity>
+			<View className="mb-6 flex-row justify-center">
+				<TouchableOpacity className="flex-row items-center rounded-lg bg-slate-700 px-8 py-3">
+					<Plus size={20} color="#FFFFFF" />
+					<Text className="ml-3 text-base font-semibold text-white">Create New Thread</Text>
+				</TouchableOpacity>
+			</View>
 		</View>
 	);
 
