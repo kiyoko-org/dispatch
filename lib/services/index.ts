@@ -4,6 +4,9 @@ export { MockStorageService } from './mock-storage';
 export { ExpoFilePickerService } from './file-picker';
 export { UploadManager } from './upload-manager';
 
+// Export crimes service
+export * from './crimes';
+
 // Re-export types for convenience
 export type {
   IStorageService,
