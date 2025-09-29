@@ -39,8 +39,8 @@ export interface EmergencyContact {
   id: string;
   name?: string;
   phoneNumber: string;
-  type: 'quick' | 'community';
+  type: 'quick' | 'community' | 'emergency';
   createdAt: string;
 }
 
-export type ContactStorageType = 'quick' | 'community';
+export type ContactStorageType = 'quick' | 'community' | 'emergency';

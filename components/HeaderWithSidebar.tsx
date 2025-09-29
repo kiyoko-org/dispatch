@@ -143,9 +143,9 @@ export default function HeaderWithSidebar({
         },
         {
           id: 'bounties',
-          label: 'Bounties',
+          label: 'Bounty System',
           icon: Coins,
-          route: null
+          route: '/(protected)/bounty'
         },
         {
           id: 'news',

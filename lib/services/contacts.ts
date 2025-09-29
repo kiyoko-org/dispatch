@@ -3,6 +3,7 @@ import { EmergencyContact, ContactStorageType } from '../types';
 
 const QUICK_CONTACTS_KEY = '@dispatch/quick_contacts';
 const COMMUNITY_CONTACTS_KEY = '@dispatch/community_contacts';
+const EMERGENCY_CONTACTS_KEY = '@dispatch/emergency_contacts';
 
 export class ContactsService {
   /**
@@ -18,7 +19,10 @@ export class ContactsService {
         createdAt: new Date().toISOString(),
       };
 
-      const storageKey = type === 'quick' ? QUICK_CONTACTS_KEY : COMMUNITY_CONTACTS_KEY;
+      const storageKey = 
+        type === 'quick' ? QUICK_CONTACTS_KEY : 
+        type === 'community' ? COMMUNITY_CONTACTS_KEY : 
+        EMERGENCY_CONTACTS_KEY;
       const existingContacts = await this.getContacts(type);
       
       // Check if contact already exists
@@ -42,7 +46,10 @@ export class ContactsService {
    */
   static async getContacts(type: ContactStorageType): Promise<EmergencyContact[]> {
     try {
-      const storageKey = type === 'quick' ? QUICK_CONTACTS_KEY : COMMUNITY_CONTACTS_KEY;
+      const storageKey = 
+        type === 'quick' ? QUICK_CONTACTS_KEY : 
+        type === 'community' ? COMMUNITY_CONTACTS_KEY : 
+        EMERGENCY_CONTACTS_KEY;
       const contactsJson = await AsyncStorage.getItem(storageKey);
       
       if (!contactsJson) {
@@ -64,7 +71,10 @@ export class ContactsService {
       const existingContacts = await this.getContacts(type);
       const updatedContacts = existingContacts.filter(c => c.id !== contactId);
       
-      const storageKey = type === 'quick' ? QUICK_CONTACTS_KEY : COMMUNITY_CONTACTS_KEY;
+      const storageKey = 
+        type === 'quick' ? QUICK_CONTACTS_KEY : 
+        type === 'community' ? COMMUNITY_CONTACTS_KEY : 
+        EMERGENCY_CONTACTS_KEY;
       await AsyncStorage.setItem(storageKey, JSON.stringify(updatedContacts));
       
       return true;
@@ -79,7 +89,10 @@ export class ContactsService {
    */
   static async clearContacts(type: ContactStorageType): Promise<boolean> {
     try {
-      const storageKey = type === 'quick' ? QUICK_CONTACTS_KEY : COMMUNITY_CONTACTS_KEY;
+      const storageKey = 
+        type === 'quick' ? QUICK_CONTACTS_KEY : 
+        type === 'community' ? COMMUNITY_CONTACTS_KEY : 
+        EMERGENCY_CONTACTS_KEY;
       await AsyncStorage.removeItem(storageKey);
       return true;
     } catch (error) {

@@ -9,6 +9,9 @@ import {
   Animated,
   Dimensions,
   Linking,
+  AppState,
+  BackHandler,
+  DeviceEventEmitter,
 } from 'react-native';
 import {
   Shield,
@@ -23,6 +26,9 @@ import {
   Delete,
   UserPlus,
   Trash2,
+  Settings,
+  VolumeX,
+  Zap,
 } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -33,6 +39,8 @@ import HeaderWithSidebar from 'components/HeaderWithSidebar';
 import { ContactsService } from 'lib/services/contacts';
 import { EmergencyContact } from 'lib/types';
 import * as Cellular from 'expo-cellular';
+import * as Haptics from 'expo-haptics';
+import VolumeManager from 'react-native-volume-manager';
 
 export default function EmergencyScreen() {
   const router = useRouter();
@@ -42,11 +50,71 @@ export default function EmergencyScreen() {
   const [pressedButtons, setPressedButtons] = useState<Set<string>>(new Set());
   const [isQuickContactsExpanded, setIsQuickContactsExpanded] = useState(false);
   const [quickContacts, setQuickContacts] = useState<EmergencyContact[]>([]);
+  const [savedEmergencyContacts, setSavedEmergencyContacts] = useState<EmergencyContact[]>([]);
+  const [isEmergencyContactsExpanded, setIsEmergencyContactsExpanded] = useState(false);
   const flashAnim = useRef(new Animated.Value(0)).current;
+
+  // Emergency activation settings
+  const [emergencySettings, setEmergencySettings] = useState({
+    hapticEnabled: true,
+    volumeHoldEnabled: true,
+    volumeHoldDuration: 3000, // 3 seconds
+    multiPressEnabled: true,
+    multiPressCount: 5,
+    multiPressWindow: 2000, // 2 seconds
+    powerButtonEnabled: false,
+    silentMode: false,
+    accessibilityMode: false,
+  });
+
+  // Hardware button detection state
+  const [volumePressCount, setVolumePressCount] = useState(0);
+  const [volumeHoldTimer, setVolumeHoldTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [emergencyButtonPressCount, setEmergencyButtonPressCount] = useState(0);
+  const [multiPressTimer, setMultiPressTimer] = useState<ReturnType<typeof setTimeout> | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [contactName, setContactName] = useState('');
+  const [selectedCategories, setSelectedCategories] = useState<{
+    quick: boolean;
+    emergency: boolean;
+    community: boolean;
+  }>({
+    quick: false,
+    emergency: false,
+    community: false,
+  });
 
   const [voipSupport, setVoipSupport] = useState<boolean | null>(null);
   const [isCheckingVoip, setIsCheckingVoip] = useState(true);
   const [status, requestPermission] = Cellular.usePermissions();
+
+  // Emergency contacts data (default + saved)
+  const defaultEmergencyContacts = [
+    {
+      service: 'Police',
+      number: '911',
+    },
+    {
+      service: 'Fire Department',
+      number: '9602955055',
+    },
+    {
+      service: 'Ambulance',
+      number: '69420',
+    },
+  ];
+
+  // Combine default and saved emergency contacts
+  const emergencyContacts = [
+    ...defaultEmergencyContacts,
+    ...savedEmergencyContacts.map(contact => ({
+      service: contact.name || 'Emergency Contact',
+      number: contact.phoneNumber,
+      id: contact.id,
+      isSaved: true
+    }))
+  ];
 
   const checkVoipSupport = useCallback(async () => {
     setIsCheckingVoip(true);
@@ -101,12 +169,133 @@ export default function EmergencyScreen() {
     setQuickContacts(contacts);
   }, []);
 
+  // Load saved emergency contacts when component mounts
+  const loadSavedEmergencyContacts = useCallback(async () => {
+    const contacts = await ContactsService.getContacts('emergency');
+    setSavedEmergencyContacts(contacts);
+  }, []);
+
   // Refresh contacts when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       loadQuickContacts();
-    }, [loadQuickContacts])
+      loadSavedEmergencyContacts();
+    }, [loadQuickContacts, loadSavedEmergencyContacts])
   );
+
+  // Hardware button detection
+  useEffect(() => {
+    let backPressCount = 0;
+    let backPressTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const handleBackPress = () => {
+      if (emergencySettings.powerButtonEnabled) {
+        backPressCount++;
+        
+        if (backPressTimer) {
+          clearTimeout(backPressTimer);
+        }
+        
+        backPressTimer = setTimeout(() => {
+          backPressCount = 0;
+        }, 1000);
+        
+        if (backPressCount >= 3) {
+          triggerHapticFeedback('emergency');
+          Alert.alert(
+            'Emergency via Power Button',
+            'Emergency protocol activated via power button sequence!',
+            [
+              {
+                text: 'Cancel',
+                style: 'cancel',
+              },
+              {
+                text: 'Confirm Emergency',
+                style: 'destructive',
+                onPress: activateEmergencyProtocol,
+              },
+            ]
+          );
+          backPressCount = 0;
+          if (backPressTimer) clearTimeout(backPressTimer);
+          return true; // Prevent default back action
+        }
+      }
+      return false; // Allow default back action
+    };
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
+
+    return () => {
+      subscription.remove();
+      if (backPressTimer) clearTimeout(backPressTimer);
+    };
+  }, [emergencySettings.powerButtonEnabled]);
+
+  // Volume button detection with react-native-volume-manager
+  useEffect(() => {
+    let volumeTimer: ReturnType<typeof setTimeout> | null = null;
+    let pressStartTime = 0;
+
+    const handleVolumeChange = () => {
+      if (!emergencySettings.volumeHoldEnabled) return;
+      
+      triggerHapticFeedback('light');
+      pressStartTime = Date.now();
+      
+      if (volumeTimer) {
+        clearTimeout(volumeTimer);
+      }
+      
+      volumeTimer = setTimeout(() => {
+        const holdDuration = Date.now() - pressStartTime;
+        if (holdDuration >= emergencySettings.volumeHoldDuration - 100) { // 100ms tolerance
+          triggerHapticFeedback('emergency');
+          Alert.alert(
+            'Emergency via Volume Hold',
+            'Emergency protocol activated via volume button hold!',
+            [
+              {
+                text: 'Cancel',
+                style: 'cancel',
+              },
+              {
+                text: 'Confirm Emergency',
+                style: 'destructive',
+                onPress: activateEmergencyProtocol,
+              },
+            ]
+          );
+        }
+      }, emergencySettings.volumeHoldDuration);
+    };
+
+    // Enable volume change detection
+    const enableVolumeListener = async () => {
+      try {
+        await VolumeManager.enable(true);
+        VolumeManager.addVolumeListener(handleVolumeChange);
+      } catch (error) {
+        console.warn('Volume manager error:', error);
+      }
+    };
+
+    if (emergencySettings.volumeHoldEnabled) {
+      enableVolumeListener();
+    }
+
+    return () => {
+      try {
+        VolumeManager.enable(false);
+        // Note: removeVolumeListener might not exist in this version
+        // VolumeManager.removeVolumeListener();
+      } catch (error) {
+        console.warn('Volume manager cleanup error:', error);
+      }
+      if (volumeTimer) clearTimeout(volumeTimer);
+    };
+  }, [emergencySettings.volumeHoldEnabled, emergencySettings.volumeHoldDuration]);
 
   useEffect(() => {
     const flash = () => {
@@ -126,25 +315,114 @@ export default function EmergencyScreen() {
     flash();
   }, [flashAnim]);
 
+  // Haptic feedback functions
+  const triggerHapticFeedback = async (type: 'light' | 'medium' | 'heavy' | 'warning' | 'emergency') => {
+    if (!emergencySettings.hapticEnabled) return;
+
+    try {
+      switch (type) {
+        case 'light':
+          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          break;
+        case 'medium':
+          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+          break;
+        case 'heavy':
+          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+          break;
+        case 'warning':
+          await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+          break;
+        case 'emergency':
+          // Emergency pattern: 3 heavy impacts with short delays
+          await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+          setTimeout(async () => {
+            await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+            setTimeout(async () => {
+              await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
+            }, 200);
+          }, 200);
+          break;
+      }
+    } catch (error) {
+      console.warn('Haptic feedback error:', error);
+    }
+  };
+
+  const activateEmergencyProtocol = () => {
+    triggerHapticFeedback('emergency');
+    setEmergencyProtocolActive(true);
+    
+    Alert.alert(
+      'Emergency Activated',
+      'Authorities have been notified with your location. Emergency contacts will be alerted.',
+      [
+        {
+          text: 'OK',
+          onPress: () => {
+            // Here you would integrate with actual emergency services
+            // Send location, contact emergency contacts, etc.
+          },
+        },
+      ]
+    );
+  };
+
   const handleEmergencyButton = () => {
+    triggerHapticFeedback('warning');
+    
+    if (emergencySettings.multiPressEnabled) {
+      setEmergencyButtonPressCount(prev => prev + 1);
+      
+      if (multiPressTimer) {
+        clearTimeout(multiPressTimer);
+      }
+      
+      const newTimer = setTimeout(() => {
+        setEmergencyButtonPressCount(0);
+      }, emergencySettings.multiPressWindow);
+      
+      setMultiPressTimer(newTimer);
+      
+      if (emergencyButtonPressCount + 1 >= emergencySettings.multiPressCount) {
+        clearTimeout(newTimer);
+        setEmergencyButtonPressCount(0);
+        activateEmergencyProtocol();
+        return;
+      }
+      
+      if (emergencyButtonPressCount + 1 === emergencySettings.multiPressCount - 1) {
+        triggerHapticFeedback('heavy');
+        Alert.alert(
+          'Emergency Ready',
+          `Press ${emergencySettings.multiPressCount - emergencyButtonPressCount - 1} more time to activate emergency protocol.`,
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+    }
+
     Alert.alert(
       'Emergency Alert',
-      'Are you sure you want to activate emergency protocol? This will alert authorities with your GPS location.',
+      emergencySettings.multiPressEnabled 
+        ? `Press ${emergencySettings.multiPressCount} times quickly to activate emergency protocol, or tap "Activate Emergency" below.\n\nPresses: ${emergencyButtonPressCount + 1}/${emergencySettings.multiPressCount}`
+        : 'Are you sure you want to activate emergency protocol? This will alert authorities with your GPS location.',
       [
         {
           text: 'Cancel',
           style: 'cancel',
+          onPress: () => {
+            setEmergencyButtonPressCount(0);
+            if (multiPressTimer) clearTimeout(multiPressTimer);
+          },
         },
         {
           text: 'Activate Emergency',
           style: 'destructive',
           onPress: () => {
-            setEmergencyProtocolActive(true);
-            // Here you would integrate with actual emergency services
-            Alert.alert(
-              'Emergency Activated',
-              'Authorities have been notified with your location.'
-            );
+            setEmergencyButtonPressCount(0);
+            if (multiPressTimer) clearTimeout(multiPressTimer);
+            activateEmergencyProtocol();
           },
         },
       ]
@@ -159,6 +437,7 @@ export default function EmergencyScreen() {
   ];
 
   const handleNumberPress = (number: string) => {
+    triggerHapticFeedback('light');
     setEmergencyNumber((prev) => prev + number);
   };
 
@@ -184,6 +463,7 @@ export default function EmergencyScreen() {
 
   const makeCall = () => {
     if (emergencyNumber) {
+      triggerHapticFeedback('medium');
       Linking.openURL(`tel:${emergencyNumber}`);
     }
   };
@@ -213,13 +493,16 @@ export default function EmergencyScreen() {
   };
 
   const handleContactCall = (phoneNumber: string) => {
-    Linking.openURL(`tel:${phoneNumber}`);
+    setEmergencyNumber(phoneNumber);
+    triggerHapticFeedback('medium');
   };
 
-  const handleDeleteContact = (contactId: string, phoneNumber: string) => {
+  const handleDeleteContact = (contactId: string, phoneNumber: string, contactType: 'quick' | 'emergency' = 'quick') => {
+    const typeDisplayName = contactType === 'quick' ? 'Quick Contacts' : 'Saved Emergency Contacts';
+    
     Alert.alert(
       'Delete Contact',
-      `Are you sure you want to remove ${phoneNumber} from Quick Contacts?`,
+      `Are you sure you want to remove ${phoneNumber} from ${typeDisplayName}?`,
       [
         {
           text: 'Cancel',
@@ -229,12 +512,16 @@ export default function EmergencyScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            const success = await ContactsService.deleteContact(contactId, 'quick');
+            const success = await ContactsService.deleteContact(contactId, contactType);
             if (success) {
-              loadQuickContacts(); // Refresh the contacts list
+              if (contactType === 'quick') {
+                loadQuickContacts(); // Refresh the quick contacts list
+              } else {
+                loadSavedEmergencyContacts(); // Refresh the emergency contacts list
+              }
               Alert.alert(
                 'Contact Deleted',
-                `${phoneNumber} has been removed from Quick Contacts.`
+                `${phoneNumber} has been removed from ${typeDisplayName}.`
               );
             } else {
               Alert.alert('Error', 'There was an error deleting the contact.');
@@ -245,54 +532,90 @@ export default function EmergencyScreen() {
     );
   };
 
+  // Handler for emergency contact press
+  const handleEmergencyContactPress = (phoneNumber: string) => {
+    setEmergencyNumber(phoneNumber);
+    triggerHapticFeedback('medium');
+  };
+
   const saveContact = () => {
     if (emergencyNumber.trim()) {
-      Alert.alert('Save Emergency Contact', `Where would you like to save ${emergencyNumber}?`, [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Quick Contacts',
-          onPress: async () => {
-            const success = await ContactsService.saveContact(emergencyNumber.trim(), 'quick');
-            if (success) {
-              Alert.alert(
-                'Contact Saved',
-                `${emergencyNumber} has been saved to Quick Contacts for immediate emergency access.`
-              );
-              loadQuickContacts(); // Refresh the contacts list
-              setEmergencyNumber(''); // Clear the input
-            } else {
-              Alert.alert(
-                'Error',
-                'This contact already exists in Quick Contacts or there was an error saving.'
-              );
-            }
-          },
-        },
-        {
-          text: 'Community Resources',
-          onPress: async () => {
-            const success = await ContactsService.saveContact(emergencyNumber.trim(), 'community');
-            if (success) {
-              Alert.alert(
-                'Contact Saved',
-                `${emergencyNumber} has been saved to Community Resources where others can also access this emergency contact.`
-              );
-              setEmergencyNumber(''); // Clear the input
-            } else {
-              Alert.alert(
-                'Error',
-                'This contact already exists in Community Resources or there was an error saving.'
-              );
-            }
-          },
-        },
-      ]);
+      triggerHapticFeedback('light');
+      setShowSaveModal(true);
     } else {
       Alert.alert('No Number', 'Please enter a phone number to save as contact');
     }
+  };
+
+  const handleSaveToCategories = async () => {
+    const name = contactName.trim() || undefined;
+    const selectedCategoriesList = Object.entries(selectedCategories)
+      .filter(([_, isSelected]) => isSelected)
+      .map(([category, _]) => category as 'quick' | 'emergency' | 'community');
+
+    if (selectedCategoriesList.length === 0) {
+      Alert.alert('No Categories Selected', 'Please select at least one category to save the contact.');
+      return;
+    }
+
+    const results = await Promise.all(
+      selectedCategoriesList.map(async (category) => {
+        const success = await ContactsService.saveContact(emergencyNumber.trim(), category, name);
+        return { category, success };
+      })
+    );
+
+    const successfulSaves = results.filter(r => r.success);
+    const failedSaves = results.filter(r => !r.success);
+
+    if (successfulSaves.length > 0) {
+      const categoryNames = {
+        quick: 'Quick Contacts',
+        emergency: 'Emergency Contacts',
+        community: 'Community Resources'
+      };
+
+      const savedToNames = successfulSaves.map(r => categoryNames[r.category]).join(', ');
+      
+      Alert.alert(
+        'Contact Saved',
+        `${emergencyNumber}${name ? ` (${name})` : ''} has been saved to: ${savedToNames}.`
+      );
+
+      // Refresh the appropriate contact lists
+      if (successfulSaves.some(r => r.category === 'quick')) {
+        loadQuickContacts();
+      }
+      if (successfulSaves.some(r => r.category === 'emergency')) {
+        loadSavedEmergencyContacts();
+      }
+
+      setEmergencyNumber(''); // Clear the input
+      setContactName(''); // Clear the name input
+      setSelectedCategories({ quick: false, emergency: false, community: false }); // Reset selections
+      setShowSaveModal(false);
+    }
+
+    if (failedSaves.length > 0) {
+      const categoryNames = {
+        quick: 'Quick Contacts',
+        emergency: 'Emergency Contacts',
+        community: 'Community Resources'
+      };
+      
+      const failedNames = failedSaves.map(r => categoryNames[r.category]).join(', ');
+      Alert.alert(
+        'Some Saves Failed',
+        `Contact already exists in or there was an error saving to: ${failedNames}.`
+      );
+    }
+  };
+
+  const toggleCategory = (category: 'quick' | 'emergency' | 'community') => {
+    setSelectedCategories(prev => ({
+      ...prev,
+      [category]: !prev[category]
+    }));
   };
 
   const getButtonStyle = (buttonId: string, isPressed: boolean) => {
@@ -359,6 +682,19 @@ export default function EmergencyScreen() {
       <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
 
       <HeaderWithSidebar title="Emergency Response" showBackButton={false} />
+
+      {/* Settings Button - Positioned over the header */}
+      <View className="absolute right-4 top-5 z-50">
+        <TouchableOpacity
+          onPress={() => {
+            triggerHapticFeedback('light');
+            setShowSettings(true);
+          }}
+          className="p-2 bg-white rounded-full shadow-md border border-gray-200"
+          activeOpacity={0.7}>
+          <Settings size={20} color="#3B82F6" />
+        </TouchableOpacity>
+      </View>
 
       <ScreenContent
         contentContainerStyle={{
@@ -428,9 +764,11 @@ export default function EmergencyScreen() {
                           </View>
                           <View className="flex-1">
                             <Text className="font-semibold text-slate-900">
-                              {contact.phoneNumber}
+                              {contact.name || contact.phoneNumber}
                             </Text>
-                            <Text className="text-sm text-slate-600">Emergency Contact</Text>
+                            <Text className="text-sm text-slate-600">
+                              {contact.name ? contact.phoneNumber : 'Emergency Contact'}
+                            </Text>
                           </View>
                         </TouchableOpacity>
                         <TouchableOpacity
@@ -451,6 +789,75 @@ export default function EmergencyScreen() {
               </View>
             )}
           </Card>
+
+          {/* Emergency Contacts */}
+          <Card className={isTablet ? 'mb-8' : 'mb-6'}>
+            <TouchableOpacity
+              className="flex-row items-center justify-between"
+              onPress={() => setIsEmergencyContactsExpanded(!isEmergencyContactsExpanded)}
+              activeOpacity={0.7}>
+              <View className="flex-row items-center">
+                <AlertTriangle size={isTablet ? 26 : 24} color="#DC2626" />
+                <Text
+                  className={`font-bold ${isTablet ? 'text-xl' : 'text-lg'} ml-3 text-gray-900`}>
+                  Emergency Contacts
+                </Text>
+              </View>
+              <View className="flex-row items-center">
+                <Text
+                  className={`${isTablet ? 'text-base' : 'text-sm'} mr-2 font-medium text-red-600`}>
+                  {isEmergencyContactsExpanded ? 'COLLAPSE' : 'EXPAND'}
+                </Text>
+                {isEmergencyContactsExpanded ? (
+                  <ChevronUp size={isTablet ? 24 : 20} color="#DC2626" />
+                ) : (
+                  <ChevronDown size={isTablet ? 24 : 20} color="#DC2626" />
+                )}
+              </View>
+            </TouchableOpacity>
+
+            {isEmergencyContactsExpanded && (
+              <View
+                className={`${isTablet ? 'mt-6' : 'mt-4'} border-t border-gray-200 ${isTablet ? 'pt-6' : 'pt-4'}`}>
+                <View className="space-y-4">
+                  {emergencyContacts.map((contact, index) => (
+                    <View
+                      key={contact.id || `default-${index}`}
+                      className="flex-row items-center justify-between rounded-xl border border-red-200 bg-red-50 px-3 py-4"
+                      style={{
+                        shadowColor: '#EF4444',
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 4,
+                        elevation: 4,
+                      }}>
+                      <TouchableOpacity
+                        className="flex-1 flex-row items-center"
+                        onPress={() => handleEmergencyContactPress(contact.number)}
+                        activeOpacity={0.7}>
+                        <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-red-100">
+                          <Phone size={20} color="#DC2626" />
+                        </View>
+                        <View className="flex-1">
+                          <Text className="font-medium text-slate-700">{contact.service}</Text>
+                          <Text className="text-lg font-bold text-red-600">{contact.number}</Text>
+                        </View>
+                      </TouchableOpacity>
+                      {contact.isSaved && (
+                        <TouchableOpacity
+                          className="ml-3 p-2"
+                          onPress={() => handleDeleteContact(contact.id, contact.number, 'emergency')}
+                          activeOpacity={0.7}>
+                          <Trash2 size={18} color="#DC2626" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
+          </Card>
+
 
           {/* Emergency Button */}
           <Animated.View
@@ -476,13 +883,29 @@ export default function EmergencyScreen() {
               activeOpacity={1}
               onPressIn={() => handleButtonPressIn('emergency')}
               onPressOut={() => handleButtonPressOut('emergency')}
-              style={pressedButtons.has('emergency') ? { transform: [{ scale: 0.98 }] } : {}}>
+              style={pressedButtons.has('emergency') ? { transform: [{ scale: 0.98 }] } : {}}
+              accessibilityLabel="Emergency button"
+              accessibilityHint={
+                emergencySettings.multiPressEnabled 
+                  ? `Press ${emergencySettings.multiPressCount} times quickly to activate emergency protocol`
+                  : "Tap to activate emergency protocol"
+              }>
               <View className="flex-row items-center">
                 <User size={isTablet ? 40 : 32} color="white" />
                 <Text className={`font-bold text-white ${isTablet ? 'text-3xl' : 'text-2xl'} ml-3`}>
                   EMERGENCY
                 </Text>
               </View>
+              {(emergencySettings.multiPressEnabled || emergencySettings.volumeHoldEnabled || emergencySettings.powerButtonEnabled) && (
+                <View className="flex-row items-center mt-2">
+                  <Zap size={16} color="white" />
+                  <Text className="text-white text-xs ml-1 opacity-80">
+                    {emergencySettings.multiPressEnabled && `${emergencyButtonPressCount}/${emergencySettings.multiPressCount}`}
+                    {emergencySettings.volumeHoldEnabled && ' • Vol Hold'}
+                    {emergencySettings.powerButtonEnabled && ' • Power 3x'}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
           </Animated.View>
 
@@ -587,7 +1010,7 @@ export default function EmergencyScreen() {
                     <UserPlus size={isTablet ? 22 : 18} color="white" />
                     <Text
                       className={`font-bold text-white ${isTablet ? 'text-base' : 'text-sm'} ml-2`}>
-                      Save as Emergency Contact
+                      Save as Contact
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -640,6 +1063,271 @@ export default function EmergencyScreen() {
           </Card>
         </Container>
       </ScreenContent>
+
+      {/* Emergency Settings Modal */}
+      {showSettings && (
+        <View 
+          className="absolute inset-0 bg-black/50 flex-1 justify-center items-center px-4"
+          style={{ zIndex: 1000 }}>
+          <View className="bg-white rounded-2xl w-full max-w-md p-6 max-h-[80%]">
+            <View className="flex-row items-center justify-between mb-6">
+              <Text className="text-xl font-bold text-gray-900">Emergency Settings</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  triggerHapticFeedback('light');
+                  setShowSettings(false);
+                }}
+                className="p-2 -m-2">
+                <X size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <View className="space-y-4">
+              {/* Haptic Feedback */}
+              <View className="flex-row items-center justify-between">
+                <View className="flex-1">
+                  <Text className="font-semibold text-gray-900">Haptic Feedback</Text>
+                  <Text className="text-sm text-gray-600">Feel vibrations for button presses</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    triggerHapticFeedback('light');
+                    setEmergencySettings(prev => ({ ...prev, hapticEnabled: !prev.hapticEnabled }));
+                  }}
+                  className={`w-12 h-6 rounded-full ${emergencySettings.hapticEnabled ? 'bg-blue-500' : 'bg-gray-300'}`}>
+                  <View
+                    className={`w-5 h-5 bg-white rounded-full mt-0.5 transition-transform ${
+                      emergencySettings.hapticEnabled ? 'ml-6' : 'ml-0.5'
+                    }`}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Volume Hold */}
+              <View className="flex-row items-center justify-between">
+                <View className="flex-1">
+                  <Text className="font-semibold text-gray-900">Volume Button Hold</Text>
+                  <Text className="text-sm text-gray-600">Hold volume up for {emergencySettings.volumeHoldDuration/1000}s</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    triggerHapticFeedback('light');
+                    setEmergencySettings(prev => ({ ...prev, volumeHoldEnabled: !prev.volumeHoldEnabled }));
+                  }}
+                  className={`w-12 h-6 rounded-full ${emergencySettings.volumeHoldEnabled ? 'bg-blue-500' : 'bg-gray-300'}`}>
+                  <View
+                    className={`w-5 h-5 bg-white rounded-full mt-0.5 transition-transform ${
+                      emergencySettings.volumeHoldEnabled ? 'ml-6' : 'ml-0.5'
+                    }`}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Multi-Press */}
+              <View className="flex-row items-center justify-between">
+                <View className="flex-1">
+                  <Text className="font-semibold text-gray-900">Multi-Press Activation</Text>
+                  <Text className="text-sm text-gray-600">Press emergency button {emergencySettings.multiPressCount} times</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    triggerHapticFeedback('light');
+                    setEmergencySettings(prev => ({ ...prev, multiPressEnabled: !prev.multiPressEnabled }));
+                  }}
+                  className={`w-12 h-6 rounded-full ${emergencySettings.multiPressEnabled ? 'bg-blue-500' : 'bg-gray-300'}`}>
+                  <View
+                    className={`w-5 h-5 bg-white rounded-full mt-0.5 transition-transform ${
+                      emergencySettings.multiPressEnabled ? 'ml-6' : 'ml-0.5'
+                    }`}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Power Button */}
+              <View className="flex-row items-center justify-between">
+                <View className="flex-1">
+                  <Text className="font-semibold text-gray-900">Power Button Sequence</Text>
+                  <Text className="text-sm text-gray-600">Press back/power button 3 times</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    triggerHapticFeedback('light');
+                    setEmergencySettings(prev => ({ ...prev, powerButtonEnabled: !prev.powerButtonEnabled }));
+                  }}
+                  className={`w-12 h-6 rounded-full ${emergencySettings.powerButtonEnabled ? 'bg-blue-500' : 'bg-gray-300'}`}>
+                  <View
+                    className={`w-5 h-5 bg-white rounded-full mt-0.5 transition-transform ${
+                      emergencySettings.powerButtonEnabled ? 'ml-6' : 'ml-0.5'
+                    }`}
+                  />
+                </TouchableOpacity>
+              </View>
+
+              {/* Silent Mode */}
+              <View className="flex-row items-center justify-between">
+                <View className="flex-1">
+                  <Text className="font-semibold text-gray-900">Silent Emergency Mode</Text>
+                  <Text className="text-sm text-gray-600">Activate without sound or vibration</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    triggerHapticFeedback('light');
+                    setEmergencySettings(prev => ({ ...prev, silentMode: !prev.silentMode }));
+                  }}
+                  className={`w-12 h-6 rounded-full ${emergencySettings.silentMode ? 'bg-blue-500' : 'bg-gray-300'}`}>
+                  <View
+                    className={`w-5 h-5 bg-white rounded-full mt-0.5 transition-transform ${
+                      emergencySettings.silentMode ? 'ml-6' : 'ml-0.5'
+                    }`}
+                  />
+                </TouchableOpacity>
+              </View>
+
+            </View>
+
+            <TouchableOpacity
+              onPress={() => {
+                triggerHapticFeedback('medium');
+                setShowSettings(false);
+              }}
+              className="mt-6 bg-blue-600 rounded-xl py-3 px-6">
+              <Text className="text-white font-semibold text-center">Save Settings</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Save Contact Modal */}
+      {showSaveModal && (
+        <View 
+          className="absolute inset-0 bg-black/50 flex-1 justify-center items-center px-4"
+          style={{ zIndex: 1001 }}>
+          <View className="bg-white rounded-2xl w-full max-w-md p-6">
+            <View className="flex-row items-center justify-between mb-6">
+              <Text className="text-xl font-bold text-gray-900">Save Contact</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  triggerHapticFeedback('light');
+                  setShowSaveModal(false);
+                  setContactName('');
+                  setSelectedCategories({ quick: false, emergency: false, community: false });
+                }}
+                className="p-2 -m-2">
+                <X size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <View className="mb-6">
+              <Text className="text-lg font-semibold text-gray-900 mb-2">
+                {emergencyNumber}
+              </Text>
+              <Text className="text-sm text-gray-600 mb-4">
+                Enter a name for this contact (optional):
+              </Text>
+              <TextInput
+                placeholder="Contact name (optional)"
+                value={contactName}
+                onChangeText={setContactName}
+                className="border border-gray-300 rounded-xl px-4 py-3 text-base"
+                placeholderTextColor="#9CA3AF"
+                autoFocus={true}
+              />
+            </View>
+
+            <View className="space-y-3">
+              <Text className="font-semibold text-gray-900 mb-2">
+                Choose where to save (select multiple):
+              </Text>
+              
+              <TouchableOpacity
+                onPress={() => toggleCategory('quick')}
+                className={`flex-row items-center p-4 rounded-xl border ${
+                  selectedCategories.quick 
+                    ? 'bg-blue-100 border-blue-300' 
+                    : 'bg-blue-50 border-blue-200'
+                }`}
+                activeOpacity={0.7}>
+                <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-blue-100">
+                  <Phone size={20} color="#3B82F6" />
+                </View>
+                <View className="flex-1">
+                  <Text className="font-semibold text-gray-900">Quick Contacts</Text>
+                  <Text className="text-sm text-gray-600">Immediate emergency access</Text>
+                </View>
+                <View className={`w-6 h-6 rounded border-2 ${
+                  selectedCategories.quick 
+                    ? 'bg-blue-500 border-blue-500' 
+                    : 'border-gray-300'
+                } items-center justify-center`}>
+                  {selectedCategories.quick && (
+                    <Text className="text-white text-xs font-bold">✓</Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => toggleCategory('emergency')}
+                className={`flex-row items-center p-4 rounded-xl border ${
+                  selectedCategories.emergency 
+                    ? 'bg-red-100 border-red-300' 
+                    : 'bg-red-50 border-red-200'
+                }`}
+                activeOpacity={0.7}>
+                <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-red-100">
+                  <AlertTriangle size={20} color="#DC2626" />
+                </View>
+                <View className="flex-1">
+                  <Text className="font-semibold text-gray-900">Emergency Contacts</Text>
+                  <Text className="text-sm text-gray-600">Dedicated emergency category</Text>
+                </View>
+                <View className={`w-6 h-6 rounded border-2 ${
+                  selectedCategories.emergency 
+                    ? 'bg-red-500 border-red-500' 
+                    : 'border-gray-300'
+                } items-center justify-center`}>
+                  {selectedCategories.emergency && (
+                    <Text className="text-white text-xs font-bold">✓</Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => toggleCategory('community')}
+                className={`flex-row items-center p-4 rounded-xl border ${
+                  selectedCategories.community 
+                    ? 'bg-green-100 border-green-300' 
+                    : 'bg-green-50 border-green-200'
+                }`}
+                activeOpacity={0.7}>
+                <View className="mr-3 h-10 w-10 items-center justify-center rounded-full bg-green-100">
+                  <User size={20} color="#16A34A" />
+                </View>
+                <View className="flex-1">
+                  <Text className="font-semibold text-gray-900">Community Resources</Text>
+                  <Text className="text-sm text-gray-600">Shared with community</Text>
+                </View>
+                <View className={`w-6 h-6 rounded border-2 ${
+                  selectedCategories.community 
+                    ? 'bg-green-500 border-green-500' 
+                    : 'border-gray-300'
+                } items-center justify-center`}>
+                  {selectedCategories.community && (
+                    <Text className="text-white text-xs font-bold">✓</Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              onPress={handleSaveToCategories}
+              className="mt-6 bg-blue-600 rounded-xl py-3 px-6"
+              activeOpacity={0.8}>
+              <Text className="text-white font-semibold text-center">Save Contact</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
     </View>
   );
 }
