@@ -446,8 +446,18 @@ export default function ReportIncidentIndex() {
         // Add any additional fields if needed
       };
 
-      // Call the report API to submit the incident report
-      const result = await reportService.addReport(reportData);
+      // Create a timeout promise (60 seconds)
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => {
+          reject(new Error('TIMEOUT'));
+        }, 60000); // 60 seconds
+      });
+
+      // Race between the API call and timeout
+      const result = await Promise.race([
+        reportService.addReport(reportData),
+        timeoutPromise
+      ]);
 
       if (result.error) {
         throw new Error(result.error.message || 'Failed to submit report');
@@ -467,6 +477,28 @@ export default function ReportIncidentIndex() {
       );
     } catch (error) {
       console.error('Report submission error:', error);
+      
+      // Handle timeout specifically
+      if (error instanceof Error && error.message === 'TIMEOUT') {
+        updateUIState({ isSubmitting: false });
+        Alert.alert(
+          'Submission Timeout',
+          'Submitting took too long. Would you like to retry?',
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel'
+            },
+            {
+              text: 'Retry',
+              onPress: () => handleSubmitReport()
+            }
+          ]
+        );
+        return;
+      }
+
+      // Handle other errors
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
       Alert.alert(
         'Submission Error',
