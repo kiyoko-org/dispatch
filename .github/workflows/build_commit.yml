@@ -1,0 +1,41 @@
+name: Build commit
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Make expo prebuilds
+        run: bun expo prebuild
+
+      - name: Build with Gradle
+        run: |
+          cd android
+          ./gradlew assembleRelease
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: android/app/build/outputs/apk/release/*.apk
