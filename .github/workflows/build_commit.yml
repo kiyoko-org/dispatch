@@ -29,6 +29,14 @@ jobs:
       - name: Make expo prebuilds
         run: bun expo prebuild
 
+      - name: Make dotenv
+        run: |
+          cat > .env <<EOF
+          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}
+          EOF
+
       - name: Build with Gradle
         run: |
           cd android
