@@ -16,7 +16,7 @@ import {
   AlertCircle,
 } from 'lucide-react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { useCallback , useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import HeaderWithSidebar from '../../components/HeaderWithSidebar';
 import { useAuthContext } from 'components/AuthProvider';
 import { useTheme } from 'components/ThemeContext';
@@ -69,6 +69,7 @@ export default function Home() {
   const [profile, setProfile] = useState<Profile>();
   const [recentReports, setRecentReports] = useState<Report[]>([]);
   const [reportsLoading, setReportsLoading] = useState(false);
+  const [reportCount, setReportCount] = useState<number | null>(null);
 
   // Get current theme colors or fall back to default
   const getCurrentColors = () => {
@@ -102,7 +103,7 @@ export default function Home() {
       reportText: colors.text,
       reportIconBg: colors.surfaceVariant,
       background: colors.background,
-      statusBarStyle: isDark ? 'light-content' as const : 'dark-content' as const,
+      statusBarStyle: isDark ? ('light-content' as const) : ('dark-content' as const),
       primary: colors.primary,
       primaryLight: colors.primaryLight,
     };
@@ -135,6 +136,7 @@ export default function Home() {
       // Get the 5 most recent reports
       const recentReports = result.data?.slice(0, 5) || [];
       setRecentReports(recentReports);
+      setReportCount(result.data?.length ?? 0);
     } catch (error) {
       console.error('Error fetching recent reports:', error);
     } finally {
@@ -227,7 +229,10 @@ export default function Home() {
 
   return (
     <View style={{ flex: 1, backgroundColor: currentColors.background }}>
-      <StatusBar barStyle={currentColors.statusBarStyle} backgroundColor={currentColors.background} />
+      <StatusBar
+        barStyle={currentColors.statusBarStyle}
+        backgroundColor={currentColors.background}
+      />
 
       <HeaderWithSidebar
         title="Dispatch Dashboard"
@@ -240,7 +245,13 @@ export default function Home() {
         {/* Welcome Banner */}
         <View style={{ padding: 24, backgroundColor: currentColors.headerBg }}>
           <View className="mb-6">
-            <Text style={{ marginBottom: 8, fontSize: 24, fontWeight: 'bold', color: currentColors.headerText }}>
+            <Text
+              style={{
+                marginBottom: 8,
+                fontSize: 24,
+                fontWeight: 'bold',
+                color: currentColors.headerText,
+              }}>
               Welcome back, {profile?.first_name}
             </Text>
             <Text style={{ fontSize: 16, color: currentColors.headerSubtext }}>
@@ -248,49 +259,59 @@ export default function Home() {
             </Text>
           </View>
 
-          <View style={{ 
-            borderRadius: 12, 
-            borderWidth: 1, 
-            borderColor: currentColors.headerCardBorder, 
-            backgroundColor: currentColors.headerCardBg, 
-            padding: 16 
-          }}>
+          <View
+            style={{
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: currentColors.headerCardBorder,
+              backgroundColor: currentColors.headerCardBg,
+              padding: 16,
+            }}>
             <View className="mb-4 flex-row items-center justify-between">
               <View className="flex-row items-center">
-                <View style={{ 
-                  marginRight: 12, 
-                  height: 40, 
-                  width: 40, 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  borderRadius: 8, 
-                  backgroundColor: currentColors.headerCardIconBg 
-                }}>
+                <View
+                  style={{
+                    marginRight: 12,
+                    height: 40,
+                    width: 40,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 8,
+                    backgroundColor: currentColors.headerCardIconBg,
+                  }}>
                   <Shield size={22} color={currentColors.headerCardIcon} />
                 </View>
-                <Text style={{ fontSize: 18, fontWeight: '600', color: currentColors.headerText }}>Security Status</Text>
+                <Text style={{ fontSize: 18, fontWeight: '600', color: currentColors.headerText }}>
+                  Security Status
+                </Text>
               </View>
-              <View style={{ 
-                borderRadius: 8, 
-                backgroundColor: currentColors.headerTagBg, 
-                paddingHorizontal: 12, 
-                paddingVertical: 6 
-              }}>
-                <Text style={{ fontSize: 12, fontWeight: '500', color: currentColors.headerText }}>Active</Text>
+              <View
+                style={{
+                  borderRadius: 8,
+                  backgroundColor: currentColors.headerTagBg,
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                }}>
+                <Text style={{ fontSize: 12, fontWeight: '500', color: currentColors.headerText }}>
+                  Active
+                </Text>
               </View>
             </View>
-            <View style={{ 
-              marginBottom: 12, 
-              height: 12, 
-              borderRadius: 6, 
-              backgroundColor: currentColors.headerProgressBg 
-            }}>
-              <View style={{ 
-                height: 12, 
-                width: '80%', 
-                borderRadius: 6, 
-                backgroundColor: currentColors.headerProgressFill 
-              }} />
+            <View
+              style={{
+                marginBottom: 12,
+                height: 12,
+                borderRadius: 6,
+                backgroundColor: currentColors.headerProgressBg,
+              }}>
+              <View
+                style={{
+                  height: 12,
+                  width: '80%',
+                  borderRadius: 6,
+                  backgroundColor: currentColors.headerProgressFill,
+                }}
+              />
             </View>
             <Text style={{ fontSize: 14, fontWeight: '500', color: currentColors.headerSubtext }}>
               System Status: 87% Operational
@@ -300,108 +321,158 @@ export default function Home() {
 
         {/* Key Metrics */}
         <View style={{ marginBottom: 32, marginTop: 24, paddingHorizontal: 16 }}>
-          <Text style={{ marginBottom: 16, fontSize: 18, fontWeight: 'bold', color: currentColors.sectionHeading }}>
+          <Text
+            style={{
+              marginBottom: 16,
+              fontSize: 18,
+              fontWeight: 'bold',
+              color: currentColors.sectionHeading,
+            }}>
             Key Metrics
           </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
             <View
-              style={{ 
+              style={{
                 width: '48%',
                 borderRadius: 8,
                 borderWidth: 1,
                 borderColor: currentColors.cardBorder,
                 backgroundColor: currentColors.cardBg,
-                padding: 12
+                padding: 12,
               }}>
               <View style={{ alignItems: 'center' }}>
-                <View style={{ 
-                  marginBottom: 8, 
-                  height: 32, 
-                  width: 32, 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  borderRadius: 8, 
-                  backgroundColor: currentColors.cardIconBg 
-                }}>
+                <View
+                  style={{
+                    marginBottom: 8,
+                    height: 32,
+                    width: 32,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 8,
+                    backgroundColor: currentColors.cardIconBg,
+                  }}>
                   <Shield size={20} color={currentColors.cardIcon} />
                 </View>
-                <Text style={{ fontSize: 20, fontWeight: 'bold', color: currentColors.cardText }}>87%</Text>
-                <Text style={{ textAlign: 'center', fontSize: 12, fontWeight: '500', color: currentColors.cardSubtext }}>Trust Score</Text>
+                <Text style={{ fontSize: 20, fontWeight: 'bold', color: currentColors.cardText }}>
+                  87%
+                </Text>
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    fontSize: 12,
+                    fontWeight: '500',
+                    color: currentColors.cardSubtext,
+                  }}>
+                  Trust Score
+                </Text>
               </View>
             </View>
             <View
-              style={{ 
+              style={{
                 width: '48%',
                 borderRadius: 8,
                 borderWidth: 1,
                 borderColor: currentColors.cardBorder,
                 backgroundColor: currentColors.cardBg,
-                padding: 12
+                padding: 12,
               }}>
               <View style={{ alignItems: 'center' }}>
-                <View style={{ 
-                  marginBottom: 8, 
-                  height: 32, 
-                  width: 32, 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  borderRadius: 8, 
-                  backgroundColor: currentColors.cardIconBg 
-                }}>
+                <View
+                  style={{
+                    marginBottom: 8,
+                    height: 32,
+                    width: 32,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 8,
+                    backgroundColor: currentColors.cardIconBg,
+                  }}>
                   <FileText size={20} color={currentColors.cardIcon} />
                 </View>
-                <Text style={{ fontSize: 20, fontWeight: 'bold', color: currentColors.cardText }}>47</Text>
-                <Text style={{ textAlign: 'center', fontSize: 12, fontWeight: '500', color: currentColors.cardSubtext }}>Reports</Text>
+                <Text style={{ fontSize: 20, fontWeight: 'bold', color: currentColors.cardText }}>
+                  {reportCount ?? '—'}
+                </Text>
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    fontSize: 12,
+                    fontWeight: '500',
+                    color: currentColors.cardSubtext,
+                  }}>
+                  Reports
+                </Text>
               </View>
             </View>
             <View
-              style={{ 
+              style={{
                 width: '48%',
                 borderRadius: 8,
                 borderWidth: 1,
                 borderColor: currentColors.cardBorder,
                 backgroundColor: currentColors.cardBg,
-                padding: 12
+                padding: 12,
               }}>
               <View style={{ alignItems: 'center' }}>
-                <View style={{ 
-                  marginBottom: 8, 
-                  height: 32, 
-                  width: 32, 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  borderRadius: 8, 
-                  backgroundColor: currentColors.cardIconBg 
-                }}>
+                <View
+                  style={{
+                    marginBottom: 8,
+                    height: 32,
+                    width: 32,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 8,
+                    backgroundColor: currentColors.cardIconBg,
+                  }}>
                   <CheckCircle size={20} color={currentColors.cardIcon} />
                 </View>
-                <Text style={{ fontSize: 20, fontWeight: 'bold', color: currentColors.cardText }}>42</Text>
-                <Text style={{ textAlign: 'center', fontSize: 12, fontWeight: '500', color: currentColors.cardSubtext }}>Verified</Text>
+                <Text style={{ fontSize: 20, fontWeight: 'bold', color: currentColors.cardText }}>
+                  42
+                </Text>
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    fontSize: 12,
+                    fontWeight: '500',
+                    color: currentColors.cardSubtext,
+                  }}>
+                  Verified
+                </Text>
               </View>
             </View>
             <View
-              style={{ 
+              style={{
                 width: '48%',
                 borderRadius: 8,
                 borderWidth: 1,
                 borderColor: currentColors.cardBorder,
                 backgroundColor: currentColors.cardBg,
-                padding: 12
+                padding: 12,
               }}>
               <View style={{ alignItems: 'center' }}>
-                <View style={{ 
-                  marginBottom: 8, 
-                  height: 32, 
-                  width: 32, 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  borderRadius: 8, 
-                  backgroundColor: currentColors.cardIconBg 
-                }}>
+                <View
+                  style={{
+                    marginBottom: 8,
+                    height: 32,
+                    width: 32,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 8,
+                    backgroundColor: currentColors.cardIconBg,
+                  }}>
                   <Zap size={20} color={currentColors.cardIcon} />
                 </View>
-                <Text style={{ fontSize: 20, fontWeight: 'bold', color: currentColors.cardText }}>2.3min</Text>
-                <Text style={{ textAlign: 'center', fontSize: 12, fontWeight: '500', color: currentColors.cardSubtext }}>Response</Text>
+                <Text style={{ fontSize: 20, fontWeight: 'bold', color: currentColors.cardText }}>
+                  2.3min
+                </Text>
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    fontSize: 12,
+                    fontWeight: '500',
+                    color: currentColors.cardSubtext,
+                  }}>
+                  Response
+                </Text>
               </View>
             </View>
           </View>
@@ -411,15 +482,26 @@ export default function Home() {
         <View style={{ marginBottom: 32, paddingHorizontal: 16 }}>
           <View style={{ marginBottom: 16, flexDirection: 'row', alignItems: 'center' }}>
             <AlertTriangle size={24} color={currentColors.cardIcon} />
-            <Text style={{ marginLeft: 12, fontSize: 18, fontWeight: 'bold', color: currentColors.sectionHeading }}>Quick Actions</Text>
-            <View style={{ 
-              marginLeft: 12, 
-              borderRadius: 6, 
-              backgroundColor: currentColors.headerTagBg, 
-              paddingHorizontal: 8, 
-              paddingVertical: 4 
-            }}>
-              <Text style={{ fontSize: 12, fontWeight: '500', color: currentColors.headerText }}>Active</Text>
+            <Text
+              style={{
+                marginLeft: 12,
+                fontSize: 18,
+                fontWeight: 'bold',
+                color: currentColors.sectionHeading,
+              }}>
+              Quick Actions
+            </Text>
+            <View
+              style={{
+                marginLeft: 12,
+                borderRadius: 6,
+                backgroundColor: currentColors.headerTagBg,
+                paddingHorizontal: 8,
+                paddingVertical: 4,
+              }}>
+              <Text style={{ fontSize: 12, fontWeight: '500', color: currentColors.headerText }}>
+                Active
+              </Text>
             </View>
           </View>
 
@@ -440,24 +522,26 @@ export default function Home() {
               }}
               onPress={handleEmergency}>
               <View style={{ alignItems: 'center' }}>
-                <View style={{ 
-                  marginBottom: 12, 
-                  height: 48, 
-                  width: 48, 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  borderRadius: 8, 
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)' 
-                }}>
+                <View
+                  style={{
+                    marginBottom: 12,
+                    height: 48,
+                    width: 48,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 8,
+                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                  }}>
                   <AlertTriangle size={24} color="white" />
                 </View>
-                <Text style={{ 
-                  marginBottom: 4, 
-                  textAlign: 'center', 
-                  fontSize: 18, 
-                  fontWeight: 'bold', 
-                  color: 'white' 
-                }}>
+                <Text
+                  style={{
+                    marginBottom: 4,
+                    textAlign: 'center',
+                    fontSize: 18,
+                    fontWeight: 'bold',
+                    color: 'white',
+                  }}>
                   Emergency Alert
                 </Text>
                 <Text style={{ textAlign: 'center', fontSize: 12, color: 'white' }}>
@@ -482,27 +566,30 @@ export default function Home() {
               }}
               onPress={handleReportIncident}>
               <View style={{ alignItems: 'center' }}>
-                <View style={{ 
-                  marginBottom: 12, 
-                  height: 48, 
-                  width: 48, 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  borderRadius: 8, 
-                  backgroundColor: currentColors.reportIconBg 
-                }}>
+                <View
+                  style={{
+                    marginBottom: 12,
+                    height: 48,
+                    width: 48,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 8,
+                    backgroundColor: currentColors.reportIconBg,
+                  }}>
                   <Bell size={24} color={currentColors.reportText} />
                 </View>
-                <Text style={{ 
-                  marginBottom: 4, 
-                  textAlign: 'center', 
-                  fontSize: 18, 
-                  fontWeight: 'bold', 
-                  color: currentColors.reportText 
-                }}>
+                <Text
+                  style={{
+                    marginBottom: 4,
+                    textAlign: 'center',
+                    fontSize: 18,
+                    fontWeight: 'bold',
+                    color: currentColors.reportText,
+                  }}>
                   Report Incident
                 </Text>
-                <Text style={{ textAlign: 'center', fontSize: 12, color: currentColors.reportText }}>
+                <Text
+                  style={{ textAlign: 'center', fontSize: 12, color: currentColors.reportText }}>
                   Submit new report
                 </Text>
               </View>
@@ -512,161 +599,221 @@ export default function Home() {
 
         {/* Quick Access */}
         <View style={{ marginBottom: 32, paddingHorizontal: 16 }}>
-          <Text style={{ marginBottom: 16, fontSize: 18, fontWeight: 'bold', color: currentColors.sectionHeading }}>
+          <Text
+            style={{
+              marginBottom: 16,
+              fontSize: 18,
+              fontWeight: 'bold',
+              color: currentColors.sectionHeading,
+            }}>
             Quick Access
           </Text>
 
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
             <TouchableOpacity
-              style={{ 
+              style={{
                 width: '31%',
                 borderRadius: 8,
                 borderWidth: 1,
                 borderColor: currentColors.cardBorder,
                 backgroundColor: currentColors.cardBg,
-                padding: 16
+                padding: 16,
               }}>
               <View style={{ alignItems: 'center' }}>
-                <View style={{ 
-                  marginBottom: 12, 
-                  height: 40, 
-                  width: 40, 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  borderRadius: 8, 
-                  backgroundColor: currentColors.cardIconBg 
-                }}>
+                <View
+                  style={{
+                    marginBottom: 12,
+                    height: 40,
+                    width: 40,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 8,
+                    backgroundColor: currentColors.cardIconBg,
+                  }}>
                   <Shield size={24} color={currentColors.cardIcon} />
                 </View>
-                <Text style={{ textAlign: 'center', fontSize: 14, fontWeight: '600', color: currentColors.cardText }}>Anonymity</Text>
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    fontSize: 14,
+                    fontWeight: '600',
+                    color: currentColors.cardText,
+                  }}>
+                  Anonymity
+                </Text>
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={{ 
+              style={{
                 width: '31%',
                 borderRadius: 8,
                 borderWidth: 1,
                 borderColor: currentColors.cardBorder,
                 backgroundColor: currentColors.cardBg,
-                padding: 16
+                padding: 16,
               }}
               onPress={() => router.push('/lost-and-found')}>
               <View style={{ alignItems: 'center' }}>
-                <View style={{ 
-                  marginBottom: 12, 
-                  height: 40, 
-                  width: 40, 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  borderRadius: 8, 
-                  backgroundColor: currentColors.cardIconBg 
-                }}>
+                <View
+                  style={{
+                    marginBottom: 12,
+                    height: 40,
+                    width: 40,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 8,
+                    backgroundColor: currentColors.cardIconBg,
+                  }}>
                   <Search size={24} color={currentColors.cardIcon} />
                 </View>
-                <Text style={{ textAlign: 'center', fontSize: 14, fontWeight: '600', color: currentColors.cardText }}>Lost & Found</Text>
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    fontSize: 14,
+                    fontWeight: '600',
+                    color: currentColors.cardText,
+                  }}>
+                  Lost & Found
+                </Text>
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={{ 
+              style={{
                 width: '31%',
                 borderRadius: 8,
                 borderWidth: 1,
                 borderColor: currentColors.cardBorder,
                 backgroundColor: currentColors.cardBg,
-                padding: 16
+                padding: 16,
               }}
               onPress={() => router.push('/community')}>
               <View style={{ alignItems: 'center' }}>
-                <View style={{ 
-                  marginBottom: 12, 
-                  height: 40, 
-                  width: 40, 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  borderRadius: 8, 
-                  backgroundColor: currentColors.cardIconBg 
-                }}>
+                <View
+                  style={{
+                    marginBottom: 12,
+                    height: 40,
+                    width: 40,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 8,
+                    backgroundColor: currentColors.cardIconBg,
+                  }}>
                   <Users size={24} color={currentColors.cardIcon} />
                 </View>
-                <Text style={{ textAlign: 'center', fontSize: 14, fontWeight: '600', color: currentColors.cardText }}>Community</Text>
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    fontSize: 14,
+                    fontWeight: '600',
+                    color: currentColors.cardText,
+                  }}>
+                  Community
+                </Text>
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={{ 
+              style={{
                 width: '31%',
                 borderRadius: 8,
                 borderWidth: 1,
                 borderColor: currentColors.cardBorder,
                 backgroundColor: currentColors.cardBg,
-                padding: 16
+                padding: 16,
               }}
               onPress={() => router.push('/bounty')}>
               <View style={{ alignItems: 'center' }}>
-                <View style={{ 
-                  marginBottom: 12, 
-                  height: 40, 
-                  width: 40, 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  borderRadius: 8, 
-                  backgroundColor: currentColors.cardIconBg 
-                }}>
+                <View
+                  style={{
+                    marginBottom: 12,
+                    height: 40,
+                    width: 40,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 8,
+                    backgroundColor: currentColors.cardIconBg,
+                  }}>
                   <Coins size={24} color={currentColors.cardIcon} />
                 </View>
-                <Text style={{ textAlign: 'center', fontSize: 14, fontWeight: '600', color: currentColors.cardText }}>Bounties</Text>
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    fontSize: 14,
+                    fontWeight: '600',
+                    color: currentColors.cardText,
+                  }}>
+                  Bounties
+                </Text>
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={{ 
+              style={{
                 width: '31%',
                 borderRadius: 8,
                 borderWidth: 1,
                 borderColor: currentColors.cardBorder,
                 backgroundColor: currentColors.cardBg,
-                padding: 16
+                padding: 16,
               }}>
               <View style={{ alignItems: 'center' }}>
-                <View style={{ 
-                  marginBottom: 12, 
-                  height: 40, 
-                  width: 40, 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  borderRadius: 8, 
-                  backgroundColor: currentColors.cardIconBg 
-                }}>
+                <View
+                  style={{
+                    marginBottom: 12,
+                    height: 40,
+                    width: 40,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 8,
+                    backgroundColor: currentColors.cardIconBg,
+                  }}>
                   <Newspaper size={24} color={currentColors.cardIcon} />
                 </View>
-                <Text style={{ textAlign: 'center', fontSize: 14, fontWeight: '600', color: currentColors.cardText }}>News Feed</Text>
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    fontSize: 14,
+                    fontWeight: '600',
+                    color: currentColors.cardText,
+                  }}>
+                  News Feed
+                </Text>
               </View>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={{ 
+              style={{
                 width: '31%',
                 borderRadius: 8,
                 borderWidth: 1,
                 borderColor: currentColors.cardBorder,
                 backgroundColor: currentColors.cardBg,
-                padding: 16
+                padding: 16,
               }}>
               <View style={{ alignItems: 'center' }}>
-                <View style={{ 
-                  marginBottom: 12, 
-                  height: 40, 
-                  width: 40, 
-                  alignItems: 'center', 
-                  justifyContent: 'center', 
-                  borderRadius: 8, 
-                  backgroundColor: currentColors.cardIconBg 
-                }}>
+                <View
+                  style={{
+                    marginBottom: 12,
+                    height: 40,
+                    width: 40,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 8,
+                    backgroundColor: currentColors.cardIconBg,
+                  }}>
                   <FileText size={24} color={currentColors.cardIcon} />
                 </View>
-                <Text style={{ textAlign: 'center', fontSize: 14, fontWeight: '600', color: currentColors.cardText }}>Cases</Text>
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    fontSize: 14,
+                    fontWeight: '600',
+                    color: currentColors.cardText,
+                  }}>
+                  Cases
+                </Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -674,43 +821,57 @@ export default function Home() {
 
         {/* Recent Activity */}
         <View style={{ marginBottom: 32, paddingHorizontal: 16 }}>
-          <View style={{ marginBottom: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Text style={{ fontSize: 18, fontWeight: 'bold', color: currentColors.sectionHeading }}>Recent Activity</Text>
+          <View
+            style={{
+              marginBottom: 16,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}>
+            <Text style={{ fontSize: 18, fontWeight: 'bold', color: currentColors.sectionHeading }}>
+              Recent Activity
+            </Text>
             <TouchableOpacity
               onPress={fetchRecentReports}
               disabled={reportsLoading}
               style={{
                 borderRadius: 8,
                 backgroundColor: currentColors.cardIconBg,
-                padding: 8
+                padding: 8,
               }}>
-              <Clock size={16} color={reportsLoading ? currentColors.cardSubtext : currentColors.cardIcon} />
+              <Clock
+                size={16}
+                color={reportsLoading ? currentColors.cardSubtext : currentColors.cardIcon}
+              />
             </TouchableOpacity>
           </View>
 
           <View style={{ gap: 12 }}>
             {reportsLoading ? (
-              <View style={{
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: currentColors.cardBorder,
-                backgroundColor: currentColors.cardBg,
-                padding: 16
-              }}>
+              <View
+                style={{
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: currentColors.cardBorder,
+                  backgroundColor: currentColors.cardBg,
+                  padding: 16,
+                }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{
-                    marginRight: 12,
-                    height: 32,
-                    width: 32,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: 8,
-                    backgroundColor: currentColors.cardIconBg
-                  }}>
+                  <View
+                    style={{
+                      marginRight: 12,
+                      height: 32,
+                      width: 32,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: 8,
+                      backgroundColor: currentColors.cardIconBg,
+                    }}>
                     <Clock size={20} color={currentColors.cardSubtext} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 14, fontWeight: '600', color: currentColors.cardText }}>
+                    <Text
+                      style={{ fontSize: 14, fontWeight: '600', color: currentColors.cardText }}>
                       Loading recent activity...
                     </Text>
                   </View>
@@ -728,25 +889,34 @@ export default function Home() {
                       borderWidth: 1,
                       borderColor: currentColors.cardBorder,
                       backgroundColor: currentColors.cardBg,
-                      padding: 16
+                      padding: 16,
                     }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <View style={{
-                        marginRight: 12,
-                        height: 32,
-                        width: 32,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        borderRadius: 8,
-                        backgroundColor: currentColors.cardIconBg
-                      }}>
+                      <View
+                        style={{
+                          marginRight: 12,
+                          height: 32,
+                          width: 32,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          borderRadius: 8,
+                          backgroundColor: currentColors.cardIconBg,
+                        }}>
                         <IconComponent size={20} color={activityIcon.color} />
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 14, fontWeight: '600', color: currentColors.cardText }}>
+                        <Text
+                          style={{
+                            fontSize: 14,
+                            fontWeight: '600',
+                            color: currentColors.cardText,
+                          }}>
                           {report.incident_title || 'Incident Report'}
                           {report.id && (
-                            <Text style={{ fontSize: 12, color: currentColors.cardSubtext }}> #{report.id}</Text>
+                            <Text style={{ fontSize: 12, color: currentColors.cardSubtext }}>
+                              {' '}
+                              #{report.id}
+                            </Text>
                           )}
                         </Text>
                         <Text style={{ fontSize: 12, color: currentColors.cardSubtext }}>
@@ -761,27 +931,30 @@ export default function Home() {
                 );
               })
             ) : (
-              <View style={{
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: currentColors.cardBorder,
-                backgroundColor: currentColors.cardBg,
-                padding: 16
-              }}>
+              <View
+                style={{
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: currentColors.cardBorder,
+                  backgroundColor: currentColors.cardBg,
+                  padding: 16,
+                }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={{
-                    marginRight: 12,
-                    height: 32,
-                    width: 32,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: 8,
-                    backgroundColor: currentColors.cardIconBg
-                  }}>
+                  <View
+                    style={{
+                      marginRight: 12,
+                      height: 32,
+                      width: 32,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      borderRadius: 8,
+                      backgroundColor: currentColors.cardIconBg,
+                    }}>
                     <Bell size={20} color={currentColors.cardSubtext} />
                   </View>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 14, fontWeight: '600', color: currentColors.cardText }}>
+                    <Text
+                      style={{ fontSize: 14, fontWeight: '600', color: currentColors.cardText }}>
                       No recent activity
                     </Text>
                     <Text style={{ fontSize: 12, color: currentColors.cardSubtext }}>
