@@ -20,7 +20,6 @@ import {
   AlertTriangle,
   Phone,
   MessageCircle,
-  Video,
   X,
   User,
   ChevronDown,
@@ -528,15 +527,6 @@ export default function EmergencyScreen() {
           isEmergency: '1',
         },
       });
-    } else {
-      Alert.alert('No Number', 'Please enter a phone number first');
-    }
-  };
-
-  const startVideoCall = () => {
-    if (emergencyNumber) {
-      Alert.alert('Video Call', `Starting video call with ${emergencyNumber}...`);
-      // Here you would integrate with actual video calling functionality
     } else {
       Alert.alert('No Number', 'Please enter a phone number first');
     }
@@ -1098,19 +1088,6 @@ export default function EmergencyScreen() {
                   className="items-center justify-center"
                   style={getActionButtonStyle('#10B981', '#34D399', pressedButtons.has('call'))}>
                   <Phone size={isTablet ? 30 : 26} color="white" />
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                className="items-center"
-                activeOpacity={1}
-                onPress={startVideoCall}
-                onPressIn={() => handleButtonPressIn('video')}
-                onPressOut={() => handleButtonPressOut('video')}>
-                <View
-                  className="items-center justify-center"
-                  style={getActionButtonStyle('#8B5CF6', '#A78BFA', pressedButtons.has('video'))}>
-                  <Video size={isTablet ? 30 : 26} color="white" />
                 </View>
               </TouchableOpacity>
             </View>
