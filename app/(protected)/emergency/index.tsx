@@ -104,23 +104,27 @@ export default function EmergencyScreen() {
   const [isCheckingVoip, setIsCheckingVoip] = useState(true);
   const [status, requestPermission] = Cellular.usePermissions();
 
-  // Emergency contacts data (default + saved)
   const defaultEmergencyContacts = [
     {
       service: 'Police',
       number: '911',
+      id: 'default-1',
+      isSaved: false,
     },
     {
       service: 'Fire Department',
       number: '9602955055',
+      id: 'default-2',
+      isSaved: false,
     },
     {
       service: 'Ambulance',
       number: '69420',
+      id: 'default-3',
+      isSaved: false,
     },
   ];
 
-  // Combine default and saved emergency contacts
   const emergencyContacts = [
     ...defaultEmergencyContacts,
     ...savedEmergencyContacts.map((contact) => ({
@@ -352,7 +356,6 @@ export default function EmergencyScreen() {
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
           break;
         case 'emergency':
-          // Emergency pattern: 3 heavy impacts with short delays
           await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
           setTimeout(async () => {
             await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -365,6 +368,16 @@ export default function EmergencyScreen() {
     } catch (error) {
       console.warn('Haptic feedback error:', error);
     }
+  };
+
+  const determineCallType = (phoneNumber: string): 'police' | 'fire' | 'medical' | 'general' => {
+    const emergencyMappings: { [key: string]: 'police' | 'fire' | 'medical' } = {
+      '911': 'police',
+      '9602955055': 'fire',
+      '69420': 'medical',
+    };
+
+    return emergencyMappings[phoneNumber] || 'general';
   };
 
   const activateEmergencyProtocol = async () => {
@@ -385,6 +398,9 @@ export default function EmergencyScreen() {
       console.warn('Failed to get location:', error);
     }
 
+    const emergencyNumber = '9602955055';
+    const callType = determineCallType(emergencyNumber);
+
     Alert.alert(
       'Emergency Activated',
       'Authorities have been notified with your location. Emergency contacts will be alerted.',
@@ -393,9 +409,11 @@ export default function EmergencyScreen() {
           text: 'OK',
           onPress: async () => {
             try {
-              await makeCall('9602955055');
+              await makeCall(emergencyNumber);
               await emergencyCallService.logEmergencyCall(
-                '9602955055',
+                emergencyNumber,
+                undefined,
+                callType,
                 locationLat,
                 locationLng,
                 'initiated'

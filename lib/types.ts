@@ -50,6 +50,8 @@ export interface EmergencyCallLog {
   id?: string;
   user_id?: string;
   called_number: string;
+  caller_number?: string;
+  call_type?: 'police' | 'fire' | 'medical' | 'general';
   call_timestamp?: string;
   location_lat?: number;
   location_lng?: number;

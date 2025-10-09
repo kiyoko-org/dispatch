@@ -3,6 +3,8 @@ CREATE TABLE public.emergency_calls (
   id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
   user_id uuid REFERENCES auth.users ON DELETE CASCADE NOT NULL,
   called_number TEXT NOT NULL,
+  caller_number TEXT,
+  call_type TEXT CHECK (call_type IN ('police', 'fire', 'medical', 'general')) DEFAULT 'general',
   call_timestamp TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   location_lat FLOAT,
   location_lng FLOAT,

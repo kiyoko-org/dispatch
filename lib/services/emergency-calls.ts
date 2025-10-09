@@ -5,6 +5,8 @@ import { supabase } from '../supabase';
 export const emergencyCallService = {
   async logEmergencyCall(
     calledNumber: string,
+    callerNumber?: string,
+    callType: 'police' | 'fire' | 'medical' | 'general' = 'general',
     locationLat?: number,
     locationLng?: number,
     outcome: 'initiated' | 'failed' | 'completed' = 'initiated'
@@ -29,6 +31,8 @@ export const emergencyCallService = {
     return db.emergencyCalls.add({
       user_id: user.id,
       called_number: calledNumber,
+      caller_number: callerNumber,
+      call_type: callType,
       location_lat: locationLat,
       location_lng: locationLng,
       outcome,
