@@ -12,6 +12,7 @@ import {
 } from '../../lib/services';
 import { FileUtils } from '../../lib/services/file-utils';
 import { AudioRecorder } from 'expo-audio';
+import { useTheme } from '../ThemeContext';
 
 interface EvidenceStepProps {
 	uiState: {
@@ -31,6 +32,7 @@ export default function EvidenceStep({
 	onUpdateUIState,
 	onFilesUploaded,
 }: EvidenceStepProps) {
+	const { colors } = useTheme();
 	const [uploadedFiles, setUploadedFiles] = useState<FileUploadResult[]>([]);
 	const [isUploading, setIsUploading] = useState(false);
 	const [uploadProgress, setUploadProgress] = useState<FileUploadProgress | null>(null);
@@ -222,16 +224,24 @@ export default function EvidenceStep({
 	};
 
 	return (
-		<Card className="mb-5">
-			<View className="mb-4 flex-row items-center">
-				<View className="mr-3 h-8 w-8 items-center justify-center rounded-lg bg-slate-100">
-					<Mic size={20} color="#475569" />
+		<Card style={{ marginBottom: 20 }}>
+			<View style={{ marginBottom: 16, flexDirection: 'row', alignItems: 'center' }}>
+				<View style={{ 
+					marginRight: 12, 
+					height: 32, 
+					width: 32, 
+					alignItems: 'center', 
+					justifyContent: 'center', 
+					borderRadius: 8, 
+					backgroundColor: colors.surfaceVariant 
+				}}>
+					<Mic size={20} color={colors.textSecondary} />
 				</View>
-				<Text className="text-xl font-bold text-slate-900">Voice Statement & Evidence</Text>
+				<Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text }}>Voice Statement & Evidence</Text>
 			</View>
 
-			<View className="space-y-5">
-				<Text className="text-sm text-slate-600">
+			<View>
+				<Text style={{ fontSize: 14, color: colors.textSecondary, marginBottom: 20 }}>
 					Record a voice statement or attach evidence to provide additional details.
 				</Text>
 
@@ -242,26 +252,36 @@ export default function EvidenceStep({
 
 				{/* Uploaded Files */}
 				{uploadedFiles.length > 0 && (
-					<View className="space-y-2">
-						<Text className="text-sm font-medium text-slate-700">Uploaded Files:</Text>
+					<View style={{ marginBottom: 16 }}>
+						<Text style={{ fontSize: 14, fontWeight: '500', color: colors.text, marginBottom: 8 }}>
+							Uploaded Files:
+						</Text>
 						{uploadedFiles.map((file, index) => (
 							<View
 								key={index}
-								className="flex-row items-center justify-between rounded-lg bg-gray-50 p-3">
+								style={{
+									flexDirection: 'row',
+									alignItems: 'center',
+									justifyContent: 'space-between',
+									borderRadius: 8,
+									backgroundColor: colors.surfaceVariant,
+									padding: 12,
+									marginBottom: 8,
+								}}>
 								{renderFilePreview(file)}
-								<View className="flex-1">
-									<Text className="text-sm font-medium text-slate-900" numberOfLines={1}>
+								<View style={{ flex: 1 }}>
+									<Text style={{ fontSize: 14, fontWeight: '500', color: colors.text }} numberOfLines={1}>
 										{file.name}
 									</Text>
-									<Text className="text-xs text-slate-500">
+									<Text style={{ fontSize: 12, color: colors.textSecondary }}>
 										{FileUtils.formatFileSize(file.size)} • {file.type}
 									</Text>
 								</View>
 								<TouchableOpacity
 									onPress={() => removeFile(index)}
-									className="ml-2 p-1"
+									style={{ marginLeft: 8, padding: 4 }}
 									hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-									<X size={16} color="#EF4444" />
+									<X size={16} color={colors.error} />
 								</TouchableOpacity>
 							</View>
 						))}
@@ -269,61 +289,124 @@ export default function EvidenceStep({
 				)}
 
 				{/* Voice Recording */}
-				<View className="items-center rounded-lg border-2 border-dashed border-gray-300 px-4 py-5">
+				<View style={{
+					alignItems: 'center',
+					borderRadius: 8,
+					borderWidth: 2,
+					borderStyle: 'dashed',
+					borderColor: colors.border,
+					paddingHorizontal: 16,
+					paddingVertical: 20,
+					marginBottom: 16,
+				}}>
 					<TouchableOpacity
 						onPress={handleVoiceRecording}
-						className={`mb-3 h-14 w-14 items-center justify-center rounded-full ${uiState.isRecording ? 'bg-red-600' : 'bg-slate-600'
-							}`}
+						style={{
+							marginBottom: 12,
+							height: 56,
+							width: 56,
+							alignItems: 'center',
+							justifyContent: 'center',
+							borderRadius: 28,
+							backgroundColor: uiState.isRecording ? colors.error : colors.primary,
+						}}
 						activeOpacity={0.8}>
-						<Mic size={22} color="white" />
+						<Mic size={22} color={colors.card} />
 					</TouchableOpacity>
-					<Text className="mb-1 text-base font-medium text-slate-700">
+					<Text style={{ marginBottom: 4, fontSize: 16, fontWeight: '500', color: colors.text }}>
 						{uiState.isRecording ? 'Stop Recording' : 'Start Recording'}
 					</Text>
 					{uiState.isRecording && (
-						<Text className="mb-1 text-sm font-medium text-red-600">
+						<Text style={{ marginBottom: 4, fontSize: 14, fontWeight: '500', color: colors.error }}>
 							Recording: {Math.floor(recordingDuration / 60)}:
 							{(recordingDuration % 60).toString().padStart(2, '0')}
 						</Text>
 					)}
-					<Text className="text-center text-sm text-slate-500">
+					<Text style={{ textAlign: 'center', fontSize: 14, color: colors.textSecondary }}>
 						Click to {uiState.isRecording ? 'stop' : 'start'} voice recording
 					</Text>
 				</View>
 
 				{/* Evidence Attachments */}
-				<View className="space-y-3">
-					<Text className="text-sm font-medium text-slate-700">Attach Evidence:</Text>
-					<View className="flex-row space-x-2">
+				<View>
+					<Text style={{ fontSize: 14, fontWeight: '500', color: colors.text, marginBottom: 12 }}>
+						Attach Evidence:
+					</Text>
+					<View style={{ flexDirection: 'row', gap: 8 }}>
 						<TouchableOpacity
-							className="flex-1 items-center rounded-lg border-2 border-dashed border-gray-300 px-2 py-4"
+							style={{
+								flex: 1,
+								alignItems: 'center',
+								borderRadius: 8,
+								borderWidth: 2,
+								borderStyle: 'dashed',
+								borderColor: colors.border,
+								paddingHorizontal: 8,
+								paddingVertical: 16,
+							}}
 							onPress={() => handleFileUpload('image')}
 							disabled={isUploading}>
-							<Upload size={22} color={isUploading ? '#9CA3AF' : '#64748B'} />
+							<Upload size={22} color={isUploading ? colors.textSecondary : colors.text} />
 							<Text
-								className={`mt-2 text-center text-xs font-medium ${isUploading ? 'text-gray-400' : 'text-slate-700'}`}>
+								style={{
+									marginTop: 8,
+									textAlign: 'center',
+									fontSize: 12,
+									fontWeight: '500',
+									color: isUploading ? colors.textSecondary : colors.text,
+								}}>
 								Upload Files
 							</Text>
 						</TouchableOpacity>
 
 						<TouchableOpacity
-							className="flex-1 items-center rounded-lg border-2 border-dashed border-gray-300 px-2 py-4"
+							style={{
+								flex: 1,
+								alignItems: 'center',
+								borderRadius: 8,
+								borderWidth: 2,
+								borderStyle: 'dashed',
+								borderColor: colors.border,
+								paddingHorizontal: 8,
+								paddingVertical: 16,
+							}}
 							onPress={() => handleFileUpload('photo')}
 							disabled={isUploading}>
-							<Camera size={22} color={isUploading ? '#9CA3AF' : '#64748B'} />
+							<Camera size={22} color={isUploading ? colors.textSecondary : colors.text} />
 							<Text
-								className={`mt-2 text-center text-xs font-medium ${isUploading ? 'text-gray-400' : 'text-slate-700'}`}>
+								style={{
+									marginTop: 8,
+									textAlign: 'center',
+									fontSize: 12,
+									fontWeight: '500',
+									color: isUploading ? colors.textSecondary : colors.text,
+								}}>
 								Take Photo
 							</Text>
 						</TouchableOpacity>
 
 						<TouchableOpacity
-							className="flex-1 items-center rounded-lg border-2 border-dashed border-gray-300 px-2 py-4"
+							style={{
+								flex: 1,
+								alignItems: 'center',
+								borderRadius: 8,
+								borderWidth: 2,
+								borderStyle: 'dashed',
+								borderColor: colors.border,
+								paddingHorizontal: 8,
+								paddingVertical: 16,
+							}}
 							onPress={() => handleFileUpload('document')}
 							disabled={isUploading}>
-							<FileText size={22} color={isUploading ? '#9CA3AF' : '#64748B'} />
+							<FileText size={22} color={isUploading ? colors.textSecondary : colors.text} />
 							<Text
-								className={`mt-2 text-center text-xs font-medium ${isUploading ? 'text-gray-400' : 'text-slate-700'}`}>
+								style={{
+									marginTop: 8,
+									textAlign: 'center',
+									fontSize: 12,
+									fontWeight: '500',
+									color: isUploading ? colors.textSecondary : colors.text,
+								}}>
 								Documents
 							</Text>
 						</TouchableOpacity>
