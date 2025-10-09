@@ -403,17 +403,9 @@ export default function EmergencyScreen() {
           text: 'OK',
           onPress: async () => {
             try {
-              await makeCall(emergencyNumber);
-              await emergencyCallService.logEmergencyCall(
-                emergencyNumber,
-                undefined,
-                callType,
-                locationLat,
-                locationLng,
-                'initiated'
-              );
+              await makeCall(emergencyNumber, undefined, locationLat, locationLng, 'initiated');
             } catch (error) {
-              console.error('Failed to log emergency call:', error);
+              console.error('Failed to activate emergency call:', error);
             }
           },
         },
@@ -475,9 +467,34 @@ export default function EmergencyScreen() {
     setEmergencyNumber((prev) => prev.slice(0, -1));
   };
 
-  const makeCall = async (number: string) => {
+  const makeCall = async (
+    number: string,
+    callerNumber?: string,
+    locationLat?: number,
+    locationLng?: number,
+    outcome: 'initiated' | 'failed' | 'completed' = 'initiated'
+  ) => {
     if (!number) return;
+
     triggerHapticFeedback('medium');
+
+    // Determine call type for logging
+    const callType = determineCallType(number);
+
+    // Log the call to Supabase before attempting to perform the call.
+    try {
+      await emergencyCallService.logEmergencyCall(
+        number,
+        callerNumber,
+        callType,
+        locationLat,
+        locationLng,
+        outcome
+      );
+    } catch (err) {
+      console.error('Failed to log emergency call before dialing:', err);
+      // Proceed with the call even if logging fails
+    }
 
     // Try Android direct call via native module + runtime permission
     if (Platform.OS === 'android' && ImmediatePhoneCallModule) {
@@ -922,8 +939,7 @@ export default function EmergencyScreen() {
                   EMERGENCY
                 </Text>
               </View>
-              {(emergencySettings.volumeHoldEnabled ||
-                emergencySettings.powerButtonEnabled) && (
+              {(emergencySettings.volumeHoldEnabled || emergencySettings.powerButtonEnabled) && (
                 <View className="mt-2 flex-row items-center">
                   <Zap size={16} color="white" />
                   <Text className="ml-1 text-xs text-white opacity-80">
