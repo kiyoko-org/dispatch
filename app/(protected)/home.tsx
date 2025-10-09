@@ -354,7 +354,7 @@ export default function Home() {
                   <Shield size={20} color={currentColors.cardIcon} />
                 </View>
                 <Text style={{ fontSize: 20, fontWeight: 'bold', color: currentColors.cardText }}>
-                  87%
+                  0%
                 </Text>
                 <Text
                   style={{
@@ -426,7 +426,7 @@ export default function Home() {
                   <CheckCircle size={20} color={currentColors.cardIcon} />
                 </View>
                 <Text style={{ fontSize: 20, fontWeight: 'bold', color: currentColors.cardText }}>
-                  42
+                  0
                 </Text>
                 <Text
                   style={{
@@ -462,7 +462,7 @@ export default function Home() {
                   <Zap size={20} color={currentColors.cardIcon} />
                 </View>
                 <Text style={{ fontSize: 20, fontWeight: 'bold', color: currentColors.cardText }}>
-                  2.3min
+                  0min
                 </Text>
                 <Text
                   style={{
