@@ -7,7 +7,7 @@ import {
 	UploadManager,
 	FileUploadResult,
 	FileUploadProgress,
-	MockStorageService,
+	SupabaseStorageService,
 	ExpoFilePickerService
 } from '../../lib/services';
 import { FileUtils } from '../../lib/services/file-utils';
@@ -22,7 +22,7 @@ interface EvidenceStepProps {
 }
 
 // Initialize services (in a real app, these would be provided via context or props)
-const storageService = new MockStorageService(); // Use MockStorageService for testing
+const storageService = new SupabaseStorageService(); // Use MockStorageService for testing
 const filePickerService = new ExpoFilePickerService();
 const uploadManager = new UploadManager(storageService, filePickerService);
 
