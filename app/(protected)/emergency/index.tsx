@@ -430,57 +430,18 @@ export default function EmergencyScreen() {
   const handleEmergencyButton = () => {
     triggerHapticFeedback('warning');
 
-    if (emergencySettings.multiPressEnabled) {
-      setEmergencyButtonPressCount((prev) => prev + 1);
-
-      if (multiPressTimer) {
-        clearTimeout(multiPressTimer);
-      }
-
-      const newTimer = setTimeout(() => {
-        setEmergencyButtonPressCount(0);
-      }, emergencySettings.multiPressWindow);
-
-      setMultiPressTimer(newTimer);
-
-      if (emergencyButtonPressCount + 1 >= emergencySettings.multiPressCount) {
-        clearTimeout(newTimer);
-        setEmergencyButtonPressCount(0);
-        activateEmergencyProtocol();
-        return;
-      }
-
-      if (emergencyButtonPressCount + 1 === emergencySettings.multiPressCount - 1) {
-        triggerHapticFeedback('heavy');
-        Alert.alert(
-          'Emergency Ready',
-          `Press ${emergencySettings.multiPressCount - emergencyButtonPressCount - 1} more time to activate emergency protocol.`,
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-    }
-
     Alert.alert(
       'Emergency Alert',
-      emergencySettings.multiPressEnabled
-        ? `Press ${emergencySettings.multiPressCount} times quickly to activate emergency protocol, or tap "Activate Emergency" below.\n\nPresses: ${emergencyButtonPressCount + 1}/${emergencySettings.multiPressCount}`
-        : 'Are you sure you want to activate emergency protocol? This will alert authorities with your GPS location.',
+      'Are you sure you want to activate emergency protocol? This will alert authorities with your GPS location.',
       [
         {
           text: 'Cancel',
           style: 'cancel',
-          onPress: () => {
-            setEmergencyButtonPressCount(0);
-            if (multiPressTimer) clearTimeout(multiPressTimer);
-          },
         },
         {
           text: 'Activate Emergency',
           style: 'destructive',
           onPress: () => {
-            setEmergencyButtonPressCount(0);
-            if (multiPressTimer) clearTimeout(multiPressTimer);
             activateEmergencyProtocol();
           },
         },
@@ -982,26 +943,19 @@ export default function EmergencyScreen() {
               onPressOut={() => handleButtonPressOut('emergency')}
               style={pressedButtons.has('emergency') ? { transform: [{ scale: 0.98 }] } : {}}
               accessibilityLabel="Emergency button"
-              accessibilityHint={
-                emergencySettings.multiPressEnabled
-                  ? `Press ${emergencySettings.multiPressCount} times quickly to activate emergency protocol`
-                  : 'Tap to activate emergency protocol'
-              }>
+              accessibilityHint="Tap to activate emergency protocol">
               <View className="flex-row items-center">
                 <User size={isTablet ? 40 : 32} color="white" />
                 <Text className={`font-bold text-white ${isTablet ? 'text-3xl' : 'text-2xl'} ml-3`}>
                   EMERGENCY
                 </Text>
               </View>
-              {(emergencySettings.multiPressEnabled ||
-                emergencySettings.volumeHoldEnabled ||
+              {(emergencySettings.volumeHoldEnabled ||
                 emergencySettings.powerButtonEnabled) && (
                 <View className="mt-2 flex-row items-center">
                   <Zap size={16} color="white" />
                   <Text className="ml-1 text-xs text-white opacity-80">
-                    {emergencySettings.multiPressEnabled &&
-                      `${emergencyButtonPressCount}/${emergencySettings.multiPressCount}`}
-                    {emergencySettings.volumeHoldEnabled && ' • Vol Hold'}
+                    {emergencySettings.volumeHoldEnabled && 'Vol Hold'}
                     {emergencySettings.powerButtonEnabled && ' • Power 3x'}
                   </Text>
                 </View>
@@ -1226,31 +1180,6 @@ export default function EmergencyScreen() {
                   <View
                     className={`mt-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
                       emergencySettings.volumeHoldEnabled ? 'ml-6' : 'ml-0.5'
-                    }`}
-                  />
-                </TouchableOpacity>
-              </View>
-
-              {/* Multi-Press */}
-              <View className="flex-row items-center justify-between">
-                <View className="flex-1">
-                  <Text className="font-semibold text-gray-900">Multi-Press Activation</Text>
-                  <Text className="text-sm text-gray-600">
-                    Press emergency button {emergencySettings.multiPressCount} times
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  onPress={() => {
-                    triggerHapticFeedback('light');
-                    setEmergencySettings((prev) => ({
-                      ...prev,
-                      multiPressEnabled: !prev.multiPressEnabled,
-                    }));
-                  }}
-                  className={`h-6 w-12 rounded-full ${emergencySettings.multiPressEnabled ? 'bg-blue-500' : 'bg-gray-300'}`}>
-                  <View
-                    className={`mt-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-                      emergencySettings.multiPressEnabled ? 'ml-6' : 'ml-0.5'
                     }`}
                   />
                 </TouchableOpacity>
