@@ -2,6 +2,7 @@ import { View, Text, TextInput, TouchableOpacity } from 'react-native';
 import { AlertTriangle, Users, Eye, Shield } from 'lucide-react-native';
 import { Card } from '../ui/Card';
 import Dropdown from '../Dropdown';
+import { useTheme } from '../ThemeContext';
 
 interface DetailsStepProps {
   formData: {
@@ -30,20 +31,30 @@ export default function DetailsStep({
   onCloseDropdown,
   validationErrors,
 }: DetailsStepProps) {
+  const { colors } = useTheme();
+  
   return (
-    <Card className="mb-5">
-      <View className="mb-4 flex-row items-center">
-        <View className="mr-3 h-8 w-8 items-center justify-center rounded-lg bg-slate-100">
-          <AlertTriangle size={20} color="#475569" />
+    <Card style={{ marginBottom: 20 }}>
+      <View style={{ marginBottom: 16, flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ 
+          marginRight: 12, 
+          height: 32, 
+          width: 32, 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          borderRadius: 8, 
+          backgroundColor: colors.surfaceVariant 
+        }}>
+          <AlertTriangle size={20} color={colors.textSecondary} />
         </View>
-        <Text className="text-xl font-bold text-slate-900">Incident Details</Text>
+        <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text }}>Incident Details</Text>
       </View>
 
-      <View className="space-y-4">
+      <View>
         {/* Main Incident Account */}
-        <View>
-          <Text className="mb-2 font-medium text-slate-700">
-            What Happened? <Text className="text-red-600">*</Text>
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{ marginBottom: 8, fontWeight: '500', color: colors.text }}>
+            What Happened? <Text style={{ color: colors.error }}>*</Text>
           </Text>
           <TextInput
             placeholder="Tell us what happened step by step..."
@@ -51,95 +62,163 @@ export default function DetailsStep({
             onChangeText={(value) => onUpdateFormData({ what_happened: value })}
             multiline
             numberOfLines={4}
-            className="mb-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
-            placeholderTextColor="#9CA3AF"
-            textAlignVertical="top"
+            style={{
+              marginBottom: 12,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: colors.surface,
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+              color: colors.text,
+              textAlignVertical: 'top',
+            }}
+            placeholderTextColor={colors.textSecondary}
           />
           {validationErrors.what_happened && (
-            <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.what_happened}</Text>
+            <Text style={{ marginTop: 4, marginBottom: 12, fontSize: 14, color: colors.error }}>
+              {validationErrors.what_happened}
+            </Text>
           )}
         </View>
 
         {/* People Involved Section */}
-        <View>
-          <Text className="mb-2 font-medium text-slate-700">Who Was Involved?</Text>
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{ marginBottom: 8, fontWeight: '500', color: colors.text }}>Who Was Involved?</Text>
           <TextInput
             placeholder="Describe anyone involved (suspects, victims, etc.)"
             value={formData.who_was_involved}
             onChangeText={(value) => onUpdateFormData({ who_was_involved: value })}
             multiline
             numberOfLines={3}
-            className="mb-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
-            placeholderTextColor="#9CA3AF"
-            textAlignVertical="top"
+            style={{
+              marginBottom: 12,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: colors.surface,
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+              color: colors.text,
+              textAlignVertical: 'top',
+            }}
+            placeholderTextColor={colors.textSecondary}
           />
         </View>
 
         {/* Additional Details */}
-        <View className="space-y-4">
-          <View className="flex-row space-x-4">
-            <View className="flex-1">
-              <Text className="mb-2 font-medium text-slate-700">Number of Witnesses</Text>
+        <View style={{ marginBottom: 16 }}>
+          <View style={{ flexDirection: 'row', gap: 16 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ marginBottom: 8, fontWeight: '500', color: colors.text }}>Number of Witnesses</Text>
               <TextInput
                 placeholder="0"
                 value={formData.number_of_witnesses}
                 onChangeText={(value) => onUpdateFormData({ number_of_witnesses: value })}
-                className="mb-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-center text-slate-900"
-                placeholderTextColor="#9CA3AF"
+                style={{
+                  marginBottom: 12,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  backgroundColor: colors.surface,
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  textAlign: 'center',
+                  color: colors.text,
+                }}
+                placeholderTextColor={colors.textSecondary}
                 keyboardType="numeric"
               />
             </View>
-            <View className="flex-1">
-              <Text className="mb-2 font-medium text-slate-700">Injuries Reported</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ marginBottom: 8, fontWeight: '500', color: colors.text }}>Injuries Reported</Text>
               <TouchableOpacity
                 onPress={() => onOpenDropdown('injuries')}
-                className="mb-3 flex-row items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3">
-                <Text className={formData.injuries_reported ? 'text-slate-900' : 'text-gray-500'}>
+                style={{
+                  marginBottom: 12,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  backgroundColor: colors.surface,
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                }}>
+                <Text style={{ color: formData.injuries_reported ? colors.text : colors.textSecondary }}>
                   {formData.injuries_reported || 'Select injury level'}
                 </Text>
-                <Text className="text-gray-400">▼</Text>
+                <Text style={{ color: colors.textSecondary }}>▼</Text>
               </TouchableOpacity>
             </View>
           </View>
           
-          <View>
-            <Text className="mb-2 font-medium text-slate-700">Property Damage</Text>
+          <View style={{ marginBottom: 16 }}>
+            <Text style={{ marginBottom: 8, fontWeight: '500', color: colors.text }}>Property Damage</Text>
             <TextInput
               placeholder="Describe any damage or estimated costs"
               value={formData.property_damage}
               onChangeText={(value) => onUpdateFormData({ property_damage: value })}
-              className="mb-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
-              placeholderTextColor="#9CA3AF"
+              style={{
+                marginBottom: 12,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.surface,
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                color: colors.text,
+              }}
+              placeholderTextColor={colors.textSecondary}
             />
           </View>
         </View>
 
         {/* Additional Information */}
-        <View className="space-y-4">
+        <View>
           {/* Suspect Description */}
-          <View>
-            <Text className="mb-2 font-medium text-slate-700">Suspect Description</Text>
+          <View style={{ marginBottom: 16 }}>
+            <Text style={{ marginBottom: 8, fontWeight: '500', color: colors.text }}>Suspect Description</Text>
             <TextInput
               placeholder="Physical description, clothing, vehicle, etc."
               value={formData.suspect_description}
               onChangeText={(value) => onUpdateFormData({ suspect_description: value })}
-              className="mb-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
-              placeholderTextColor="#9CA3AF"
+              style={{
+                marginBottom: 12,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.surface,
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                color: colors.text,
+              }}
+              placeholderTextColor={colors.textSecondary}
             />
           </View>
 
           {/* Witness Contacts */}
           <View>
-            <Text className="mb-2 font-medium text-slate-700">Witness Contact Information</Text>
+            <Text style={{ marginBottom: 8, fontWeight: '500', color: colors.text }}>Witness Contact Information</Text>
             <TextInput
               placeholder="Names and contact info (with their permission)"
               value={formData.witness_contact_info}
               onChangeText={(value) => onUpdateFormData({ witness_contact_info: value })}
               multiline
               numberOfLines={2}
-              className="mb-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
-              placeholderTextColor="#9CA3AF"
-              textAlignVertical="top"
+              style={{
+                marginBottom: 12,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.surface,
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                color: colors.text,
+                textAlignVertical: 'top',
+              }}
+              placeholderTextColor={colors.textSecondary}
             />
           </View>
         </View>

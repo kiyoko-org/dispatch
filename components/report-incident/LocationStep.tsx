@@ -7,6 +7,7 @@ import MapView, { LatLng, Marker } from 'react-native-maps';
 import { geocodingService } from '../../lib/services/geocoding';
 import { fetchAddressDetails } from '../../lib/services/addressDetails';
 import AddressSearch from '../AddressSearch';
+import { useTheme } from '../ThemeContext';
 
 interface LocationStepProps {
   formData: {
@@ -31,6 +32,7 @@ export default function LocationStep({
   onUseCurrentLocation,
   isGettingLocation,
 }: LocationStepProps) {
+  const { colors } = useTheme();
   const [coordinate, setCoordinate] = useState<LatLng>({
     latitude: formData.latitude || 17.6028048,
     longitude: formData.longitude || 121.6765444,
@@ -105,24 +107,31 @@ export default function LocationStep({
   }
 
   return (
-    <Card className="mb-5">
-      <View className="mb-4 flex-row items-center">
-        <View className="mr-3 h-8 w-8 items-center justify-center rounded-lg bg-slate-100">
-          <MapPin size={20} color="#475569" />
+    <Card style={{ marginBottom: 20 }}>
+      <View style={{ marginBottom: 16, flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ 
+          marginRight: 12, 
+          height: 32, 
+          width: 32, 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          borderRadius: 8, 
+          backgroundColor: colors.surfaceVariant 
+        }}>
+          <MapPin size={20} color={colors.textSecondary} />
         </View>
-        <Text className="text-xl font-bold text-slate-900">Location Information</Text>
-        <View className="flex-1" />
-        <ActivityIndicator animating={isFetchingAddress} />
+        <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text }}>Location Information</Text>
+        <View style={{ flex: 1 }} />
+        <ActivityIndicator animating={isFetchingAddress} color={colors.primary} />
       </View>
 
-      <View className="space-y-4">
+      <View>
         {/* Primary Location */}
-        <View>
-          <Text className="mb-2 font-medium text-slate-700">
-            Where did this happen? <Text className="text-red-600">*</Text>
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{ marginBottom: 8, fontWeight: '500', color: colors.text }}>
+            Where did this happen? <Text style={{ color: colors.error }}>*</Text>
           </Text>
           <View
-            className=""
             style={{ height: 200, borderRadius: 12, overflow: 'hidden', marginBottom: 16 }}>
             {/* Map */}
             <MapView
@@ -165,13 +174,21 @@ export default function LocationStep({
           </View>
           <TouchableOpacity
             onPress={() => setShowAddressSearch(true)}
-            className="mb-3 rounded-lg border border-gray-300 bg-white px-4 py-3">
-            <Text className="text-slate-900">
+            style={{
+              marginBottom: 12,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: colors.surface,
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+            }}>
+            <Text style={{ color: colors.text }}>
               {formData.street_address || 'Street address or location'}
             </Text>
           </TouchableOpacity>
           {validationErrors.street_address && (
-            <Text className="mb-3 mt-1 text-sm text-red-600">
+            <Text style={{ marginBottom: 12, marginTop: 4, fontSize: 14, color: colors.error }}>
               {validationErrors.street_address}
             </Text>
           )}
@@ -181,73 +198,120 @@ export default function LocationStep({
         <TouchableOpacity
           onPress={onUseCurrentLocation}
           disabled={isGettingLocation}
-          className="mb-3 flex-row items-center justify-between rounded-lg border border-gray-300 bg-gray-50 px-4 py-3"
+          style={{
+            marginBottom: 12,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            borderRadius: 8,
+            borderWidth: 1,
+            borderColor: colors.border,
+            backgroundColor: colors.surfaceVariant,
+            paddingHorizontal: 16,
+            paddingVertical: 12,
+          }}
           activeOpacity={0.8}>
-          <View className="flex-row items-center">
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             {isGettingLocation ? (
-              <ActivityIndicator size="small" color="#475569" className="mr-2" />
+              <ActivityIndicator size="small" color={colors.primary} style={{ marginRight: 8 }} />
             ) : (
-              <MapPin size={16} color="#475569" className="mr-2" />
+              <MapPin size={16} color={colors.textSecondary} style={{ marginRight: 8 }} />
             )}
             <Text
-              className={`font-medium ${isGettingLocation ? 'text-slate-500' : 'text-slate-700'}`}>
+              style={{ 
+                fontWeight: '500', 
+                color: isGettingLocation ? colors.textSecondary : colors.text 
+              }}>
               {isGettingLocation ? 'Getting Location...' : 'Use Current Location'}
             </Text>
           </View>
-          <Text className="text-sm text-slate-600">{isGettingLocation ? '...' : '→'}</Text>
+          <Text style={{ fontSize: 14, color: colors.textSecondary }}>
+            {isGettingLocation ? '...' : '→'}
+          </Text>
         </TouchableOpacity>
 
         {/* Area Details */}
-        <View className="space-y-4">
-          <View className="flex-row space-x-4">
-            <View className="flex-1">
-              <Text className="mb-2 font-medium text-slate-700">
-                City <Text className="text-red-600">*</Text>
+        <View style={{ marginBottom: 16 }}>
+          <View style={{ flexDirection: 'row', gap: 16, marginBottom: 16 }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ marginBottom: 8, fontWeight: '500', color: colors.text }}>
+                City <Text style={{ color: colors.error }}>*</Text>
               </Text>
               <TextInput
                 placeholder="City"
                 value={formData.city}
                 onChangeText={(value) => onUpdateFormData({ city: value })}
-                className="mb-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
-                placeholderTextColor="#9CA3AF"
+                style={{
+                  marginBottom: 12,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  backgroundColor: colors.surface,
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  color: colors.text,
+                }}
+                placeholderTextColor={colors.textSecondary}
               />
               {validationErrors.city && (
-                <Text className="mb-3 mt-1 text-sm text-red-600">{validationErrors.city}</Text>
+                <Text style={{ marginBottom: 12, marginTop: 4, fontSize: 14, color: colors.error }}>
+                  {validationErrors.city}
+                </Text>
               )}
             </View>
-            <View className="flex-1">
-              <Text className="mb-2 font-medium text-slate-700">
-                Province <Text className="text-red-600">*</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={{ marginBottom: 8, fontWeight: '500', color: colors.text }}>
+                Province <Text style={{ color: colors.error }}>*</Text>
               </Text>
               <TextInput
                 placeholder="Province"
                 value={formData.province}
                 onChangeText={(value) => onUpdateFormData({ province: value })}
-                className="mb-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
-                placeholderTextColor="#9CA3AF"
+                style={{
+                  marginBottom: 12,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  backgroundColor: colors.surface,
+                  paddingHorizontal: 16,
+                  paddingVertical: 12,
+                  color: colors.text,
+                }}
+                placeholderTextColor={colors.textSecondary}
               />
               {validationErrors.province && (
-                <Text className="mb-3 mt-1 text-sm text-red-600">{validationErrors.province}</Text>
+                <Text style={{ marginBottom: 12, marginTop: 4, fontSize: 14, color: colors.error }}>
+                  {validationErrors.province}
+                </Text>
               )}
             </View>
           </View>
 
           <View>
-            <Text className="mb-2 font-medium text-slate-700">Nearby Landmark</Text>
+            <Text style={{ marginBottom: 8, fontWeight: '500', color: colors.text }}>Nearby Landmark</Text>
             <TextInput
               placeholder="Notable landmark or building"
               value={formData.nearby_landmark}
               onChangeText={(value) => onUpdateFormData({ nearby_landmark: value })}
-              className="mb-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
-              placeholderTextColor="#9CA3AF"
+              style={{
+                marginBottom: 12,
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.surface,
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+                color: colors.text,
+              }}
+              placeholderTextColor={colors.textSecondary}
             />
           </View>
         </View>
 
         {/* Brief Description */}
         <View>
-          <Text className="mb-2 font-medium text-slate-700">
-            Brief Description <Text className="text-red-600">*</Text>
+          <Text style={{ marginBottom: 8, fontWeight: '500', color: colors.text }}>
+            Brief Description <Text style={{ color: colors.error }}>*</Text>
           </Text>
           <TextInput
             placeholder="Briefly describe what happened..."
@@ -255,12 +319,21 @@ export default function LocationStep({
             onChangeText={(value) => onUpdateFormData({ brief_description: value })}
             multiline
             numberOfLines={3}
-            className="mb-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
-            placeholderTextColor="#9CA3AF"
-            textAlignVertical="top"
+            style={{
+              marginBottom: 12,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: colors.surface,
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+              color: colors.text,
+              textAlignVertical: 'top',
+            }}
+            placeholderTextColor={colors.textSecondary}
           />
           {validationErrors.brief_description && (
-            <Text className="mb-3 mt-1 text-sm text-red-600">
+            <Text style={{ marginBottom: 12, marginTop: 4, fontSize: 14, color: colors.error }}>
               {validationErrors.brief_description}
             </Text>
           )}

@@ -22,6 +22,7 @@ import * as Location from 'expo-location';
 import { ReportData } from 'lib/types';
 import { reportService } from 'lib/services/reports';
 import { geocodingService } from 'lib/services/geocoding';
+import { useTheme } from 'components/ThemeContext';
 
 interface UIState {
   showCategoryDropdown: boolean;
@@ -41,6 +42,7 @@ interface UIState {
 
 export default function ReportIncidentIndex() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const dropdownAnim = useRef(new Animated.Value(0)).current;
@@ -513,15 +515,18 @@ export default function ReportIncidentIndex() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-white">
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      style={{ flex: 1, backgroundColor: colors.background }}>
+      <StatusBar 
+        barStyle={isDark ? 'light-content' : 'dark-content'} 
+        backgroundColor={colors.background} 
+      />
 
       <HeaderWithSidebar title="Report Incident" showBackButton={false} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 32 }}
-        className="flex-1">
+        style={{ flex: 1 }}>
         <View className="px-4 pt-2">
           <Animated.View
             style={{
@@ -615,9 +620,19 @@ export default function ReportIncidentIndex() {
             <View className="mb-4">
               <TouchableOpacity
                 onPress={() => router.replace('/(protected)/home')}
-                className="items-center rounded-lg border border-gray-300 bg-white px-8 py-4"
+                style={{
+                  alignItems: 'center',
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  backgroundColor: colors.card,
+                  paddingHorizontal: 32,
+                  paddingVertical: 16,
+                }}
                 activeOpacity={0.8}>
-                <Text className="text-base font-semibold text-slate-700">Cancel & Return Home</Text>
+                <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
+                  Cancel & Return Home
+                </Text>
               </TouchableOpacity>
             </View>
           </Animated.View>

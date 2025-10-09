@@ -4,6 +4,7 @@ import { Card } from '../ui/Card';
 import Dropdown from '../Dropdown';
 import TimePicker from '../TimePicker';
 import DatePicker from '../DatePicker';
+import { useTheme } from '../ThemeContext';
 
 interface BasicInfoStepProps {
   formData: {
@@ -44,101 +45,172 @@ export default function BasicInfoStep({
   selectedPeriod,
   validationErrors,
 }: BasicInfoStepProps) {
+  const { colors } = useTheme();
+  
   return (
-    <Card className="mb-5">
-      <View className="mb-4 flex-row items-center">
-        <View className="mr-3 h-8 w-8 items-center justify-center rounded-lg bg-slate-100">
-          <Text className="text-xl">📋</Text>
+    <Card style={{ marginBottom: 20 }}>
+      <View style={{ marginBottom: 16, flexDirection: 'row', alignItems: 'center' }}>
+        <View style={{ 
+          marginRight: 12, 
+          height: 32, 
+          width: 32, 
+          alignItems: 'center', 
+          justifyContent: 'center', 
+          borderRadius: 8, 
+          backgroundColor: colors.surfaceVariant 
+        }}>
+          <Text style={{ fontSize: 20 }}>📋</Text>
         </View>
-        <Text className="text-xl font-bold text-slate-900">Basic Incident Information</Text>
+        <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.text }}>Basic Incident Information</Text>
       </View>
 
-      <View className="space-y-4">
+      <View>
         {/* Incident Category */}
-        <View>
-          <Text className="mb-2 font-medium text-slate-700">
-            Incident Category <Text className="text-red-600">*</Text>
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{ marginBottom: 8, fontWeight: '500', color: colors.text }}>
+            Incident Category <Text style={{ color: colors.error }}>*</Text>
           </Text>
           <TouchableOpacity
             onPress={() => onOpenDropdown('category')}
-            className="mb-3 flex-row items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3">
-            <Text className={formData.incident_category ? 'text-slate-900' : 'text-gray-500'}>
+            style={{
+              marginBottom: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: colors.surface,
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+            }}>
+            <Text style={{ color: formData.incident_category ? colors.text : colors.textSecondary }}>
               {formData.incident_category || 'Select incident category'}
             </Text>
-            <Text className="text-gray-400">▼</Text>
+            <Text style={{ color: colors.textSecondary }}>▼</Text>
           </TouchableOpacity>
           {validationErrors.incident_category && (
-            <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.incident_category}</Text>
+            <Text style={{ marginTop: 4, marginBottom: 12, fontSize: 14, color: colors.error }}>
+              {validationErrors.incident_category}
+            </Text>
           )}
         </View>
 
         {/* Incident Subcategory */}
         {formData.incident_category && (
-          <View>
-            <Text className="mb-2 font-medium text-slate-700">
-              Subcategory <Text className="text-red-600">*</Text>
+          <View style={{ marginBottom: 16 }}>
+            <Text style={{ marginBottom: 8, fontWeight: '500', color: colors.text }}>
+              Subcategory <Text style={{ color: colors.error }}>*</Text>
             </Text>
             <TouchableOpacity
               onPress={() => onOpenDropdown('subcategory')}
-              className="mb-3 flex-row items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3">
-              <Text className={formData.incident_subcategory ? 'text-slate-900' : 'text-gray-500'}>
+              style={{
+                marginBottom: 12,
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.surface,
+                paddingHorizontal: 16,
+                paddingVertical: 12,
+              }}>
+              <Text style={{ color: formData.incident_subcategory ? colors.text : colors.textSecondary }}>
                 {formData.incident_subcategory || 'Select subcategory'}
               </Text>
-              <Text className="text-gray-400">▼</Text>
+              <Text style={{ color: colors.textSecondary }}>▼</Text>
             </TouchableOpacity>
           </View>
         )}
 
         {/* Incident Title */}
-        <View>
-          <Text className="mb-2 font-medium text-slate-700">
-            Incident Title <Text className="text-red-600">*</Text>
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{ marginBottom: 8, fontWeight: '500', color: colors.text }}>
+            Incident Title <Text style={{ color: colors.error }}>*</Text>
           </Text>
           <TextInput
             placeholder="Brief, clear title describing the incident"
             value={formData.incident_title}
             onChangeText={(value) => onUpdateFormData({ incident_title: value })}
-            className="mb-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
-            placeholderTextColor="#9CA3AF"
+            style={{
+              marginBottom: 12,
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: colors.surface,
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+              color: colors.text,
+            }}
+            placeholderTextColor={colors.textSecondary}
           />
           {validationErrors.incident_title && (
-            <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.incident_title}</Text>
+            <Text style={{ marginTop: 4, marginBottom: 12, fontSize: 14, color: colors.error }}>
+              {validationErrors.incident_title}
+            </Text>
           )}
         </View>
 
         {/* Incident Date */}
-        <View>
-          <Text className="mb-2 font-medium text-slate-700">
-            Incident Date <Text className="text-red-600">*</Text>
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{ marginBottom: 8, fontWeight: '500', color: colors.text }}>
+            Incident Date <Text style={{ color: colors.error }}>*</Text>
           </Text>
           <TouchableOpacity
             onPress={() => onOpenDropdown('date')}
-            className="mb-3 flex-row items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3">
-            <Text className={formData.incident_date ? 'text-slate-900' : 'text-gray-500'}>
+            style={{
+              marginBottom: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: colors.surface,
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+            }}>
+            <Text style={{ color: formData.incident_date ? colors.text : colors.textSecondary }}>
               {formData.incident_date || 'mm/dd/yyyy'}
             </Text>
-            <Calendar size={20} color="#64748B" />
+            <Calendar size={20} color={colors.textSecondary} />
           </TouchableOpacity>
           {validationErrors.incident_date && (
-            <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.incident_date}</Text>
+            <Text style={{ marginTop: 4, marginBottom: 12, fontSize: 14, color: colors.error }}>
+              {validationErrors.incident_date}
+            </Text>
           )}
         </View>
 
         {/* Incident Time */}
-        <View>
-          <Text className="mb-2 font-medium text-slate-700">
-            Incident Time <Text className="text-red-600">*</Text>
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{ marginBottom: 8, fontWeight: '500', color: colors.text }}>
+            Incident Time <Text style={{ color: colors.error }}>*</Text>
           </Text>
           <TouchableOpacity
             onPress={() => onOpenDropdown('time')}
-            className="mb-3 flex-row items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3">
-            <Text className={formData.incident_time ? 'text-slate-900' : 'text-gray-500'}>
+            style={{
+              marginBottom: 12,
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              borderRadius: 8,
+              borderWidth: 1,
+              borderColor: colors.border,
+              backgroundColor: colors.surface,
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+            }}>
+            <Text style={{ color: formData.incident_time ? colors.text : colors.textSecondary }}>
               {formData.incident_time || 'Select time'}
             </Text>
-            <Text className="text-gray-400">▼</Text>
+            <Text style={{ color: colors.textSecondary }}>▼</Text>
           </TouchableOpacity>
           {validationErrors.incident_time && (
-            <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.incident_time}</Text>
+            <Text style={{ marginTop: 4, marginBottom: 12, fontSize: 14, color: colors.error }}>
+              {validationErrors.incident_time}
+            </Text>
           )}
         </View>
 
