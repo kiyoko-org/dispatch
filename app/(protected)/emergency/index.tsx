@@ -9,14 +9,11 @@ import {
   Animated,
   Dimensions,
   Linking,
-  AppState,
   BackHandler,
-  DeviceEventEmitter,
   Platform,
   PermissionsAndroid,
 } from 'react-native';
 import {
-  Shield,
   AlertTriangle,
   Phone,
   MessageCircle,
@@ -29,7 +26,6 @@ import {
   UserPlus,
   Trash2,
   Settings,
-  VolumeX,
   Zap,
 } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';

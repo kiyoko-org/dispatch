@@ -19,6 +19,7 @@
     "expo": "~53.0.20",
     "expo-audio": "~0.4.9",
     "expo-auth-session": "~6.2.1",
+    "expo-camera": "~16.1.11",
     "expo-cellular": "~7.1.5",
     "expo-constants": "~17.1.7",
     "expo-crypto": "~14.1.5",
