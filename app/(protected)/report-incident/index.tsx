@@ -99,6 +99,9 @@ export default function ReportIncidentIndex() {
     longitude: '121.7270',
   });
 
+  // Attachments state
+  const [attachments, setAttachments] = useState<string[]>([]);
+
   // Helper functions for updating state
   const updateFormData = (updates: Partial<ReportData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
@@ -455,8 +458,8 @@ export default function ReportIncidentIndex() {
 
       // Race between the API call and timeout
       const result = await Promise.race([
-        reportService.addReport(reportData),
-        timeoutPromise
+        reportService.addReport(reportData, attachments),
+        timeoutPromise,
       ]);
 
       if (result.error) {
@@ -477,24 +480,20 @@ export default function ReportIncidentIndex() {
       );
     } catch (error) {
       console.error('Report submission error:', error);
-      
+
       // Handle timeout specifically
       if (error instanceof Error && error.message === 'TIMEOUT') {
         updateUIState({ isSubmitting: false });
-        Alert.alert(
-          'Submission Timeout',
-          'Submitting took too long. Would you like to retry?',
-          [
-            {
-              text: 'Cancel',
-              style: 'cancel'
-            },
-            {
-              text: 'Retry',
-              onPress: () => handleSubmitReport()
-            }
-          ]
-        );
+        Alert.alert('Submission Timeout', 'Submitting took too long. Would you like to retry?', [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Retry',
+            onPress: () => handleSubmitReport(),
+          },
+        ]);
         return;
       }
 
@@ -597,6 +596,7 @@ export default function ReportIncidentIndex() {
             <EvidenceStep
               uiState={{ isRecording: uiState.isRecording }}
               onUpdateUIState={updateUIState}
+              onFilesUploaded={(files) => setAttachments(files.map((f) => f.path))}
             />
 
             {/* Review & Submit Options */}
