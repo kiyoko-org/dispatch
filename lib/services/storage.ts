@@ -422,22 +422,90 @@ export class SupabaseStorageService implements IStorageService {
   }
 
   /**
-   * Convert file URI to Blob for upload
+   * Convert file URI to a binary payload suitable for Supabase upload.
+   * Returns a Blob when available, otherwise a Uint8Array.
+   *
+   * For Expo/React Native we:
+   * - Read base64 via `expo-file-system`
+   * - Decode base64 to `Uint8Array` (no Node Buffer)
+   * - Try to construct a `Blob` (preferred); otherwise return the `Uint8Array`
    */
-  private async fileUriToBlob(fileUri: string, mimeType: string): Promise<Blob> {
+  private async fileUriToBlob(fileUri: string, mimeType: string): Promise<Blob | Uint8Array> {
     try {
       const base64 = await FileSystem.readAsStringAsync(fileUri, {
         encoding: FileSystem.EncodingType.Base64,
       });
-      // Create a data URI so `fetch` can convert it to a Blob in JS environments (works in RN / Expo)
-      const dataUri = `data:${mimeType};base64,${base64}`;
-      const response = await fetch(dataUri);
-      const blob = await response.blob();
-      return blob;
+
+      const bytes = this.base64ToUint8Array(base64);
+
+      // Try to return a Blob if available in the runtime
+      if (typeof Blob !== 'undefined') {
+        try {
+          return new Blob([bytes], { type: mimeType });
+        } catch (blobErr) {
+          console.warn('Blob construction failed, falling back to Uint8Array:', blobErr);
+        }
+      }
+
+      // Fallback: return the Uint8Array (supabase-js accepts Uint8Array)
+      return bytes;
     } catch (err) {
-      console.error('Failed to convert file URI to Blob:', err);
+      console.error('Failed to convert file URI to binary payload:', err);
       throw err;
     }
+  }
+
+  /**
+   * Decode a base64 string into a Uint8Array without using Node Buffer.
+   * Works in pure JS environments (React Native / Expo).
+   */
+  private base64ToUint8Array(base64: string): Uint8Array {
+    // Strip any data URI prefix (if present)
+    const cleaned = base64.replace(/^data:.*;base64,/, '').replace(/[^A-Za-z0-9+/=]/g, '');
+
+    if (cleaned.length === 0) {
+      return new Uint8Array(0);
+    }
+
+    // Use native atob if available (faster). Otherwise decode manually.
+    if (typeof globalThis.atob === 'function') {
+      const binary = globalThis.atob(cleaned);
+      const len = binary.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return bytes;
+    }
+
+    // Manual base64 decode fallback (no Buffer)
+    const b64chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+    const lookup = new Uint8Array(256);
+    for (let i = 0; i < lookup.length; i++) lookup[i] = 255;
+    for (let i = 0; i < b64chars.length; i++) lookup[b64chars.charCodeAt(i)] = i;
+    lookup['='.charCodeAt(0)] = 0;
+
+    const len = cleaned.length;
+    // calculate output length
+    const padding = cleaned.endsWith('==') ? 2 : cleaned.endsWith('=') ? 1 : 0;
+    const bytesLength = Math.floor((len * 3) / 4) - padding;
+    const bytes = new Uint8Array(bytesLength);
+
+    let byteIndex = 0;
+    for (let i = 0; i < len; i += 4) {
+      const a = lookup[cleaned.charCodeAt(i)];
+      const b = lookup[cleaned.charCodeAt(i + 1)];
+      const c = lookup[cleaned.charCodeAt(i + 2)];
+      const d = lookup[cleaned.charCodeAt(i + 3)];
+
+      const triple = (a << 18) | (b << 12) | (c << 6) | d;
+
+      if (byteIndex < bytesLength) bytes[byteIndex++] = (triple >> 16) & 0xff;
+      if (byteIndex < bytesLength) bytes[byteIndex++] = (triple >> 8) & 0xff;
+      if (byteIndex < bytesLength) bytes[byteIndex++] = triple & 0xff;
+    }
+
+    return bytes;
   }
 
   /**
