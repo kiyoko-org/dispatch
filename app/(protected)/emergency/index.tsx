@@ -28,7 +28,6 @@ import {
   Delete,
   UserPlus,
   Trash2,
-  Settings,
   VolumeX,
   Zap,
 } from 'lucide-react-native';
@@ -87,7 +86,6 @@ export default function EmergencyScreen() {
   const [multiPressTimer, setMultiPressTimer] = useState<ReturnType<typeof setTimeout> | null>(
     null
   );
-  const [showSettings, setShowSettings] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [contactName, setContactName] = useState('');
   const [selectedCategories, setSelectedCategories] = useState<{
@@ -740,19 +738,6 @@ export default function EmergencyScreen() {
 
       <HeaderWithSidebar title="Emergency Response" showBackButton={false} />
 
-      {/* Settings Button - Positioned over the header */}
-      <View className="absolute right-4 top-5 z-50">
-        <TouchableOpacity
-          onPress={() => {
-            triggerHapticFeedback('light');
-            setShowSettings(true);
-          }}
-          className="rounded-full border border-gray-200 bg-white p-2 shadow-md"
-          activeOpacity={0.7}>
-          <Settings size={20} color="#3B82F6" />
-        </TouchableOpacity>
-      </View>
-
       <ScreenContent
         contentContainerStyle={{
           paddingBottom: 40,
@@ -1117,129 +1102,6 @@ export default function EmergencyScreen() {
           </Card>
         </Container>
       </ScreenContent>
-
-      {/* Emergency Settings Modal */}
-      {showSettings && (
-        <View
-          className="absolute inset-0 flex-1 items-center justify-center bg-black/50 px-4"
-          style={{ zIndex: 1000 }}>
-          <View className="max-h-[80%] w-full max-w-md rounded-2xl bg-white p-6">
-            <View className="mb-6 flex-row items-center justify-between">
-              <Text className="text-xl font-bold text-gray-900">Emergency Settings</Text>
-              <TouchableOpacity
-                onPress={() => {
-                  triggerHapticFeedback('light');
-                  setShowSettings(false);
-                }}
-                className="-m-2 p-2">
-                <X size={24} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-
-            <View className="space-y-4">
-              {/* Haptic Feedback */}
-              <View className="flex-row items-center justify-between">
-                <View className="flex-1">
-                  <Text className="font-semibold text-gray-900">Haptic Feedback</Text>
-                  <Text className="text-sm text-gray-600">Feel vibrations for button presses</Text>
-                </View>
-                <TouchableOpacity
-                  onPress={() => {
-                    triggerHapticFeedback('light');
-                    setEmergencySettings((prev) => ({
-                      ...prev,
-                      hapticEnabled: !prev.hapticEnabled,
-                    }));
-                  }}
-                  className={`h-6 w-12 rounded-full ${emergencySettings.hapticEnabled ? 'bg-blue-500' : 'bg-gray-300'}`}>
-                  <View
-                    className={`mt-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-                      emergencySettings.hapticEnabled ? 'ml-6' : 'ml-0.5'
-                    }`}
-                  />
-                </TouchableOpacity>
-              </View>
-
-              {/* Volume Hold */}
-              <View className="flex-row items-center justify-between">
-                <View className="flex-1">
-                  <Text className="font-semibold text-gray-900">Volume Button Hold</Text>
-                  <Text className="text-sm text-gray-600">
-                    Hold volume up for {emergencySettings.volumeHoldDuration / 1000}s
-                  </Text>
-                </View>
-                <TouchableOpacity
-                  onPress={() => {
-                    triggerHapticFeedback('light');
-                    setEmergencySettings((prev) => ({
-                      ...prev,
-                      volumeHoldEnabled: !prev.volumeHoldEnabled,
-                    }));
-                  }}
-                  className={`h-6 w-12 rounded-full ${emergencySettings.volumeHoldEnabled ? 'bg-blue-500' : 'bg-gray-300'}`}>
-                  <View
-                    className={`mt-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-                      emergencySettings.volumeHoldEnabled ? 'ml-6' : 'ml-0.5'
-                    }`}
-                  />
-                </TouchableOpacity>
-              </View>
-
-              {/* Power Button */}
-              <View className="flex-row items-center justify-between">
-                <View className="flex-1">
-                  <Text className="font-semibold text-gray-900">Power Button Sequence</Text>
-                  <Text className="text-sm text-gray-600">Press back/power button 3 times</Text>
-                </View>
-                <TouchableOpacity
-                  onPress={() => {
-                    triggerHapticFeedback('light');
-                    setEmergencySettings((prev) => ({
-                      ...prev,
-                      powerButtonEnabled: !prev.powerButtonEnabled,
-                    }));
-                  }}
-                  className={`h-6 w-12 rounded-full ${emergencySettings.powerButtonEnabled ? 'bg-blue-500' : 'bg-gray-300'}`}>
-                  <View
-                    className={`mt-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-                      emergencySettings.powerButtonEnabled ? 'ml-6' : 'ml-0.5'
-                    }`}
-                  />
-                </TouchableOpacity>
-              </View>
-
-              {/* Silent Mode */}
-              <View className="flex-row items-center justify-between">
-                <View className="flex-1">
-                  <Text className="font-semibold text-gray-900">Silent Emergency Mode</Text>
-                  <Text className="text-sm text-gray-600">Activate without sound or vibration</Text>
-                </View>
-                <TouchableOpacity
-                  onPress={() => {
-                    triggerHapticFeedback('light');
-                    setEmergencySettings((prev) => ({ ...prev, silentMode: !prev.silentMode }));
-                  }}
-                  className={`h-6 w-12 rounded-full ${emergencySettings.silentMode ? 'bg-blue-500' : 'bg-gray-300'}`}>
-                  <View
-                    className={`mt-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
-                      emergencySettings.silentMode ? 'ml-6' : 'ml-0.5'
-                    }`}
-                  />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <TouchableOpacity
-              onPress={() => {
-                triggerHapticFeedback('medium');
-                setShowSettings(false);
-              }}
-              className="mt-6 rounded-xl bg-blue-600 px-6 py-3">
-              <Text className="text-center font-semibold text-white">Save Settings</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
 
       {/* Save Contact Modal */}
       {showSaveModal && (
