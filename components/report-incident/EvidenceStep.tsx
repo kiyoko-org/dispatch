@@ -12,6 +12,7 @@ import {
 } from '../../lib/services';
 import { FileUtils } from '../../lib/services/file-utils';
 import { AudioRecorder } from 'expo-audio';
+import { useAuth } from 'hooks/useAuth';
 
 interface EvidenceStepProps {
 	uiState: {
@@ -47,6 +48,8 @@ export default function EvidenceStep({
 		};
 	}, []);
 
+	const { user } = useAuth()
+
 	const handleVoiceRecording = async () => {
 		if (uiState.isRecording) {
 			// Stop recording
@@ -60,11 +63,12 @@ export default function EvidenceStep({
 							stopRecording: true,
 							maxSize: 25 * 1024 * 1024, // 25MB for audio
 							allowedTypes: ["application/octet-stream"],
+							auth_id: user?.id
 						},
 						(progress) => {
 							console.log('Upload progress:', progress);
 							setUploadProgress(progress);
-						}
+						},
 					);
 
 					console.log('Audio upload result:', result);

@@ -23,7 +23,7 @@ export class SupabaseStorageService implements IStorageService {
    */
   async uploadFile(
     fileUri: string,
-    options: FileUploadOptions & { auth_id?: string } = {},
+    options: FileUploadOptions = {},
     onProgress?: (progress: FileUploadProgress) => void
   ): Promise<FileUploadResult> {
     try {
@@ -46,9 +46,11 @@ export class SupabaseStorageService implements IStorageService {
       const fileSize = await this.getFileSize(fileUri);
       const fileType = await this.getFileType(fileUri);
 
-      // Upload file - Note: For React Native, you would need to convert the file URI to a blob
-      // This is a simplified implementation - actual implementation would need proper file handling
-      const { data, error } = await supabase.storage.from(bucket).upload(filePath, fileUri, {
+      // Convert file URI to Blob (React Native / Expo friendly)
+      const blob = await this.fileUriToBlob(fileUri, fileType);
+
+      // Upload blob to Supabase Storage
+      const { data, error } = await supabase.storage.from(bucket).upload(filePath, blob, {
         cacheControl: '3600',
         upsert: false,
       });
@@ -417,6 +419,25 @@ export class SupabaseStorageService implements IStorageService {
     const random = Math.random().toString(36).substring(2, 15);
     const extension = fileUri.split('.').pop() || 'unknown';
     return `${timestamp}-${random}.${extension}`;
+  }
+
+  /**
+   * Convert file URI to Blob for upload
+   */
+  private async fileUriToBlob(fileUri: string, mimeType: string): Promise<Blob> {
+    try {
+      const base64 = await FileSystem.readAsStringAsync(fileUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      // Create a data URI so `fetch` can convert it to a Blob in JS environments (works in RN / Expo)
+      const dataUri = `data:${mimeType};base64,${base64}`;
+      const response = await fetch(dataUri);
+      const blob = await response.blob();
+      return blob;
+    } catch (err) {
+      console.error('Failed to convert file URI to Blob:', err);
+      throw err;
+    }
   }
 
   /**

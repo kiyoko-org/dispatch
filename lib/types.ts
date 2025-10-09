@@ -67,6 +67,7 @@ export interface FileUploadOptions {
   allowedTypes?: string[];
   compressImages?: boolean;
   quality?: number; // 0-1 for images
+  auth_id?: string;
 }
 
 export interface FileUploadResult {
