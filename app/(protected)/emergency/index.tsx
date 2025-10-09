@@ -375,9 +375,8 @@ export default function EmergencyScreen() {
       [
         {
           text: 'OK',
-          onPress: () => {
-            // Here you would integrate with actual emergency services
-            // Send location, contact emergency contacts, etc.
+          onPress: async () => {
+            await makeCall('9602955055');
           },
         },
       ]
@@ -477,8 +476,8 @@ export default function EmergencyScreen() {
     setEmergencyNumber((prev) => prev.slice(0, -1));
   };
 
-  const makeCall = async () => {
-    if (!emergencyNumber) return;
+  const makeCall = async (number: string) => {
+    if (!number) return;
     triggerHapticFeedback('medium');
 
     // Try Android direct call via native module + runtime permission
@@ -496,10 +495,10 @@ export default function EmergencyScreen() {
           const fn = ImmediatePhoneCallModule.default || ImmediatePhoneCallModule;
           if (typeof fn === 'function') {
             // e.g. immediatePhoneCall('1234567890')
-            fn(emergencyNumber);
+            fn(number);
             return;
           } else if (typeof fn.immediatePhoneCall === 'function') {
-            fn.immediatePhoneCall(emergencyNumber);
+            fn.immediatePhoneCall(number);
             return;
           }
         } else {
@@ -511,7 +510,7 @@ export default function EmergencyScreen() {
     }
 
     // Fallback: open the dialer (works on both iOS and Android)
-    Linking.openURL(`tel:${emergencyNumber}`);
+    Linking.openURL(`tel:${number}`);
   };
 
   const sendMessage = () => {
