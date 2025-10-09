@@ -16,6 +16,8 @@ import {
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from './ThemeContext';
+import { useAuthContext } from './AuthProvider';
+import { supabase } from 'lib/supabase';
 
 interface HeaderWithSidebarProps {
   title: string;
@@ -42,11 +44,42 @@ export default function HeaderWithSidebar({
 }: HeaderWithSidebarProps) {
   const router = useRouter();
   const { colors } = useTheme();
+  const { session } = useAuthContext();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const sidebarAnim = useRef(new Animated.Value(-300)).current;
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [userName, setUserName] = useState<string>('');
+
+  // Fetch user profile to get the name
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!session?.user?.id) return;
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('first_name, last_name')
+          .eq('id', session.user.id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching user profile:', error);
+          return;
+        }
+
+        if (data) {
+          const fullName = [data.first_name, data.last_name].filter(Boolean).join(' ') || 'User';
+          setUserName(fullName);
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+      }
+    };
+
+    fetchUserProfile();
+  }, [session?.user?.id]);
 
   useEffect(() => {
     Animated.parallel([
@@ -437,7 +470,7 @@ export default function HeaderWithSidebar({
                 className="text-sm font-medium"
                 style={{ color: colors.text }}
               >
-                Juan Dela Cruz
+                {userName || 'User'}
               </Text>
               <Text
                 className="text-xs"
