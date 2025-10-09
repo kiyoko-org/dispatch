@@ -96,6 +96,7 @@ export default function Login() {
                   value={email}
                   onChangeText={setEmail}
                   placeholderTextColor="#9CA3AF"
+                  style={{ color: '#1F2937' }}
                 />
               </View>
             </View>
@@ -114,6 +115,7 @@ export default function Login() {
                   onChangeText={setPassword}
                   secureTextEntry={!showPassword}
                   placeholderTextColor="#9CA3AF"
+                  style={{ color: '#1F2937' }}
                 />
                 <TouchableOpacity
                   className="absolute right-3 top-1/2 z-10 -translate-y-1/2 transform p-1 sm:right-4 sm:p-2"
