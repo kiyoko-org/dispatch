@@ -55,6 +55,7 @@ export function TextInput({
           placeholder={placeholder}
           keyboardType={keyboardType}
           secureTextEntry={isPassword && !showPassword}
+          // Explicit text color (gray-900) to ensure consistent rendering across all states
           style={{ color: '#1F2937' }}
         />
         {isPassword && (
