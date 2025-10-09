@@ -43,6 +43,8 @@ import { EmergencyContact } from 'lib/types';
 import * as Cellular from 'expo-cellular';
 import * as Haptics from 'expo-haptics';
 import VolumeManager from 'react-native-volume-manager';
+import { emergencyCallService } from 'lib/services/emergency-calls';
+import * as Location from 'expo-location';
 
 let ImmediatePhoneCallModule: any = null;
 try {
@@ -365,9 +367,23 @@ export default function EmergencyScreen() {
     }
   };
 
-  const activateEmergencyProtocol = () => {
+  const activateEmergencyProtocol = async () => {
     triggerHapticFeedback('emergency');
     setEmergencyProtocolActive(true);
+
+    let locationLat: number | undefined;
+    let locationLng: number | undefined;
+
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const location = await Location.getCurrentPositionAsync({});
+        locationLat = location.coords.latitude;
+        locationLng = location.coords.longitude;
+      }
+    } catch (error) {
+      console.warn('Failed to get location:', error);
+    }
 
     Alert.alert(
       'Emergency Activated',
@@ -376,7 +392,17 @@ export default function EmergencyScreen() {
         {
           text: 'OK',
           onPress: async () => {
-            await makeCall('9602955055');
+            try {
+              await makeCall('9602955055');
+              await emergencyCallService.logEmergencyCall(
+                '9602955055',
+                locationLat,
+                locationLng,
+                'initiated'
+              );
+            } catch (error) {
+              console.error('Failed to log emergency call:', error);
+            }
           },
         },
       ]
@@ -1093,7 +1119,7 @@ export default function EmergencyScreen() {
               <TouchableOpacity
                 className="items-center"
                 activeOpacity={1}
-                onPress={makeCall}
+                onPress={() => makeCall(emergencyNumber)}
                 onPressIn={() => handleButtonPressIn('call')}
                 onPressOut={() => handleButtonPressOut('call')}>
                 <View
