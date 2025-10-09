@@ -45,6 +45,20 @@ export interface EmergencyContact {
 
 export type ContactStorageType = 'quick' | 'community' | 'emergency';
 
+// Emergency Call Log types
+export interface EmergencyCallLog {
+  id?: string;
+  user_id?: string;
+  called_number: string;
+  caller_number?: string;
+  call_type?: 'police' | 'fire' | 'medical' | 'general';
+  call_timestamp?: string;
+  location_lat?: number;
+  location_lng?: number;
+  outcome?: 'initiated' | 'failed' | 'completed';
+  created_at?: string;
+}
+
 // Storage Interface Types
 export interface FileUploadOptions {
   bucket?: string;

@@ -43,6 +43,8 @@ import { EmergencyContact } from 'lib/types';
 import * as Cellular from 'expo-cellular';
 import * as Haptics from 'expo-haptics';
 import VolumeManager from 'react-native-volume-manager';
+import { emergencyCallService } from 'lib/services/emergency-calls';
+import * as Location from 'expo-location';
 
 let ImmediatePhoneCallModule: any = null;
 try {
@@ -102,23 +104,27 @@ export default function EmergencyScreen() {
   const [isCheckingVoip, setIsCheckingVoip] = useState(true);
   const [status, requestPermission] = Cellular.usePermissions();
 
-  // Emergency contacts data (default + saved)
   const defaultEmergencyContacts = [
     {
       service: 'Police',
       number: '911',
+      id: 'default-1',
+      isSaved: false,
     },
     {
       service: 'Fire Department',
       number: '9602955055',
+      id: 'default-2',
+      isSaved: false,
     },
     {
       service: 'Ambulance',
       number: '69420',
+      id: 'default-3',
+      isSaved: false,
     },
   ];
 
-  // Combine default and saved emergency contacts
   const emergencyContacts = [
     ...defaultEmergencyContacts,
     ...savedEmergencyContacts.map((contact) => ({
@@ -350,7 +356,6 @@ export default function EmergencyScreen() {
           await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
           break;
         case 'emergency':
-          // Emergency pattern: 3 heavy impacts with short delays
           await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
           setTimeout(async () => {
             await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -365,9 +370,36 @@ export default function EmergencyScreen() {
     }
   };
 
-  const activateEmergencyProtocol = () => {
+  const determineCallType = (phoneNumber: string): 'police' | 'fire' | 'medical' | 'general' => {
+    const emergencyMappings: { [key: string]: 'police' | 'fire' | 'medical' } = {
+      '911': 'police',
+      '9602955055': 'fire',
+      '69420': 'medical',
+    };
+
+    return emergencyMappings[phoneNumber] || 'general';
+  };
+
+  const activateEmergencyProtocol = async () => {
     triggerHapticFeedback('emergency');
     setEmergencyProtocolActive(true);
+
+    let locationLat: number | undefined;
+    let locationLng: number | undefined;
+
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === 'granted') {
+        const location = await Location.getCurrentPositionAsync({});
+        locationLat = location.coords.latitude;
+        locationLng = location.coords.longitude;
+      }
+    } catch (error) {
+      console.warn('Failed to get location:', error);
+    }
+
+    const emergencyNumber = '9602955055';
+    const callType = determineCallType(emergencyNumber);
 
     Alert.alert(
       'Emergency Activated',
@@ -376,7 +408,19 @@ export default function EmergencyScreen() {
         {
           text: 'OK',
           onPress: async () => {
-            await makeCall('9602955055');
+            try {
+              await makeCall(emergencyNumber);
+              await emergencyCallService.logEmergencyCall(
+                emergencyNumber,
+                undefined,
+                callType,
+                locationLat,
+                locationLng,
+                'initiated'
+              );
+            } catch (error) {
+              console.error('Failed to log emergency call:', error);
+            }
           },
         },
       ]
@@ -1093,7 +1137,7 @@ export default function EmergencyScreen() {
               <TouchableOpacity
                 className="items-center"
                 activeOpacity={1}
-                onPress={makeCall}
+                onPress={() => makeCall(emergencyNumber)}
                 onPressIn={() => handleButtonPressIn('call')}
                 onPressOut={() => handleButtonPressOut('call')}>
                 <View
