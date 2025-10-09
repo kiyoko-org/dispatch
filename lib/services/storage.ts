@@ -15,7 +15,7 @@ import {
  * Handles file uploads, downloads, and management using Supabase Storage
  */
 export class SupabaseStorageService implements IStorageService {
-	private readonly defaultBucket = 'files';
+	private readonly defaultBucket = 'attachments';
 	private readonly defaultFolder = 'uploads';
 
 	/**
