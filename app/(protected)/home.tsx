@@ -791,7 +791,8 @@ export default function Home() {
                 borderColor: currentColors.cardBorder,
                 backgroundColor: currentColors.cardBg,
                 padding: 16,
-              }}>
+              }}
+              onPress={() => router.push('/cases')}>
               <View style={{ alignItems: 'center' }}>
                 <View
                   style={{

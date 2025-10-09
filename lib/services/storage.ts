@@ -49,11 +49,19 @@ export class SupabaseStorageService implements IStorageService {
       // Convert file URI to Blob (React Native / Expo friendly)
       const blob = await this.fileUriToBlob(fileUri, fileType);
 
+	  if (onProgress) {
+	  	onProgress({percentage: 0, loaded: 0, total: fileSize});
+	  }
+
       // Upload blob to Supabase Storage
       const { data, error } = await supabase.storage.from(bucket).upload(filePath, blob, {
         cacheControl: '3600',
         upsert: false,
       });
+
+	  if (onProgress) {
+	  	onProgress({percentage: 100, loaded: 100, total: fileSize});
+	  }
 
       if (error) {
         throw this.mapSupabaseError(error);
