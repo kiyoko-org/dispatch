@@ -155,6 +155,8 @@ export default function ReportIncidentIndex() {
             'Current Location';
 
           updateFormData({
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
             street_address: streetAddress,
             city: place.city || place.subregion || 'Unknown City',
             province: place.region || 'Unknown Province',
@@ -163,6 +165,8 @@ export default function ReportIncidentIndex() {
         } else {
           // Fallback to coordinates if reverse geocoding fails
           updateFormData({
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
             street_address: `Lat: ${location.coords.latitude.toFixed(6)}, Lng: ${location.coords.longitude.toFixed(6)}`,
             city: 'Unknown City',
             province: 'Unknown Province',
@@ -172,6 +176,8 @@ export default function ReportIncidentIndex() {
         console.error('Geocoding error:', geocodeError);
         // Fallback to coordinates if geocoding fails
         updateFormData({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
           street_address: `Lat: ${location.coords.latitude.toFixed(6)}, Lng: ${location.coords.longitude.toFixed(6)}`,
           city: 'Unknown City',
           province: 'Unknown Province',
@@ -563,6 +569,8 @@ export default function ReportIncidentIndex() {
                 nearby_landmark: formData.nearby_landmark,
                 city: formData.city,
                 province: formData.province,
+                latitude: formData.latitude,
+                longitude: formData.longitude,
                 brief_description: formData.brief_description,
               }}
               onUpdateFormData={updateFormData}

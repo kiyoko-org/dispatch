@@ -1,7 +1,7 @@
 import { View, Text, TouchableOpacity, TextInput, ActivityIndicator, Alert } from 'react-native';
 import { MapPin } from 'lucide-react-native';
 import { Card } from '../ui/Card';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import * as Location from 'expo-location';
 import MapView, { LatLng, Marker } from 'react-native-maps';
 import { geocodingService } from '../../lib/services/geocoding';
@@ -38,6 +38,16 @@ export default function LocationStep({
   const [controller, setController] = useState<AbortController | null>(null);
   const [isFetchingAddress, setIsFetchingAddress] = useState<boolean>(false);
   const [showAddressSearch, setShowAddressSearch] = useState(false);
+
+  // Update coordinate when formData latitude/longitude changes
+  useEffect(() => {
+    if (formData.latitude && formData.longitude) {
+      setCoordinate({
+        latitude: formData.latitude,
+        longitude: formData.longitude,
+      });
+    }
+  }, [formData.latitude, formData.longitude]);
 
   async function handleMapOnPress(coordinate: LatLng) {
     if (controller) {
