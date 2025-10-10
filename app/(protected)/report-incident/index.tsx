@@ -22,6 +22,7 @@ import * as Location from 'expo-location';
 import { ReportData } from 'lib/types';
 import { reportService } from 'lib/services/reports';
 import { geocodingService } from 'lib/services/geocoding';
+import { isWithinTuguegaraoBounds } from 'lib/utils/geoBounds';
 
 interface UIState {
   showCategoryDropdown: boolean;
@@ -133,6 +134,17 @@ export default function ReportIncidentIndex() {
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.High,
       });
+
+      // Check if location is within Tuguegarao City bounds
+      if (!isWithinTuguegaraoBounds(location.coords.latitude, location.coords.longitude)) {
+        Alert.alert(
+          'Location Not Supported',
+          'Your current location is outside Tuguegarao City. This app currently only supports reporting incidents within Tuguegarao City.',
+          [{ text: 'OK' }]
+        );
+        updateUIState({ isGettingLocation: false });
+        return;
+      }
 
       // Update current location coordinates
       setCurrentLocation({

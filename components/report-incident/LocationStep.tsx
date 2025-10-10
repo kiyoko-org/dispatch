@@ -7,6 +7,7 @@ import MapView, { LatLng, Marker } from 'react-native-maps';
 import { geocodingService } from '../../lib/services/geocoding';
 import { fetchAddressDetails } from '../../lib/services/addressDetails';
 import AddressSearch from '../AddressSearch';
+import { isWithinTuguegaraoBounds } from '../../lib/utils/geoBounds';
 
 interface LocationStepProps {
   formData: {
@@ -40,6 +41,16 @@ export default function LocationStep({
   const [showAddressSearch, setShowAddressSearch] = useState(false);
 
   async function handleMapOnPress(coordinate: LatLng) {
+    // Check if location is within Tuguegarao City bounds
+    if (!isWithinTuguegaraoBounds(coordinate.latitude, coordinate.longitude)) {
+      Alert.alert(
+        'Location Not Supported',
+        'The selected location is outside Tuguegarao City. This app currently only supports reporting incidents within Tuguegarao City.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     if (controller) {
       controller.abort();
     }
@@ -270,11 +281,25 @@ export default function LocationStep({
         visible={showAddressSearch}
         onClose={() => setShowAddressSearch(false)}
         onSelect={async (item) => {
-          setCoordinate({ latitude: parseFloat(item.lat), longitude: parseFloat(item.lon) });
+          const lat = parseFloat(item.lat);
+          const lon = parseFloat(item.lon);
+          
+          // Check if location is within Tuguegarao City bounds
+          if (!isWithinTuguegaraoBounds(lat, lon)) {
+            Alert.alert(
+              'Location Not Supported',
+              'The selected location is outside Tuguegarao City. This app currently only supports reporting incidents within Tuguegarao City.',
+              [{ text: 'OK' }]
+            );
+            setShowAddressSearch(false);
+            return;
+          }
+          
+          setCoordinate({ latitude: lat, longitude: lon });
           onUpdateFormData({
             street_address: item.display_name,
-            latitude: parseFloat(item.lat),
-            longitude: parseFloat(item.lon),
+            latitude: lat,
+            longitude: lon,
             city: 'Tuguegarao',
             province: 'Cagayan',
           });
