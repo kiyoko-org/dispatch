@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Modal } from 'react-native';
+import { useState } from 'react';
+import { View, Text, TouchableOpacity, Modal } from 'react-native';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react-native';
 
 interface DatePickerProps {
   isVisible: boolean;
   onClose: () => void;
   onSelectDate: (dateString: string) => void;
-  initialDate?: string; // in MM/DD/YYYY format
+  initialDate?: string;
 }
 
 export default function DatePicker({
@@ -15,7 +15,6 @@ export default function DatePicker({
   onSelectDate,
   initialDate,
 }: DatePickerProps) {
-  // Parse initial date or use current date
   const parseInitialDate = () => {
     if (initialDate) {
       const [month, day, year] = initialDate.split('/').map(Number);
@@ -30,8 +29,18 @@ export default function DatePicker({
   );
 
   const months = [
-    'January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
 
   const getDaysInMonth = (date: Date) => {
@@ -42,22 +51,25 @@ export default function DatePicker({
     return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
   };
 
+  const isNextMonthDisabled = () => {
+    const today = new Date();
+    const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+    const todayMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    return nextMonth > todayMonth;
+  };
+
   const navigateMonth = (direction: 'prev' | 'next') => {
-    setCurrentDate(prev => {
+    setCurrentDate((prev) => {
       const newDate = new Date(prev);
       if (direction === 'prev') {
         newDate.setMonth(prev.getMonth() - 1);
       } else {
-        // Don't allow navigating to future months
         const today = new Date();
-        if (direction === 'next') {
-          const nextMonth = new Date(prev);
-          nextMonth.setMonth(prev.getMonth() + 1);
-          // Only allow if next month is not in the future
-          if (nextMonth.getFullYear() > today.getFullYear() || 
-              (nextMonth.getFullYear() === today.getFullYear() && nextMonth.getMonth() > today.getMonth())) {
-            return prev; // Don't navigate to future month
-          }
+        const nextMonth = new Date(prev.getFullYear(), prev.getMonth() + 1, 1);
+        const todayMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+        if (nextMonth > todayMonth) {
+          return prev;
         }
         newDate.setMonth(prev.getMonth() + 1);
       }
@@ -67,15 +79,14 @@ export default function DatePicker({
 
   const handleDateSelect = (day: number) => {
     const selected = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-    // Don't allow selecting future dates
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     selected.setHours(0, 0, 0, 0);
-    
+
     if (selected > today) {
-      return; // Don't allow future dates
+      return;
     }
-    
+
     setSelectedDate(selected);
   };
 
@@ -96,26 +107,24 @@ export default function DatePicker({
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    // Add empty cells for days before the first day of the month
     for (let i = 0; i < firstDay; i++) {
-      days.push(
-        <View key={`empty-${i}`} className="h-12 w-12" />
-      );
+      days.push(<View key={`empty-${i}`} className="h-12 w-12" />);
     }
 
-    // Add days of the month
     for (let day = 1; day <= daysInMonth; day++) {
       const dayDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
       dayDate.setHours(0, 0, 0, 0);
-      
+
       const isFuture = dayDate > today;
-      
-      const isSelected = selectedDate && 
+
+      const isSelected =
+        selectedDate &&
         selectedDate.getDate() === day &&
         selectedDate.getMonth() === currentDate.getMonth() &&
         selectedDate.getFullYear() === currentDate.getFullYear();
 
-      const isToday = new Date().toDateString() === 
+      const isToday =
+        new Date().toDateString() ===
         new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toDateString();
 
       days.push(
@@ -132,8 +141,7 @@ export default function DatePicker({
                   ? 'bg-gray-100'
                   : 'bg-transparent'
           }`}
-          activeOpacity={0.7}
-        >
+          activeOpacity={0.7}>
           <Text
             className={`text-base font-medium ${
               isSelected
@@ -143,8 +151,7 @@ export default function DatePicker({
                   : isFuture
                     ? 'text-gray-400'
                     : 'text-slate-900'
-            }`}
-          >
+            }`}>
             {day}
           </Text>
         </TouchableOpacity>
@@ -157,33 +164,24 @@ export default function DatePicker({
   const dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
   return (
-    <Modal
-      visible={isVisible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-    >
-      <View className="flex-1 bg-black/50 items-center justify-center p-4">
-        <View className="bg-white rounded-xl p-6 w-full max-w-sm">
-          {/* Header */}
-          <View className="flex-row items-center justify-between mb-6">
+    <Modal visible={isVisible} transparent animationType="fade" onRequestClose={onClose}>
+      <View className="flex-1 items-center justify-center bg-black/50 p-4">
+        <View className="w-full max-w-sm rounded-xl bg-white p-6">
+          <View className="mb-6 flex-row items-center justify-between">
             <Text className="text-xl font-bold text-slate-900">Select Date</Text>
             <TouchableOpacity
               onPress={onClose}
               className="h-8 w-8 items-center justify-center rounded-lg bg-gray-100"
-              activeOpacity={0.7}
-            >
+              activeOpacity={0.7}>
               <X size={18} color="#64748B" />
             </TouchableOpacity>
           </View>
 
-          {/* Month/Year Navigation */}
-          <View className="flex-row items-center justify-between mb-4">
+          <View className="mb-4 flex-row items-center justify-between">
             <TouchableOpacity
               onPress={() => navigateMonth('prev')}
               className="h-10 w-10 items-center justify-center rounded-lg bg-gray-100"
-              activeOpacity={0.7}
-            >
+              activeOpacity={0.7}>
               <ChevronLeft size={20} color="#64748B" />
             </TouchableOpacity>
 
@@ -193,15 +191,16 @@ export default function DatePicker({
 
             <TouchableOpacity
               onPress={() => navigateMonth('next')}
-              className="h-10 w-10 items-center justify-center rounded-lg bg-gray-100"
-              activeOpacity={0.7}
-            >
-              <ChevronRight size={20} color="#64748B" />
+              disabled={isNextMonthDisabled()}
+              className={`h-10 w-10 items-center justify-center rounded-lg ${
+                isNextMonthDisabled() ? 'bg-gray-200' : 'bg-gray-100'
+              }`}
+              activeOpacity={0.7}>
+              <ChevronRight size={20} color={isNextMonthDisabled() ? '#CBD5E1' : '#64748B'} />
             </TouchableOpacity>
           </View>
 
-          {/* Day Labels */}
-          <View className="flex-row justify-between mb-2">
+          <View className="mb-2 flex-row justify-between">
             {dayLabels.map((label) => (
               <View key={label} className="h-8 w-12 items-center justify-center">
                 <Text className="text-sm font-medium text-gray-500">{label}</Text>
@@ -209,18 +208,13 @@ export default function DatePicker({
             ))}
           </View>
 
-          {/* Calendar Grid */}
-          <View className="flex-row flex-wrap mb-6">
-            {renderCalendarGrid()}
-          </View>
+          <View className="mb-6 flex-row flex-wrap">{renderCalendarGrid()}</View>
 
-          {/* Action Buttons */}
           <View className="flex-row space-x-3">
             <TouchableOpacity
               onPress={onClose}
               className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-3"
-              activeOpacity={0.7}
-            >
+              activeOpacity={0.7}>
               <Text className="text-center text-base font-medium text-slate-700">Cancel</Text>
             </TouchableOpacity>
 
@@ -230,11 +224,11 @@ export default function DatePicker({
                 selectedDate ? 'bg-blue-600' : 'bg-gray-300'
               }`}
               activeOpacity={0.7}
-              disabled={!selectedDate}
-            >
-              <Text className={`text-center text-base font-medium ${
-                selectedDate ? 'text-white' : 'text-gray-500'
-              }`}>
+              disabled={!selectedDate}>
+              <Text
+                className={`text-center text-base font-medium ${
+                  selectedDate ? 'text-white' : 'text-gray-500'
+                }`}>
                 Confirm
               </Text>
             </TouchableOpacity>
