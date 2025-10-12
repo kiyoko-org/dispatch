@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useColorScheme } from 'react-native';
 
-export type ColorTheme = 'blue' | 'green' | 'purple' | 'orange' | 'red';
+export type ColorTheme = 'blue' | 'green' | 'purple' | 'orange' | 'red' | 'pink' | 'custom';
 export type ThemeMode = 'light' | 'dark' | 'system';
 
 export interface ThemeColors {
@@ -236,6 +236,86 @@ const colorThemes: Record<ColorTheme, { light: ThemeColors; dark: ThemeColors }>
       overlay: 'rgba(0, 0, 0, 0.7)',
     },
   },
+  pink: {
+    light: {
+      primary: '#EC4899',
+      primaryLight: '#FCE7F3',
+      primaryDark: '#DB2777',
+      accent: '#F472B6',
+      background: '#FDF2F8',
+      surface: '#FFFFFF',
+      surfaceVariant: '#FCE7F3',
+      text: '#831843',
+      textSecondary: '#DB2777',
+      border: '#FBCFE8',
+      divider: '#FCE7F3',
+      success: '#10B981',
+      warning: '#F59E0B',
+      error: '#EF4444',
+      info: '#3B82F6',
+      card: '#FFFFFF',
+      overlay: 'rgba(0, 0, 0, 0.5)',
+    },
+    dark: {
+      primary: '#F472B6',
+      primaryLight: '#831843',
+      primaryDark: '#DB2777',
+      accent: '#F9A8D4',
+      background: '#500724',
+      surface: '#831843',
+      surfaceVariant: '#9F1239',
+      text: '#FCE7F3',
+      textSecondary: '#FBCFE8',
+      border: '#9F1239',
+      divider: '#9F1239',
+      success: '#34D399',
+      warning: '#FBBF24',
+      error: '#F87171',
+      info: '#60A5FA',
+      card: '#831843',
+      overlay: 'rgba(0, 0, 0, 0.7)',
+    },
+  },
+  custom: {
+    light: {
+      primary: '#3B82F6',
+      primaryLight: '#DBEAFE',
+      primaryDark: '#1D4ED8',
+      accent: '#60A5FA',
+      background: '#F8FAFC',
+      surface: '#FFFFFF',
+      surfaceVariant: '#F1F5F9',
+      text: '#1E293B',
+      textSecondary: '#64748B',
+      border: '#E2E8F0',
+      divider: '#F1F5F9',
+      success: '#10B981',
+      warning: '#F59E0B',
+      error: '#EF4444',
+      info: '#3B82F6',
+      card: '#FFFFFF',
+      overlay: 'rgba(0, 0, 0, 0.5)',
+    },
+    dark: {
+      primary: '#60A5FA',
+      primaryLight: '#1E40AF',
+      primaryDark: '#1D4ED8',
+      accent: '#93C5FD',
+      background: '#0F172A',
+      surface: '#1E293B',
+      surfaceVariant: '#334155',
+      text: '#F8FAFC',
+      textSecondary: '#CBD5E1',
+      border: '#334155',
+      divider: '#334155',
+      success: '#34D399',
+      warning: '#FBBF24',
+      error: '#F87171',
+      info: '#60A5FA',
+      card: '#1E293B',
+      overlay: 'rgba(0, 0, 0, 0.7)',
+    },
+  },
 };
 
 interface ThemeContextType {
@@ -246,10 +326,12 @@ interface ThemeContextType {
   // Theme settings
   selectedColorTheme: ColorTheme;
   themeMode: ThemeMode;
+  customColors: { light: ThemeColors; dark: ThemeColors } | null;
 
   // Theme setters
   setSelectedColorTheme: (theme: ColorTheme) => void;
   setThemeMode: (mode: ThemeMode) => void;
+  setCustomColors: (colors: { light: ThemeColors; dark: ThemeColors }) => void;
 
   // Utility functions
   getThemeColors: (colorTheme: ColorTheme, isDark: boolean) => ThemeColors;
@@ -265,6 +347,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const systemColorScheme = useColorScheme();
   const [selectedColorTheme, setSelectedColorTheme] = useState<ColorTheme>('blue');
   const [themeMode, setThemeMode] = useState<ThemeMode>('system');
+  const [customColors, setCustomColors] = useState<{ light: ThemeColors; dark: ThemeColors } | null>(null);
 
   // Determine if we should use dark mode
   const isDark = themeMode === 'system'
@@ -272,9 +355,14 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     : themeMode === 'dark';
 
   // Get current theme colors
-  const colors = colorThemes[selectedColorTheme][isDark ? 'dark' : 'light'];
+  const colors = selectedColorTheme === 'custom' && customColors
+    ? customColors[isDark ? 'dark' : 'light']
+    : colorThemes[selectedColorTheme][isDark ? 'dark' : 'light'];
 
   const getThemeColors = (colorTheme: ColorTheme, isDark: boolean): ThemeColors => {
+    if (colorTheme === 'custom' && customColors) {
+      return customColors[isDark ? 'dark' : 'light'];
+    }
     return colorThemes[colorTheme][isDark ? 'dark' : 'light'];
   };
 
@@ -283,8 +371,10 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     isDark,
     selectedColorTheme,
     themeMode,
+    customColors,
     setSelectedColorTheme,
     setThemeMode,
+    setCustomColors,
     getThemeColors,
   };
 

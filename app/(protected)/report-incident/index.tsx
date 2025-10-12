@@ -22,6 +22,7 @@ import * as Location from 'expo-location';
 import { ReportData } from 'lib/types';
 import { reportService } from 'lib/services/reports';
 import { geocodingService } from 'lib/services/geocoding';
+import { useTheme } from 'components/ThemeContext';
 
 interface UIState {
   showCategoryDropdown: boolean;
@@ -41,6 +42,7 @@ interface UIState {
 
 export default function ReportIncidentIndex() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const dropdownAnim = useRef(new Animated.Value(0)).current;
@@ -57,9 +59,6 @@ export default function ReportIncidentIndex() {
     // Location Information
     street_address: '',
     nearby_landmark: '',
-    city: 'Tuguegarao City',
-    province: 'Cagayan',
-    brief_description: '',
 
     // Detailed Information
     what_happened: '',
@@ -69,11 +68,6 @@ export default function ReportIncidentIndex() {
     property_damage: '',
     suspect_description: '',
     witness_contact_info: '',
-
-    // Options
-    request_follow_up: true,
-    share_with_community: false,
-    is_anonymous: false,
   });
 
   // UI state - separate from form data
@@ -109,6 +103,29 @@ export default function ReportIncidentIndex() {
 
   const updateUIState = (updates: Partial<UIState>) => {
     setUIState((prev) => ({ ...prev, ...updates }));
+  };
+
+  // Function to handle using current date and time
+  const handleUseCurrentDateTime = () => {
+    const now = new Date();
+    
+    // Format date as MM/DD/YYYY
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const year = now.getFullYear();
+    const dateString = `${month}/${day}/${year}`;
+    
+    // Format time as HH:MM AM/PM
+    let hours = now.getHours();
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const period = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12 || 12;
+    const timeString = `${hours}:${minutes} ${period}`;
+    
+    updateFormData({
+      incident_date: dateString,
+      incident_time: timeString,
+    });
   };
 
   // Function to handle using current location
@@ -156,16 +173,12 @@ export default function ReportIncidentIndex() {
 
           updateFormData({
             street_address: streetAddress,
-            city: place.city || place.subregion || 'Unknown City',
-            province: place.region || 'Unknown Province',
             nearby_landmark: place.name || '',
           });
         } else {
           // Fallback to coordinates if reverse geocoding fails
           updateFormData({
             street_address: `Lat: ${location.coords.latitude.toFixed(6)}, Lng: ${location.coords.longitude.toFixed(6)}`,
-            city: 'Unknown City',
-            province: 'Unknown Province',
           });
         }
       } catch (geocodeError) {
@@ -173,8 +186,6 @@ export default function ReportIncidentIndex() {
         // Fallback to coordinates if geocoding fails
         updateFormData({
           street_address: `Lat: ${location.coords.latitude.toFixed(6)}, Lng: ${location.coords.longitude.toFixed(6)}`,
-          city: 'Unknown City',
-          province: 'Unknown Province',
         });
       }
 
@@ -213,15 +224,6 @@ export default function ReportIncidentIndex() {
     if (!data.street_address.trim()) {
       errors.street_address = 'Please enter the street address';
     }
-    if (!data.city.trim()) {
-      errors.city = 'Please enter the city';
-    }
-    if (!data.province.trim()) {
-      errors.province = 'Please enter the province';
-    }
-    if (!data.brief_description.trim()) {
-      errors.brief_description = 'Please provide a brief description';
-    }
     if (!data.what_happened.trim()) {
       errors.what_happened = 'Please describe what happened';
     }
@@ -240,9 +242,6 @@ export default function ReportIncidentIndex() {
     // Length validations
     if (data.incident_title.length > 100) {
       errors.incident_title = 'Title must be 100 characters or less';
-    }
-    if (data.brief_description.length > 500) {
-      errors.brief_description = 'Brief description must be 500 characters or less';
     }
     if (data.what_happened.length > 2000) {
       errors.what_happened = 'Description must be 2000 characters or less';
@@ -338,78 +337,15 @@ export default function ReportIncidentIndex() {
     }
   };
 
-  const incidentCategories = [
-    { name: 'Property Damage', severity: 'Low' },
-    { name: 'Emergency Situation', severity: 'Critical' },
-    { name: 'Crime in Progress', severity: 'High' },
-    { name: 'Suspicious Activity', severity: 'Medium' },
-    { name: 'Traffic Accident', severity: 'High' },
-    { name: 'Public Disturbance', severity: 'Medium' },
-    { name: 'Other Incident', severity: 'Low' },
-  ];
+  const incidentCategories: { name: string; severity: string }[] = [];
 
-  const injuryOptions = [
-    { name: 'No Injuries', severity: 'Low', icon: '✅' },
-    { name: 'Minor Injuries', severity: 'Medium', icon: '🩹' },
-    { name: 'Serious Injuries', severity: 'High', icon: '🚑' },
-    { name: 'Critical/Life-threatening', severity: 'Critical', icon: '🆘' },
-    { name: 'Unknown/Unclear', severity: 'Low', icon: '❓' },
-  ];
+  const injuryOptions: { name: string; severity: string; icon: string }[] = [];
 
-  const subcategories = {
-    'Property Damage': [
-      'Vandalism',
-      'Vehicle Damage',
-      'Building Damage',
-      'Equipment Damage',
-      'Other Property',
-    ],
-    'Emergency Situation': [
-      'Fire',
-      'Medical Emergency',
-      'Natural Disaster',
-      'Chemical Spill',
-      'Gas Leak',
-    ],
-    'Crime in Progress': [
-      'Theft/Robbery',
-      'Assault',
-      'Break-in',
-      'Domestic Violence',
-      'Drug Activity',
-    ],
-    'Suspicious Activity': [
-      'Suspicious Person',
-      'Suspicious Vehicle',
-      'Abandoned Item',
-      'Unknown Activity',
-    ],
-    'Traffic Accident': [
-      'Vehicle Collision',
-      'Pedestrian Accident',
-      'Motorcycle Accident',
-      'Bicycle Accident',
-      'Hit and Run',
-    ],
-    'Public Disturbance': [
-      'Noise Complaint',
-      'Public Fight',
-      'Harassment',
-      'Loitering',
-      'Disorderly Conduct',
-    ],
-    'Other Incident': [
-      'Found Property',
-      'Lost Pet',
-      'Utility Issue',
-      'Environmental Concern',
-      'Other',
-    ],
-  };
+  const subcategories: Record<string, string[]> = {};
 
-  const hourOptions = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12'];
-  const minuteOptions = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
-  const periodOptions = ['AM', 'PM'];
+  const hourOptions: string[] = [];
+  const minuteOptions: string[] = [];
+  const periodOptions: string[] = [];
 
   useEffect(() => {
     Animated.parallel([
@@ -457,10 +393,10 @@ export default function ReportIncidentIndex() {
       });
 
       // Race between the API call and timeout
-      const result = await Promise.race([
+      const result = (await Promise.race([
         reportService.addReport(reportData, attachments),
         timeoutPromise,
-      ]);
+      ])) as Awaited<ReturnType<typeof reportService.addReport>>;
 
       if (result.error) {
         throw new Error(result.error.message || 'Failed to submit report');
@@ -512,8 +448,12 @@ export default function ReportIncidentIndex() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-white">
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      className="flex-1"
+      style={{ backgroundColor: colors.background }}>
+      <StatusBar 
+        barStyle={isDark ? 'light-content' : 'dark-content'} 
+        backgroundColor={colors.background} 
+      />
 
       <HeaderWithSidebar title="Report Incident" showBackButton={false} />
 
@@ -554,6 +494,7 @@ export default function ReportIncidentIndex() {
               selectedMinute={uiState.selectedMinute}
               selectedPeriod={uiState.selectedPeriod}
               validationErrors={uiState.validationErrors}
+              onUseCurrentDateTime={handleUseCurrentDateTime}
             />
 
             {/* Step 2: Location Information */}
@@ -561,9 +502,6 @@ export default function ReportIncidentIndex() {
               formData={{
                 street_address: formData.street_address,
                 nearby_landmark: formData.nearby_landmark,
-                city: formData.city,
-                province: formData.province,
-                brief_description: formData.brief_description,
               }}
               onUpdateFormData={updateFormData}
               validationErrors={uiState.validationErrors}
@@ -601,13 +539,7 @@ export default function ReportIncidentIndex() {
 
             {/* Review & Submit Options */}
             <ReviewStep
-              formData={{
-                request_follow_up: formData.request_follow_up,
-                share_with_community: formData.share_with_community,
-                is_anonymous: formData.is_anonymous,
-              }}
               uiState={{ isSubmitting: uiState.isSubmitting }}
-              onUpdateFormData={updateFormData}
               onSubmit={handleSubmitReport}
             />
 
@@ -615,9 +547,10 @@ export default function ReportIncidentIndex() {
             <View className="mb-4">
               <TouchableOpacity
                 onPress={() => router.replace('/(protected)/home')}
-                className="items-center rounded-lg border border-gray-300 bg-white px-8 py-4"
+                className="items-center rounded-lg px-8 py-4"
+                style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }}
                 activeOpacity={0.8}>
-                <Text className="text-base font-semibold text-slate-700">Cancel & Return Home</Text>
+                <Text className="text-base font-semibold" style={{ color: colors.text }}>Cancel & Return Home</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>

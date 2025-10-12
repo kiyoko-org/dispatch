@@ -6,14 +6,10 @@ import {
   Zap,
   AlertTriangle,
   Bell,
-  Users,
-  User,
-  Search,
-  Coins,
-  Newspaper,
   Clock,
   MapPin,
   AlertCircle,
+  Phone,
 } from 'lucide-react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -23,39 +19,6 @@ import { useTheme } from 'components/ThemeContext';
 import { supabase } from 'lib/supabase';
 import { db, Report } from 'lib/database';
 import Splash from 'components/ui/Splash';
-
-// Default theme colors (current design)
-const defaultColors = {
-  headerBg: '#1E293B', // slate-800
-  headerText: '#FFFFFF',
-  headerSubtext: '#CBD5E1', // slate-300
-  headerCardBg: 'rgba(255, 255, 255, 0.1)',
-  headerCardBorder: 'rgba(255, 255, 255, 0.2)',
-  headerCardIconBg: 'rgba(255, 255, 255, 0.2)',
-  headerCardIcon: '#E2E8F0',
-  headerTagBg: '#475569', // slate-600
-  headerProgressBg: 'rgba(255, 255, 255, 0.2)',
-  headerProgressFill: '#94A3B8', // slate-400
-  sectionHeading: '#1E293B', // slate-900
-  cardBg: '#F8FAFC', // gray-50
-  cardBorder: '#E2E8F0', // gray-200
-  cardIconBg: '#F1F5F9', // slate-100
-  cardIcon: '#475569',
-  cardText: '#1E293B', // slate-900
-  cardSubtext: '#64748B', // slate-600
-  emergencyRed: '#DC2626', // red-700
-  emergencyRedLight: '#EF4444', // red-600
-  emergencyText: '#FFFFFF',
-  emergencyIconBg: 'rgba(255, 255, 255, 0.2)',
-  reportBg: '#374151', // slate-700
-  reportBorder: 'rgba(75, 85, 99, 0.2)',
-  reportText: '#FFFFFF',
-  reportIconBg: 'rgba(255, 255, 255, 0.2)',
-  background: '#FFFFFF',
-  statusBarStyle: 'dark-content' as const,
-  primary: '#3B82F6', // blue-500
-  primaryLight: '#DBEAFE', // blue-100
-};
 
 type Profile = {
   first_name: string;
@@ -71,33 +34,30 @@ export default function Home() {
   const [reportsLoading, setReportsLoading] = useState(false);
   const [reportCount, setReportCount] = useState<number | null>(null);
 
-  // Get current theme colors or fall back to default
+  // Get current theme colors
   const getCurrentColors = () => {
-    if (selectedColorTheme === 'blue' && !isDark) {
-      return defaultColors;
-    }
     return {
-      headerBg: colors.surface,
-      headerText: colors.text,
-      headerSubtext: colors.textSecondary,
-      headerCardBg: colors.surfaceVariant,
-      headerCardBorder: colors.border,
-      headerCardIconBg: colors.primaryLight,
-      headerCardIcon: colors.primary,
-      headerTagBg: colors.primary,
-      headerProgressBg: colors.surfaceVariant,
-      headerProgressFill: colors.primary,
+      headerBg: colors.primary,
+      headerText: '#FFFFFF',
+      headerSubtext: 'rgba(255, 255, 255, 0.8)',
+      headerCardBg: 'rgba(255, 255, 255, 0.1)',
+      headerCardBorder: 'rgba(255, 255, 255, 0.2)',
+      headerCardIconBg: 'rgba(255, 255, 255, 0.2)',
+      headerCardIcon: '#FFFFFF',
+      headerTagBg: 'rgba(255, 255, 255, 0.2)',
+      headerProgressBg: 'rgba(255, 255, 255, 0.2)',
+      headerProgressFill: '#FFFFFF',
       sectionHeading: colors.text,
-      cardBg: colors.card,
+      cardBg: colors.surface,
       cardBorder: colors.border,
       cardIconBg: colors.surfaceVariant,
-      cardIcon: colors.textSecondary,
+      cardIcon: colors.primary,
       cardText: colors.text,
       cardSubtext: colors.textSecondary,
       emergencyRed: colors.error,
       emergencyRedLight: colors.error,
-      emergencyText: colors.card,
-      emergencyIconBg: colors.overlay,
+      emergencyText: '#FFFFFF',
+      emergencyIconBg: 'rgba(255, 255, 255, 0.2)',
       reportBg: colors.surface,
       reportBorder: colors.border,
       reportText: colors.text,
@@ -193,6 +153,14 @@ export default function Home() {
     router.push('/report-incident');
   };
 
+  const handleViewMap = () => {
+    router.push('/map');
+  };
+
+  const handleViewHotlines = () => {
+    router.push('/hotlines');
+  };
+
   // Utility function to format timestamps as "time ago"
   const formatTimeAgo = (dateString: string): string => {
     const now = new Date();
@@ -258,65 +226,6 @@ export default function Home() {
               Your community safety dashboard
             </Text>
           </View>
-
-          <View
-            style={{
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: currentColors.headerCardBorder,
-              backgroundColor: currentColors.headerCardBg,
-              padding: 16,
-            }}>
-            <View className="mb-4 flex-row items-center justify-between">
-              <View className="flex-row items-center">
-                <View
-                  style={{
-                    marginRight: 12,
-                    height: 40,
-                    width: 40,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: 8,
-                    backgroundColor: currentColors.headerCardIconBg,
-                  }}>
-                  <Shield size={22} color={currentColors.headerCardIcon} />
-                </View>
-                <Text style={{ fontSize: 18, fontWeight: '600', color: currentColors.headerText }}>
-                  Security Status
-                </Text>
-              </View>
-              <View
-                style={{
-                  borderRadius: 8,
-                  backgroundColor: currentColors.headerTagBg,
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
-                }}>
-                <Text style={{ fontSize: 12, fontWeight: '500', color: currentColors.headerText }}>
-                  Active
-                </Text>
-              </View>
-            </View>
-            <View
-              style={{
-                marginBottom: 12,
-                height: 12,
-                borderRadius: 6,
-                backgroundColor: currentColors.headerProgressBg,
-              }}>
-              <View
-                style={{
-                  height: 12,
-                  width: '80%',
-                  borderRadius: 6,
-                  backgroundColor: currentColors.headerProgressFill,
-                }}
-              />
-            </View>
-            <Text style={{ fontSize: 14, fontWeight: '500', color: currentColors.headerSubtext }}>
-              System Status: 87% Operational
-            </Text>
-          </View>
         </View>
 
         {/* Key Metrics */}
@@ -331,7 +240,7 @@ export default function Home() {
             Key Metrics
           </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-            <View
+            <TouchableOpacity
               style={{
                 width: '48%',
                 borderRadius: 8,
@@ -339,7 +248,8 @@ export default function Home() {
                 borderColor: currentColors.cardBorder,
                 backgroundColor: currentColors.cardBg,
                 padding: 12,
-              }}>
+              }}
+              onPress={() => router.push('/trust-score')}>
               <View style={{ alignItems: 'center' }}>
                 <View
                   style={{
@@ -366,7 +276,7 @@ export default function Home() {
                   Trust Score
                 </Text>
               </View>
-            </View>
+            </TouchableOpacity>
             <View
               style={{
                 width: '48%',
@@ -618,42 +528,8 @@ export default function Home() {
                 borderColor: currentColors.cardBorder,
                 backgroundColor: currentColors.cardBg,
                 padding: 16,
-              }}>
-              <View style={{ alignItems: 'center' }}>
-                <View
-                  style={{
-                    marginBottom: 12,
-                    height: 40,
-                    width: 40,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: 8,
-                    backgroundColor: currentColors.cardIconBg,
-                  }}>
-                  <Shield size={24} color={currentColors.cardIcon} />
-                </View>
-                <Text
-                  style={{
-                    textAlign: 'center',
-                    fontSize: 14,
-                    fontWeight: '600',
-                    color: currentColors.cardText,
-                  }}>
-                  Anonymity
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={{
-                width: '31%',
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: currentColors.cardBorder,
-                backgroundColor: currentColors.cardBg,
-                padding: 16,
               }}
-              onPress={() => router.push('/lost-and-found')}>
+              onPress={handleViewMap}>
               <View style={{ alignItems: 'center' }}>
                 <View
                   style={{
@@ -665,7 +541,7 @@ export default function Home() {
                     borderRadius: 8,
                     backgroundColor: currentColors.cardIconBg,
                   }}>
-                  <Search size={24} color={currentColors.cardIcon} />
+                  <MapPin size={24} color={currentColors.cardIcon} />
                 </View>
                 <Text
                   style={{
@@ -674,111 +550,7 @@ export default function Home() {
                     fontWeight: '600',
                     color: currentColors.cardText,
                   }}>
-                  Lost & Found
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={{
-                width: '31%',
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: currentColors.cardBorder,
-                backgroundColor: currentColors.cardBg,
-                padding: 16,
-              }}
-              onPress={() => router.push('/community')}>
-              <View style={{ alignItems: 'center' }}>
-                <View
-                  style={{
-                    marginBottom: 12,
-                    height: 40,
-                    width: 40,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: 8,
-                    backgroundColor: currentColors.cardIconBg,
-                  }}>
-                  <Users size={24} color={currentColors.cardIcon} />
-                </View>
-                <Text
-                  style={{
-                    textAlign: 'center',
-                    fontSize: 14,
-                    fontWeight: '600',
-                    color: currentColors.cardText,
-                  }}>
-                  Community
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={{
-                width: '31%',
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: currentColors.cardBorder,
-                backgroundColor: currentColors.cardBg,
-                padding: 16,
-              }}
-              onPress={() => router.push('/bounty')}>
-              <View style={{ alignItems: 'center' }}>
-                <View
-                  style={{
-                    marginBottom: 12,
-                    height: 40,
-                    width: 40,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: 8,
-                    backgroundColor: currentColors.cardIconBg,
-                  }}>
-                  <Coins size={24} color={currentColors.cardIcon} />
-                </View>
-                <Text
-                  style={{
-                    textAlign: 'center',
-                    fontSize: 14,
-                    fontWeight: '600',
-                    color: currentColors.cardText,
-                  }}>
-                  Bounties
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={{
-                width: '31%',
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: currentColors.cardBorder,
-                backgroundColor: currentColors.cardBg,
-                padding: 16,
-              }}>
-              <View style={{ alignItems: 'center' }}>
-                <View
-                  style={{
-                    marginBottom: 12,
-                    height: 40,
-                    width: 40,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: 8,
-                    backgroundColor: currentColors.cardIconBg,
-                  }}>
-                  <Newspaper size={24} color={currentColors.cardIcon} />
-                </View>
-                <Text
-                  style={{
-                    textAlign: 'center',
-                    fontSize: 14,
-                    fontWeight: '600',
-                    color: currentColors.cardText,
-                  }}>
-                  News Feed
+                  Map
                 </Text>
               </View>
             </TouchableOpacity>
@@ -814,6 +586,41 @@ export default function Home() {
                     color: currentColors.cardText,
                   }}>
                   Cases
+                </Text>
+              </View>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={{
+                width: '31%',
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: currentColors.cardBorder,
+                backgroundColor: currentColors.cardBg,
+                padding: 16,
+              }}
+              onPress={handleViewHotlines}>
+              <View style={{ alignItems: 'center' }}>
+                <View
+                  style={{
+                    marginBottom: 12,
+                    height: 40,
+                    width: 40,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 8,
+                    backgroundColor: currentColors.cardIconBg,
+                  }}>
+                  <Phone size={24} color={currentColors.cardIcon} />
+                </View>
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    fontSize: 14,
+                    fontWeight: '600',
+                    color: currentColors.cardText,
+                  }}>
+                  Hotlines
                 </Text>
               </View>
             </TouchableOpacity>

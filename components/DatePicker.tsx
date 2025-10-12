@@ -48,6 +48,17 @@ export default function DatePicker({
       if (direction === 'prev') {
         newDate.setMonth(prev.getMonth() - 1);
       } else {
+        // Don't allow navigating to future months
+        const today = new Date();
+        if (direction === 'next') {
+          const nextMonth = new Date(prev);
+          nextMonth.setMonth(prev.getMonth() + 1);
+          // Only allow if next month is not in the future
+          if (nextMonth.getFullYear() > today.getFullYear() || 
+              (nextMonth.getFullYear() === today.getFullYear() && nextMonth.getMonth() > today.getMonth())) {
+            return prev; // Don't navigate to future month
+          }
+        }
         newDate.setMonth(prev.getMonth() + 1);
       }
       return newDate;
@@ -56,6 +67,15 @@ export default function DatePicker({
 
   const handleDateSelect = (day: number) => {
     const selected = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+    // Don't allow selecting future dates
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    selected.setHours(0, 0, 0, 0);
+    
+    if (selected > today) {
+      return; // Don't allow future dates
+    }
+    
     setSelectedDate(selected);
   };
 
@@ -73,6 +93,8 @@ export default function DatePicker({
     const daysInMonth = getDaysInMonth(currentDate);
     const firstDay = getFirstDayOfMonth(currentDate);
     const days = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < firstDay; i++) {
@@ -83,6 +105,11 @@ export default function DatePicker({
 
     // Add days of the month
     for (let day = 1; day <= daysInMonth; day++) {
+      const dayDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+      dayDate.setHours(0, 0, 0, 0);
+      
+      const isFuture = dayDate > today;
+      
       const isSelected = selectedDate && 
         selectedDate.getDate() === day &&
         selectedDate.getMonth() === currentDate.getMonth() &&
@@ -95,12 +122,15 @@ export default function DatePicker({
         <TouchableOpacity
           key={day}
           onPress={() => handleDateSelect(day)}
+          disabled={isFuture}
           className={`h-12 w-12 items-center justify-center rounded-lg ${
             isSelected
               ? 'bg-blue-600'
               : isToday
                 ? 'bg-blue-100'
-                : 'bg-transparent'
+                : isFuture
+                  ? 'bg-gray-100'
+                  : 'bg-transparent'
           }`}
           activeOpacity={0.7}
         >
@@ -110,7 +140,9 @@ export default function DatePicker({
                 ? 'text-white'
                 : isToday
                   ? 'text-blue-600'
-                  : 'text-slate-900'
+                  : isFuture
+                    ? 'text-gray-400'
+                    : 'text-slate-900'
             }`}
           >
             {day}
@@ -178,7 +210,7 @@ export default function DatePicker({
           </View>
 
           {/* Calendar Grid */}
-          <View className="flex-row flex-wrap justify-between mb-6">
+          <View className="flex-row flex-wrap mb-6">
             {renderCalendarGrid()}
           </View>
 

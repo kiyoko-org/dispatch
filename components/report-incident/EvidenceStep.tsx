@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, Alert, Image } from 'react-native';
 import { Mic, Upload, Camera, FileText, X, Music, File } from 'lucide-react-native';
 import { Card } from '../ui/Card';
 import { UploadProgress } from '../ui/UploadProgress';
+import { useTheme } from '../ThemeContext';
 import {
   UploadManager,
   FileUploadResult,
@@ -31,6 +32,7 @@ export default function EvidenceStep({
   onUpdateUIState,
   onFilesUploaded,
 }: EvidenceStepProps) {
+  const { colors } = useTheme();
   const [uploadedFiles, setUploadedFiles] = useState<FileUploadResult[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<FileUploadProgress | null>(null);
@@ -221,22 +223,22 @@ export default function EvidenceStep({
     } else if (FileUtils.isAudioFile(file.type)) {
       // Show music icon for audio files
       return (
-        <View className="mr-3 h-12 w-12 items-center justify-center rounded-lg bg-blue-100">
-          <Music size={24} color="#3B82F6" />
+        <View className="mr-3 h-12 w-12 items-center justify-center rounded-lg" style={{ backgroundColor: colors.primary + '30' }}>
+          <Music size={24} color={colors.primary} />
         </View>
       );
     } else if (FileUtils.isDocumentFile(file.type)) {
       // Show document icon for documents
       return (
-        <View className="mr-3 h-12 w-12 items-center justify-center rounded-lg bg-green-100">
-          <FileText size={24} color="#10B981" />
+        <View className="mr-3 h-12 w-12 items-center justify-center rounded-lg" style={{ backgroundColor: colors.success + '30' }}>
+          <FileText size={24} color={colors.success} />
         </View>
       );
     } else {
       // Show generic file icon for other file types
       return (
-        <View className="mr-3 h-12 w-12 items-center justify-center rounded-lg bg-gray-100">
-          <File size={24} color="#6B7280" />
+        <View className="mr-3 h-12 w-12 items-center justify-center rounded-lg" style={{ backgroundColor: colors.surfaceVariant }}>
+          <File size={24} color={colors.text} />
         </View>
       );
     }
@@ -245,14 +247,14 @@ export default function EvidenceStep({
   return (
     <Card className="mb-5">
       <View className="mb-4 flex-row items-center">
-        <View className="mr-3 h-8 w-8 items-center justify-center rounded-lg bg-slate-100">
-          <Mic size={20} color="#475569" />
+        <View className="mr-3 h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: colors.surfaceVariant }}>
+          <Mic size={20} color={colors.text} />
         </View>
-        <Text className="text-xl font-bold text-slate-900">Voice Statement & Evidence</Text>
+        <Text className="text-xl font-bold" style={{ color: colors.text }}>Voice Statement & Evidence</Text>
       </View>
 
       <View className="space-y-5">
-        <Text className="text-sm text-slate-600">
+        <Text className="text-sm" style={{ color: colors.textSecondary }}>
           Record a voice statement or attach evidence to provide additional details.
         </Text>
 
