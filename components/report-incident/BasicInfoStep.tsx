@@ -1,9 +1,10 @@
-import { View, Text, TouchableOpacity, TextInput } from 'react-native';
-import { Calendar } from 'lucide-react-native';
+import { View, Text, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
+import { Calendar, Clock } from 'lucide-react-native';
 import { Card } from '../ui/Card';
 import Dropdown from '../Dropdown';
 import TimePicker from '../TimePicker';
 import DatePicker from '../DatePicker';
+import { useTheme } from '../ThemeContext';
 
 interface BasicInfoStepProps {
   formData: {
@@ -26,6 +27,7 @@ interface BasicInfoStepProps {
   selectedMinute: string;
   selectedPeriod: string;
   validationErrors: Record<string, string>;
+  onUseCurrentDateTime: () => void;
 }
 
 export default function BasicInfoStep({
@@ -43,29 +45,33 @@ export default function BasicInfoStep({
   selectedMinute,
   selectedPeriod,
   validationErrors,
+  onUseCurrentDateTime,
 }: BasicInfoStepProps) {
+  const { colors } = useTheme();
+
   return (
     <Card className="mb-5">
       <View className="mb-4 flex-row items-center">
-        <View className="mr-3 h-8 w-8 items-center justify-center rounded-lg bg-slate-100">
+        <View className="mr-3 h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: colors.surfaceVariant }}>
           <Text className="text-xl">📋</Text>
         </View>
-        <Text className="text-xl font-bold text-slate-900">Basic Incident Information</Text>
+        <Text className="text-xl font-bold" style={{ color: colors.text }}>Basic Incident Information</Text>
       </View>
 
       <View className="space-y-4">
         {/* Incident Category */}
         <View>
-          <Text className="mb-2 font-medium text-slate-700">
+          <Text className="mb-2 font-medium" style={{ color: colors.text }}>
             Incident Category <Text className="text-red-600">*</Text>
           </Text>
           <TouchableOpacity
             onPress={() => onOpenDropdown('category')}
-            className="mb-3 flex-row items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3">
-            <Text className={formData.incident_category ? 'text-slate-900' : 'text-gray-500'}>
+            className="mb-3 flex-row items-center justify-between rounded-lg px-4 py-3"
+            style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }}>
+            <Text style={{ color: formData.incident_category ? colors.text : colors.textSecondary }}>
               {formData.incident_category || 'Select incident category'}
             </Text>
-            <Text className="text-gray-400">▼</Text>
+            <Text style={{ color: colors.textSecondary }}>▼</Text>
           </TouchableOpacity>
           {validationErrors.incident_category && (
             <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.incident_category}</Text>
@@ -75,31 +81,33 @@ export default function BasicInfoStep({
         {/* Incident Subcategory */}
         {formData.incident_category && (
           <View>
-            <Text className="mb-2 font-medium text-slate-700">
+            <Text className="mb-2 font-medium" style={{ color: colors.text }}>
               Subcategory <Text className="text-red-600">*</Text>
             </Text>
             <TouchableOpacity
               onPress={() => onOpenDropdown('subcategory')}
-              className="mb-3 flex-row items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3">
-              <Text className={formData.incident_subcategory ? 'text-slate-900' : 'text-gray-500'}>
+              className="mb-3 flex-row items-center justify-between rounded-lg px-4 py-3"
+              style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }}>
+              <Text style={{ color: formData.incident_subcategory ? colors.text : colors.textSecondary }}>
                 {formData.incident_subcategory || 'Select subcategory'}
               </Text>
-              <Text className="text-gray-400">▼</Text>
+              <Text style={{ color: colors.textSecondary }}>▼</Text>
             </TouchableOpacity>
           </View>
         )}
 
         {/* Incident Title */}
         <View>
-          <Text className="mb-2 font-medium text-slate-700">
+          <Text className="mb-2 font-medium" style={{ color: colors.text }}>
             Incident Title <Text className="text-red-600">*</Text>
           </Text>
           <TextInput
             placeholder="Brief, clear title describing the incident"
             value={formData.incident_title}
             onChangeText={(value) => onUpdateFormData({ incident_title: value })}
-            className="mb-3 rounded-lg border border-gray-300 bg-white px-4 py-3 text-slate-900"
-            placeholderTextColor="#9CA3AF"
+            className="mb-3 rounded-lg px-4 py-3"
+            style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, color: colors.text }}
+            placeholderTextColor={colors.textSecondary}
           />
           {validationErrors.incident_title && (
             <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.incident_title}</Text>
@@ -108,16 +116,17 @@ export default function BasicInfoStep({
 
         {/* Incident Date */}
         <View>
-          <Text className="mb-2 font-medium text-slate-700">
+          <Text className="mb-2 font-medium" style={{ color: colors.text }}>
             Incident Date <Text className="text-red-600">*</Text>
           </Text>
           <TouchableOpacity
             onPress={() => onOpenDropdown('date')}
-            className="mb-3 flex-row items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3">
-            <Text className={formData.incident_date ? 'text-slate-900' : 'text-gray-500'}>
+            className="mb-3 flex-row items-center justify-between rounded-lg px-4 py-3"
+            style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }}>
+            <Text style={{ color: formData.incident_date ? colors.text : colors.textSecondary }}>
               {formData.incident_date || 'mm/dd/yyyy'}
             </Text>
-            <Calendar size={20} color="#64748B" />
+            <Calendar size={20} color={colors.textSecondary} />
           </TouchableOpacity>
           {validationErrors.incident_date && (
             <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.incident_date}</Text>
@@ -126,23 +135,37 @@ export default function BasicInfoStep({
 
         {/* Incident Time */}
         <View>
-          <Text className="mb-2 font-medium text-slate-700">
+          <Text className="mb-2 font-medium" style={{ color: colors.text }}>
             Incident Time <Text className="text-red-600">*</Text>
           </Text>
           <TouchableOpacity
             onPress={() => onOpenDropdown('time')}
-            className="mb-3 flex-row items-center justify-between rounded-lg border border-gray-300 bg-white px-4 py-3">
-            <Text className={formData.incident_time ? 'text-slate-900' : 'text-gray-500'}>
+            className="mb-3 flex-row items-center justify-between rounded-lg px-4 py-3"
+            style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }}>
+            <Text style={{ color: formData.incident_time ? colors.text : colors.textSecondary }}>
               {formData.incident_time || 'Select time'}
             </Text>
-            <Text className="text-gray-400">▼</Text>
+            <Text style={{ color: colors.textSecondary }}>▼</Text>
           </TouchableOpacity>
           {validationErrors.incident_time && (
             <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.incident_time}</Text>
           )}
         </View>
 
-
+        {/* Use Current Date & Time Button */}
+        <TouchableOpacity
+          onPress={onUseCurrentDateTime}
+          className="mb-3 flex-row items-center justify-between rounded-lg px-4 py-3"
+          style={{ backgroundColor: colors.surfaceVariant, borderColor: colors.border, borderWidth: 1 }}
+          activeOpacity={0.8}>
+          <View className="flex-row items-center">
+            <Clock size={16} color={colors.text} className="mr-2" />
+            <Text className="font-medium" style={{ color: colors.text }}>
+              Use Current Date & Time
+            </Text>
+          </View>
+          <Text className="text-sm" style={{ color: colors.textSecondary }}>→</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Dropdown Components */}
@@ -208,6 +231,7 @@ export default function BasicInfoStep({
         initialHour={selectedHour}
         initialMinute={selectedMinute}
         initialPeriod={selectedPeriod}
+        selectedDate={formData.incident_date}
       />
 
       <DatePicker

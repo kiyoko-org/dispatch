@@ -1,8 +1,3 @@
-import { Card } from 'components/ui/Card';
-import { TextInput } from 'components/ui/TextInput';
-import { Button } from 'components/Button';
-import { Container } from 'components/ui/Container';
-import { ScreenContent } from 'components/ui/ScreenContent';
 import {
   StatusBar,
   StyleSheet,
@@ -13,20 +8,14 @@ import {
   Modal,
   Pressable,
   ActivityIndicator,
+  TextInput,
+  ScrollView,
 } from 'react-native';
-import { Button as SuperiorButton } from 'components/ui/Button';
-
 import {
-  Home,
-  Lock,
-  Mail,
-  User,
-  CreditCard,
-  Upload,
   Shield,
-  ChevronDown,
   Camera as CameraIcon,
   Check,
+  Upload,
 } from 'lucide-react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
@@ -34,19 +23,28 @@ import { useState } from 'react';
 import { supabase } from 'lib/supabase';
 import { createURL } from 'expo-linking';
 import { verifyNationalIdQR } from 'lib/id';
+import { useTheme } from 'components/ThemeContext';
 
 export default function RootLayout() {
   const router = useRouter();
+  const { colors, isDark } = useTheme();
   const [currentStep, setCurrentStep] = useState(1);
-  const [selectedIdType, setSelectedIdType] = useState('Philippine National ID');
-  const [showIdDropdown, setShowIdDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [countryCode, setCountryCode] = useState('PH+63');
   const [firstName, setFirstName] = useState('');
+  const [suffix, setSuffix] = useState('');
+  const [showSuffixDropdown, setShowSuffixDropdown] = useState(false);
   const [middleName, setMiddleName] = useState('');
+  const [noMiddleName, setNoMiddleName] = useState(false);
   const [lastName, setLastName] = useState('');
-  const [address, setAddress] = useState('');
+  const [userType, setUserType] = useState<'resident' | 'student' | 'work'>('resident');
+  const [permanentAddress1, setPermanentAddress1] = useState('');
+  const [permanentAddress2, setPermanentAddress2] = useState('Tuguegarao City, Cagayan');
+  const [temporaryAddress1, setTemporaryAddress1] = useState('');
+  const [temporaryAddress2, setTemporaryAddress2] = useState('');
 
   // Camera + scanning state
   const [cameraModalVisible, setCameraModalVisible] = useState(false);
@@ -56,6 +54,11 @@ export default function RootLayout() {
   const [isScanning, setIsScanning] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [verified, setVerified] = useState(false);
+
+  // Selfie verification state
+  const [selfieModalVisible, setSelfieModalVisible] = useState(false);
+  const [selfieTaken, setSelfieTaken] = useState(false);
+  const [selfieVerified, setSelfieVerified] = useState(false);
 
   async function signUpWithEmail() {
     setLoading(true);
@@ -70,9 +73,17 @@ export default function RootLayout() {
         emailRedirectTo: createURL('/home'),
         data: {
           first_name: firstName,
+          suffix: suffix,
           middle_name: middleName,
+          no_middle_name: noMiddleName,
           last_name: lastName,
-          address: address,
+          phone_number: phoneNumber,
+          country_code: countryCode,
+          user_type: userType,
+          permanent_address_1: permanentAddress1,
+          permanent_address_2: permanentAddress2,
+          temporary_address_1: temporaryAddress1,
+          temporary_address_2: temporaryAddress2,
         },
       },
     });
@@ -90,10 +101,10 @@ export default function RootLayout() {
     }
   }
 
-  const idTypes = ['Philippine National ID'];
+  const suffixOptions: string[] = [];
 
   const nextStep = () => {
-    if (currentStep < 2) {
+    if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -104,9 +115,9 @@ export default function RootLayout() {
     }
   };
 
-  const selectIdType = (idType: string) => {
-    setSelectedIdType(idType);
-    setShowIdDropdown(false);
+  const selectSuffix = (selectedSuffix: string) => {
+    setSuffix(selectedSuffix);
+    setShowSuffixDropdown(false);
   };
 
   // Request permission and open camera modal
@@ -179,197 +190,440 @@ export default function RootLayout() {
   };
 
   return (
-    <View className="flex-1 bg-gray-50">
-      {/* Header */}
-      <View style={styles.header}>
-        <Container maxWidth="2xl" padding="none">
-          <View className="w-full flex-row items-center justify-between">
-            <View>
-              <Text className="text-2xl font-bold text-gray-900">DISPATCH</Text>
-              <Text className="mt-1 text-sm text-gray-600">Account Registration</Text>
-            </View>
-            <View className="items-end">
-              <Text className="text-sm font-medium text-gray-700">Step {currentStep} of 2</Text>
-              <Text className="mt-1 text-xs text-gray-500">Account Setup</Text>
-            </View>
-          </View>
-
+    <View className="flex-1" style={{ backgroundColor: colors.background }}>
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
+      />
           {/* Progress Bar */}
-          <View className="mt-6 h-2 w-full rounded-full bg-gray-200">
+      <View className="px-6 pt-12">
+        <View className="mb-2 h-1 w-full rounded-full" style={{ backgroundColor: colors.border }}>
             <View
-              className="h-2 rounded-full bg-gray-900"
-              style={{ width: `${(currentStep / 2) * 100}%` }}
+            className="h-1 rounded-full"
+            style={{ width: `${(currentStep / 3) * 100}%`, backgroundColor: colors.primary }}
             />
           </View>
-        </Container>
       </View>
 
-      <ScreenContent contentContainerStyle={{ paddingBottom: 40 }} className="mt-8">
-        <Container maxWidth="md" padding="sm">
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        <View className="px-6 py-6">
           {/* Step 1: Account Creation */}
           {currentStep === 1 && (
-            <Card>
+            <View>
+              {/* Heading */}
               <View className="mb-8">
-                <Text className="mb-2 text-balance text-2xl font-bold text-gray-900">
-                  Create your account
+                <Text className="mb-2 text-3xl font-bold" style={{ color: colors.text }}>
+                  Let's Get Started!
                 </Text>
-                <Text className="text-balance leading-6 text-gray-600">
-                  Tell us a bit about yourself to get started with your DISPATCH account
+                <Text className="text-base" style={{ color: colors.textSecondary }}>
+                  Join the Dispatch community
                 </Text>
               </View>
 
-              <View className="space-y-5">
+              {/* Form Fields */}
+                <View>
+                <View className="mb-4">
+                  <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
+                    First Name *
+                  </Text>
                 <TextInput
+                    className="rounded-xl px-4 py-4 text-base"
+                    style={{
+                      backgroundColor: colors.surfaceVariant,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      color: colors.text,
+                    }}
                   value={firstName}
                   onChangeText={setFirstName}
-                  icon={<User />}
-                  label="First Name"
-                  placeholder="Juan"
-                />
+                    placeholder="Enter your first name"
+                    placeholderTextColor={colors.textSecondary}
+                    />
+                </View>
+
+                <View className="mb-4">
+                  <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
+                    Middle Name
+                  </Text>
                 <TextInput
+                    className="rounded-xl px-4 py-4 text-base"
+                    style={{
+                      backgroundColor: colors.surfaceVariant,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      color: colors.text,
+                      opacity: noMiddleName ? 0.5 : 1,
+                    }}
                   value={middleName}
                   onChangeText={setMiddleName}
-                  label="Middle Name"
-                  placeholder="Dalisay"
-                />
+                    placeholder="Enter your middle name"
+                    placeholderTextColor={colors.textSecondary}
+                      editable={!noMiddleName}
+                    />
+                    <TouchableOpacity
+                    className="mt-2 flex-row items-center"
+                      onPress={() => {
+                        setNoMiddleName(!noMiddleName);
+                        if (!noMiddleName) setMiddleName('');
+                      }}>
+                    <View
+                      className="mr-2 h-5 w-5 items-center justify-center rounded"
+                      style={{
+                        backgroundColor: noMiddleName ? colors.primary : colors.surfaceVariant,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                      }}>
+                      {noMiddleName && <Check size={14} color="#FFFFFF" />}
+                    </View>
+                    <Text className="text-sm" style={{ color: colors.textSecondary }}>
+                      I have no middle name
+                    </Text>
+                    </TouchableOpacity>
+                </View>
+
+                <View className="mb-4">
+                  <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
+                    Last Name *
+                  </Text>
+                  <View className="flex-row gap-3">
                 <TextInput
+                      className="flex-1 rounded-xl px-4 py-4 text-base"
+                      style={{
+                        backgroundColor: colors.surfaceVariant,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        color: colors.text,
+                      }}
                   value={lastName}
                   onChangeText={setLastName}
-                  label="Last Name"
-                  placeholder="Dela Cruz"
-                />
-                <TextInput
-                  value={address}
-                  onChangeText={setAddress}
-                  icon={<Home />}
-                  label="Address"
-                  placeholder="Barangay, City, Province"
-                />
-                <TextInput
-                  value={email}
-                  onChangeText={setEmail}
-                  icon={<Mail />}
-                  label="Email/Phone"
-                  placeholder="you@example.com"
-                />
-                <TextInput
-                  value={password}
-                  onChangeText={setPassword}
-                  icon={<Lock />}
-                  label="Password"
-                  placeholder="••••••"
-                  secureTextEntry={true}
-                />
+                      placeholder="Enter your last name"
+                      placeholderTextColor={colors.textSecondary}
+                      />
+
+                    {/* Suffix Dropdown */}
+                      <TouchableOpacity
+                      className="rounded-xl px-4 py-4"
+                      style={{
+                        backgroundColor: colors.surfaceVariant,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        minWidth: 100,
+                      }}
+                        onPress={() => setShowSuffixDropdown(!showSuffixDropdown)}>
+                      <Text className="text-base" style={{ color: suffix ? colors.text : colors.textSecondary }}>
+                          {suffix || 'Suffix'}
+                        </Text>
+                      </TouchableOpacity>
+                  </View>
+
+                  {/* Suffix Dropdown Options */}
+                      {showSuffixDropdown && (
+                        <View
+                      className="absolute right-0 z-10 mt-2 rounded-xl"
+                      style={{
+                        backgroundColor: colors.surface,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        minWidth: 100,
+                      }}>
+                          <TouchableOpacity
+                        className="p-3"
+                        style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}
+                            onPress={() => selectSuffix('')}>
+                        <Text className="text-sm" style={{ color: colors.textSecondary }}>None</Text>
+                          </TouchableOpacity>
+                          {suffixOptions.map((option, index) => (
+                            <TouchableOpacity
+                              key={index}
+                          className="p-3"
+                          style={index < suffixOptions.length - 1 ? { borderBottomWidth: 1, borderBottomColor: colors.border } : {}}
+                              onPress={() => selectSuffix(option)}>
+                          <Text className="text-sm" style={{ color: colors.text }}>{option}</Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      )}
+                </View>
+
+                <View className="mb-4">
+                  <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
+                    Phone Number *
+                  </Text>
+                  <View className="flex-row gap-3">
+                    <TouchableOpacity
+                      className="rounded-xl px-4 py-4"
+                      style={{
+                        backgroundColor: colors.surfaceVariant,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                      }}>
+                      <Text className="text-base" style={{ color: colors.text }}>
+                        {countryCode}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TextInput
+                      className="flex-1 rounded-xl px-4 py-4 text-base"
+                      style={{
+                        backgroundColor: colors.surfaceVariant,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        color: colors.text,
+                      }}
+                      placeholder="Enter your phone number"
+                      value={phoneNumber}
+                      onChangeText={setPhoneNumber}
+                      placeholderTextColor={colors.textSecondary}
+                      keyboardType="phone-pad"
+                    />
+                  </View>
+                </View>
+
+                <View className="mb-4">
+                  <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
+                    User Type *
+                  </Text>
+                  <View className="flex-row gap-2">
+                    <TouchableOpacity
+                      className="flex-1 rounded-xl px-4 py-3"
+                      style={{
+                        backgroundColor: userType === 'resident' ? colors.primary + '20' : colors.surfaceVariant,
+                        borderWidth: 1,
+                        borderColor: userType === 'resident' ? colors.primary : colors.border,
+                      }}
+                      onPress={() => {
+                        setUserType('resident');
+                        setPermanentAddress2('Tuguegarao City, Cagayan');
+                      }}>
+                      <Text
+                        className="text-center text-sm font-medium"
+                        style={{ color: userType === 'resident' ? colors.primary : colors.text }}>
+                        Resident
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      className="flex-1 rounded-xl px-4 py-3"
+                      style={{
+                        backgroundColor: userType === 'student' ? colors.primary + '20' : colors.surfaceVariant,
+                        borderWidth: 1,
+                        borderColor: userType === 'student' ? colors.primary : colors.border,
+                      }}
+                      onPress={() => {
+                        setUserType('student');
+                        if (permanentAddress2 === 'Tuguegarao City, Cagayan') {
+                          setPermanentAddress2('');
+                        }
+                      }}>
+                      <Text
+                        className="text-center text-sm font-medium"
+                        style={{ color: userType === 'student' ? colors.primary : colors.text }}>
+                        Student
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      className="flex-1 rounded-xl px-4 py-3"
+                      style={{
+                        backgroundColor: userType === 'work' ? colors.primary + '20' : colors.surfaceVariant,
+                        borderWidth: 1,
+                        borderColor: userType === 'work' ? colors.primary : colors.border,
+                      }}
+                      onPress={() => {
+                        setUserType('work');
+                        if (permanentAddress2 === 'Tuguegarao City, Cagayan') {
+                          setPermanentAddress2('');
+                        }
+                      }}>
+                      <Text
+                        className="text-center text-sm font-medium"
+                        style={{ color: userType === 'work' ? colors.primary : colors.text }}>
+                        Work
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View className="mb-4">
+                  <Text className="mb-2 text-sm font-semibold" style={{ color: colors.text }}>
+                    Permanent Address *
+                  </Text>
+                  <TextInput
+                    className="mb-3 rounded-xl px-4 py-4 text-base"
+                    style={{
+                      backgroundColor: colors.surfaceVariant,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      color: colors.text,
+                    }}
+                    placeholder="Street, Barangay"
+                    value={permanentAddress1}
+                    onChangeText={setPermanentAddress1}
+                    placeholderTextColor={colors.textSecondary}
+                  />
+                  <TextInput
+                    className="rounded-xl px-4 py-4 text-base"
+                    style={{
+                      backgroundColor: colors.surfaceVariant,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      color: colors.text,
+                      opacity: userType === 'resident' ? 0.7 : 1,
+                    }}
+                    placeholder="City, Province"
+                    value={permanentAddress2}
+                    onChangeText={setPermanentAddress2}
+                    placeholderTextColor={colors.textSecondary}
+                    editable={userType !== 'resident'}
+                  />
+                </View>
+
+                {(userType === 'student' || userType === 'work') && (
+                  <View className="mb-4">
+                    <Text className="mb-2 text-sm font-semibold" style={{ color: colors.text }}>
+                      Temporary Address *
+                    </Text>
+                    <TextInput
+                      className="mb-3 rounded-xl px-4 py-4 text-base"
+                      style={{
+                        backgroundColor: colors.surfaceVariant,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        color: colors.text,
+                      }}
+                      placeholder="Street, Barangay"
+                      value={temporaryAddress1}
+                      onChangeText={setTemporaryAddress1}
+                      placeholderTextColor={colors.textSecondary}
+                    />
+                    <TextInput
+                      className="rounded-xl px-4 py-4 text-base"
+                      style={{
+                        backgroundColor: colors.surfaceVariant,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        color: colors.text,
+                      }}
+                      placeholder="City, Province"
+                      value={temporaryAddress2}
+                      onChangeText={setTemporaryAddress2}
+                      placeholderTextColor={colors.textSecondary}
+                    />
+                  </View>
+                )}
+
+                <View className="mb-4">
+                  <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
+                    Email Address *
+                  </Text>
+                  <TextInput
+                    className="rounded-xl px-4 py-4 text-base"
+                    style={{
+                      backgroundColor: colors.surfaceVariant,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      color: colors.text,
+                    }}
+                    placeholder="Enter your email"
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholderTextColor={colors.textSecondary}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                </View>
+
+                <View className="mb-6">
+                  <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
+                    Password *
+                  </Text>
+                  <TextInput
+                    className="rounded-xl px-4 py-4 text-base"
+                    style={{
+                      backgroundColor: colors.surfaceVariant,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                      color: colors.text,
+                    }}
+                    placeholder="Create a password"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={true}
+                    placeholderTextColor={colors.textSecondary}
+                  />
+                </View>
               </View>
 
-              <Button
-                className="mt-8 w-full"
-                label="Continue to ID Verification"
-                onPress={nextStep}
-              />
+              {/* Next Step Button */}
+              <TouchableOpacity
+                className="rounded-xl py-4"
+                style={{ backgroundColor: colors.primary }}
+                onPress={nextStep}>
+                <Text className="text-center text-base font-semibold text-white">
+                  NEXT STEP
+                </Text>
+              </TouchableOpacity>
 
-              <View className="mt-6 border-t border-gray-100 pt-6">
-                <Text className="text-center text-gray-600">
+              {/* Login link */}
+              <View className="mt-4 items-center">
+                <Text className="text-center text-sm" style={{ color: colors.textSecondary }}>
                   Already have an account?{' '}
-                  <Text
-                    onPress={() => {
-                      router.push('/auth/login');
-                    }}
-                    className="font-semibold text-gray-900 underline">
-                    Sign in
+                  <Text style={{ color: colors.primary }} onPress={() => router.push('/auth/login')}>
+                    Login
                   </Text>
                 </Text>
               </View>
-            </Card>
+
+              {/* Bottom Spacing */}
+              <View className="h-12" />
+            </View>
           )}
 
           {/* Step 2: ID Verification */}
           {currentStep === 2 && (
-            <View className="space-y-6">
-              {/* ID Type Selection */}
-              <Card>
-                <View className="mb-6">
-                  <Text className="mb-2 text-xl font-bold text-gray-900">Select ID Type</Text>
-                  <Text className="text-balance text-gray-600">
-                    Choose your government-issued ID for verification
-                  </Text>
-                </View>
+            <View>
+              {/* Heading */}
+              <View className="mb-8">
+                <Text className="mb-2 text-3xl font-bold" style={{ color: colors.text }}>
+                  ID Verification
+                </Text>
+                <Text className="text-base" style={{ color: colors.textSecondary }}>
+                  Verify your identity with your Philippine National ID
+                </Text>
+              </View>
 
-                <View>
-                  <TouchableOpacity
-                    className="flex-row items-center justify-between rounded-xl border border-gray-200 bg-white p-4"
-                    onPress={() => setShowIdDropdown(!showIdDropdown)}>
-                    <Text
-                      className={selectedIdType ? 'font-medium text-gray-900' : 'text-gray-500'}>
-                      {selectedIdType || 'Choose your government-issued ID'}
-                    </Text>
-                    <ChevronDown size={20} className="text-gray-400" />
-                  </TouchableOpacity>
-
-                  {/* Dropdown Options */}
-                  {showIdDropdown && (
-                    <View className="mt-2 rounded-xl border border-gray-200 bg-white">
-                      {idTypes.map((idType, index) => (
-                        <TouchableOpacity
-                          key={index}
-                          className="border-b border-gray-100 p-4 last:border-b-0"
-                          onPress={() => selectIdType(idType)}>
-                          <Text className="text-gray-900">{idType}</Text>
-                        </TouchableOpacity>
-                      ))}
+              {/* ID Upload Section */}
+              <View className="mb-6">
+                <Text className="mb-3 text-sm font-medium" style={{ color: colors.text }}>
+                  Scan QR Code from Philippine National ID
+                </Text>
+                <TouchableOpacity
+                  className="items-center justify-center rounded-xl border-2 border-dashed p-8"
+                  style={{
+                    backgroundColor: colors.surfaceVariant,
+                    borderColor: colors.border,
+                  }}
+                  onPress={openCameraForQr}>
+                  <View className="items-center">
+                    <View
+                      className="mb-3 h-16 w-16 items-center justify-center rounded-lg"
+                      style={{ backgroundColor: colors.background }}>
+                      {verifying ? (
+                        <ActivityIndicator size="small" color={colors.primary} />
+                      ) : verified ? (
+                        <Check size={28} color={colors.success || '#10B981'} />
+                      ) : (
+                        <CameraIcon size={28} color={colors.textSecondary} />
+                      )}
                     </View>
-                  )}
-                </View>
-              </Card>
 
-              {/* ID Upload Section - Only show if ID type is selected */}
-              {selectedIdType && (
-                <Card>
-                  <View className="mb-6">
-                    <Text className="mb-2 text-xl font-bold text-gray-900">{selectedIdType}</Text>
-                    <Text className="text-balance text-gray-600">
-                      Upload your {selectedIdType.toLowerCase()} for verification
+                    <Text className="text-center font-medium" style={{ color: colors.text }}>
+                      {verifying ? 'Verifying...' : verified ? 'Verified!' : 'Scan QR Code'}
+                    </Text>
+                    <Text className="mt-1 text-center text-xs" style={{ color: colors.textSecondary }}>
+                      Scan the QR code from the back of your national ID
                     </Text>
                   </View>
-
-                  <View className="space-y-6">
-                    {/* Back of ID Upload */}
-                    <View>
-                      <Text className="mb-3 text-lg font-semibold text-gray-800">
-                        Back of {selectedIdType}
-                      </Text>
-                      <TouchableOpacity
-                        className="items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-8"
-                        onPress={openCameraForQr}>
-                        <View className="items-center">
-                          <View className="mb-3 h-16 w-16 items-center justify-center rounded-lg bg-gray-200">
-                            {verifying ? (
-                              <ActivityIndicator size="small" color="#111827" />
-                            ) : verified ? (
-                              <Check size={28} className="text-green-500" />
-                            ) : (
-                              <CameraIcon size={28} className="text-gray-500" />
-                            )}
-                          </View>
-
-                          <Text className="text-center font-medium text-gray-600">
-                            {verifying ? 'Verifying...' : 'Scan QR'}
-                          </Text>
-                          <Text className="mt-1 text-center text-sm text-gray-500">
-                            Please scan or upload the QR code from the back of your national ID card
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-                      <View className="mt-4 flex-row gap-3">
-                        <TouchableOpacity className="flex-1 flex-row items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-100 p-3">
-                          <Upload size={18} className="text-gray-700" />
-                          <Text className="text-sm font-medium text-gray-700">Upload Photo</Text>
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  </View>
-                </Card>
-              )}
+                </TouchableOpacity>
+              </View>
 
               {/* Camera Modal for QR Scanning */}
               <Modal
@@ -439,40 +693,248 @@ export default function RootLayout() {
                 </View>
               </Modal>
 
-              {/* Navigation and Complete */}
-              <Card>
-                <View className="mb-6 flex-row gap-3">
-                  <Button className="flex-1" label="Back" variant="outline" onPress={prevStep} />
-                  <SuperiorButton
-                    loading={loading}
-                    className={`flex-1 ${verified ? '' : 'bg-gray-300 opacity-50'}`}
-                    label="Finish"
-                    onPress={() => {
-                      if (!verified) {
-                        Alert.alert(
-                          'ID Not Verified',
-                          'Please verify your ID before finishing registration.'
-                        );
-                        return;
-                      }
-                      // proceed only when verified
-                      signUpWithEmail();
-                      router.replace('/auth/login');
+              {/* Navigation and Next Step */}
+              <View className="mt-8">
+                <View className="mb-4 flex-row gap-3">
+                  <TouchableOpacity
+                    className="flex-1 rounded-xl py-4"
+                    style={{
+                      backgroundColor: colors.surfaceVariant,
+                      borderWidth: 1,
+                      borderColor: colors.border,
                     }}
-                  />
+                    onPress={prevStep}>
+                    <Text className="text-center text-base font-medium" style={{ color: colors.text }}>
+                      Back
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    className="flex-1 rounded-xl py-4"
+                    style={{ backgroundColor: colors.primary }}
+                    onPress={() => {
+                      // proceed to selfie verification (no requirement)
+                      nextStep();
+                    }}>
+                    <Text className="text-center text-base font-semibold text-white">
+                      NEXT STEP
+                    </Text>
+                  </TouchableOpacity>
                 </View>
 
-                <View className="flex-row items-center justify-center border-t border-gray-100 pt-4">
-                  <Shield size={16} className="mr-2 text-gray-400" />
-                  <Text className="text-balance text-center text-sm leading-5 text-gray-500">
-                    All data is encrypted and complies with Philippine privacy laws
+                <View className="flex-row items-center justify-center pt-4" style={{ borderTopWidth: 1, borderTopColor: colors.border }}>
+                  <Shield size={16} color={colors.textSecondary} />
+                  <Text className="ml-2 text-center text-xs" style={{ color: colors.textSecondary }}>
+                    All data is encrypted and secure
                   </Text>
                 </View>
-              </Card>
+              </View>
+              
+              {/* Bottom Spacing */}
+              <View className="h-12" />
             </View>
           )}
-        </Container>
-      </ScreenContent>
+
+          {/* Step 3: Selfie Verification */}
+          {currentStep === 3 && (
+            <View>
+              {/* Heading */}
+              <View className="mb-8">
+                <Text className="mb-2 text-3xl font-bold" style={{ color: colors.text }}>
+                  Selfie Verification
+                </Text>
+                <Text className="text-base" style={{ color: colors.textSecondary }}>
+                  Take a selfie to verify your identity
+                </Text>
+              </View>
+
+              {/* Selfie Instructions */}
+              <View
+                className="mb-6 rounded-xl p-4"
+                style={{
+                  backgroundColor: colors.primary + '10',
+                  borderWidth: 1,
+                  borderColor: colors.primary + '30',
+                }}>
+                <Text className="mb-2 text-sm font-semibold" style={{ color: colors.text }}>
+                  Before taking your selfie:
+                </Text>
+                <View className="space-y-2">
+                  <View className="flex-row items-start">
+                    <Text className="mr-2" style={{ color: colors.primary }}>•</Text>
+                    <Text className="flex-1 text-sm" style={{ color: colors.text }}>
+                      Find a well-lit area
+                    </Text>
+                  </View>
+                  <View className="flex-row items-start">
+                    <Text className="mr-2" style={{ color: colors.primary }}>•</Text>
+                    <Text className="flex-1 text-sm" style={{ color: colors.text }}>
+                      Remove glasses, hats, or masks
+                    </Text>
+                  </View>
+                  <View className="flex-row items-start">
+                    <Text className="mr-2" style={{ color: colors.primary }}>•</Text>
+                    <Text className="flex-1 text-sm" style={{ color: colors.text }}>
+                      Keep your face centered and clearly visible
+                    </Text>
+                  </View>
+                  <View className="flex-row items-start">
+                    <Text className="mr-2" style={{ color: colors.primary }}>•</Text>
+                    <Text className="flex-1 text-sm" style={{ color: colors.text }}>
+                      Maintain a neutral expression
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Selfie Capture Section */}
+              <View className="mb-6">
+                <Text className="mb-3 text-sm font-medium" style={{ color: colors.text }}>
+                  Take Your Selfie
+                </Text>
+                <TouchableOpacity
+                  className="items-center justify-center rounded-xl border-2 border-dashed p-8"
+                  style={{
+                    backgroundColor: colors.surfaceVariant,
+                    borderColor: colors.border,
+                  }}
+                  onPress={async () => {
+                    try {
+                      if (permission && !permission.granted) {
+                        const { granted } = await requestPermission();
+                        if (!granted) {
+                          Alert.alert('Permission required', 'Camera permission is required to take a selfie.');
+                          return;
+                        }
+                      }
+                      setSelfieModalVisible(true);
+                    } catch (error) {
+                      console.error('Camera permission error', error);
+                      Alert.alert('Error', 'Unable to request camera permission.');
+                    }
+                  }}>
+                  <View className="items-center">
+                    <View
+                      className="mb-3 h-16 w-16 items-center justify-center rounded-lg"
+                      style={{ backgroundColor: colors.background }}>
+                      {selfieVerified ? (
+                        <Check size={28} color={colors.success || '#10B981'} />
+                      ) : (
+                        <CameraIcon size={28} color={colors.textSecondary} />
+                      )}
+                    </View>
+
+                    <Text className="text-center font-medium" style={{ color: colors.text }}>
+                      {selfieVerified ? 'Selfie Verified!' : selfieTaken ? 'Retake Selfie' : 'Take Selfie'}
+                    </Text>
+                    <Text className="mt-1 text-center text-xs" style={{ color: colors.textSecondary }}>
+                      Position your face in the frame
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+
+              {/* Camera Modal for Selfie */}
+              <Modal
+                visible={selfieModalVisible}
+                animationType="slide"
+                presentationStyle="fullScreen"
+                onRequestClose={() => setSelfieModalVisible(false)}>
+                <View className="flex-1 bg-black">
+                  <View className="flex-1">
+                    <CameraView
+                      style={{ flex: 1 }}
+                      facing="front"
+                    />
+                  </View>
+
+                  {/* Overlay with face guide */}
+                  <View className="absolute inset-0 items-center justify-center">
+                    <View
+                      style={{
+                        width: 250,
+                        height: 300,
+                        borderRadius: 150,
+                        borderWidth: 3,
+                        borderColor: 'rgba(255, 255, 255, 0.7)',
+                        borderStyle: 'dashed',
+                      }}
+                    />
+                  </View>
+
+                  <View className="absolute left-4 right-4 top-8 flex-row items-center justify-between">
+                    <Pressable
+                      onPress={() => setSelfieModalVisible(false)}
+                      className="rounded-full bg-black/40 p-2">
+                      <Text className="text-white">Close</Text>
+                    </Pressable>
+                  </View>
+
+                  <View className="absolute bottom-0 left-0 right-0 items-center pb-8">
+                    <Text className="mb-4 text-center text-white">
+                      Position your face within the oval
+                    </Text>
+                    <TouchableOpacity
+                      className="h-16 w-16 items-center justify-center rounded-full bg-white"
+                      onPress={() => {
+                        // Simulate taking a selfie
+                        setSelfieTaken(true);
+                        setSelfieVerified(true);
+                        setSelfieModalVisible(false);
+                        Alert.alert('Success', 'Selfie captured successfully!');
+                      }}>
+                      <View className="h-14 w-14 rounded-full border-4 border-gray-300" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </Modal>
+
+              {/* Navigation and Complete */}
+              <View className="mt-8">
+                <View className="mb-4 flex-row gap-3">
+                  <TouchableOpacity
+                    className="flex-1 rounded-xl py-4"
+                    style={{
+                      backgroundColor: colors.surfaceVariant,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                    }}
+                    onPress={prevStep}>
+                    <Text className="text-center text-base font-medium" style={{ color: colors.text }}>
+                      Back
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    className="flex-1 rounded-xl py-4"
+                    style={{
+                      backgroundColor: colors.primary,
+                      opacity: loading ? 0.7 : 1,
+                    }}
+                    disabled={loading}
+                    onPress={() => {
+                      // proceed to finish registration (no requirement)
+                      signUpWithEmail();
+                      router.replace('/auth/login');
+                    }}>
+                    <Text className="text-center text-base font-semibold text-white">
+                      {loading ? 'LOADING...' : 'FINISH'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View className="flex-row items-center justify-center pt-4" style={{ borderTopWidth: 1, borderTopColor: colors.border }}>
+                  <Shield size={16} color={colors.textSecondary} />
+                  <Text className="ml-2 text-center text-xs" style={{ color: colors.textSecondary }}>
+                    All data is encrypted and secure
+                  </Text>
+                </View>
+              </View>
+              
+              {/* Bottom Spacing */}
+              <View className="h-12" />
+            </View>
+          )}
+        </View>
+      </ScrollView>
     </View>
   );
 }

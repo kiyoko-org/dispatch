@@ -13,11 +13,8 @@ export interface ReportData {
   // Location Information
   street_address: string;
   nearby_landmark: string;
-  city: string;
-  province: string;
   latitude?: number;
   longitude?: number;
-  brief_description: string;
 
   // Detailed Information
   what_happened: string;
@@ -27,11 +24,6 @@ export interface ReportData {
   property_damage: string;
   suspect_description: string;
   witness_contact_info: string;
-
-  // Options
-  request_follow_up: boolean;
-  share_with_community: boolean;
-  is_anonymous: boolean;
 }
 
 // Emergency Contact types

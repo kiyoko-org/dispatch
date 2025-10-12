@@ -1,17 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Animated, Dimensions } from 'react-native';
 import {
-  ArrowLeft,
   User,
   Home,
   AlertTriangle,
   FileText,
   Shield,
-  Search,
-  Users,
-  Coins,
-  Newspaper,
   MapPin,
+  Phone,
   LogOut,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
@@ -157,49 +153,31 @@ export default function HeaderWithSidebar({
       title: 'Quick Access',
       items: [
         {
-          id: 'anonymity',
-          label: 'Anonymity',
-          icon: Shield,
-          route: null,
+          id: 'map',
+          label: 'Map',
+          icon: MapPin,
+          route: '/(protected)/map',
         },
         {
-          id: 'lost-found',
-          label: 'Lost & Found',
-          icon: Search,
-          route: '/(protected)/lost-and-found',
-        },
-        {
-          id: 'community',
-          label: 'Community',
-          icon: Users,
-          route: '/(protected)/community',
-        },
-        {
-          id: 'bounties',
-          label: 'Bounty System',
-          icon: Coins,
-          route: '/(protected)/bounty',
-        },
-        {
-          id: 'news',
-          label: 'News Feed',
-          icon: Newspaper,
-          route: null,
+          id: 'hotlines',
+          label: 'Hotlines',
+          icon: Phone,
+          route: '/(protected)/hotlines',
         },
         {
           id: 'cases',
           label: 'Cases',
-          icon: MapPin,
-          route: '/cases',
+          icon: FileText,
+          route: '/(protected)/cases',
         },
       ],
     },
     {
-      title: 'Profile & Logout',
+      title: 'Settings & Logout',
       items: [
         {
           id: 'profile',
-          label: 'Profile',
+          label: 'Settings',
           icon: User,
           route: '/(protected)/profile',
         },
@@ -267,15 +245,6 @@ export default function HeaderWithSidebar({
           </TouchableOpacity>
 
           <View className="flex-1 flex-row items-center">
-            {showBackButton && (
-              <TouchableOpacity
-                onPress={handleBackPress}
-                className="mr-4 h-10 w-10 items-center justify-center rounded-lg"
-                style={{ backgroundColor: colors.surfaceVariant }}
-                activeOpacity={0.7}>
-                <ArrowLeft size={20} color={colors.text} />
-              </TouchableOpacity>
-            )}
             <Text className="flex-1 text-xl font-bold" style={{ color: colors.text }}>
               {title}
             </Text>
