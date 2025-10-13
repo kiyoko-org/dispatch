@@ -5,11 +5,9 @@ import {
   CheckCircle,
   Zap,
   AlertTriangle,
-  Bell,
-  Clock,
   MapPin,
-  AlertCircle,
   Phone,
+  Bell,
 } from 'lucide-react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -161,40 +159,6 @@ export default function Home() {
     router.push('/hotlines');
   };
 
-  // Utility function to format timestamps as "time ago"
-  const formatTimeAgo = (dateString: string): string => {
-    const now = new Date();
-    const date = new Date(dateString);
-    const diffInMs = now.getTime() - date.getTime();
-    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
-    const diffInDays = Math.floor(diffInHours / 24);
-
-    if (diffInHours < 1) {
-      return 'Just now';
-    } else if (diffInHours < 24) {
-      return `${diffInHours}h ago`;
-    } else if (diffInDays < 7) {
-      return `${diffInDays}d ago`;
-    } else {
-      return date.toLocaleDateString();
-    }
-  };
-
-  // Utility function to get appropriate icon based on incident category
-  const getActivityIcon = (category: string) => {
-    const categoryIcons: Record<string, any> = {
-      'Emergency Situation': { icon: AlertTriangle, color: '#DC2626' }, // Red for critical
-      'Crime in Progress': { icon: AlertCircle, color: '#EA580C' }, // Orange for high
-      'Traffic Accident': { icon: AlertCircle, color: '#EA580C' }, // Orange for high
-      'Suspicious Activity': { icon: AlertCircle, color: '#3B82F6' }, // Blue for medium
-      'Public Disturbance': { icon: AlertCircle, color: '#3B82F6' }, // Blue for medium
-      'Property Damage': { icon: AlertCircle, color: '#6B7280' }, // Gray for low
-      'Other Incident': { icon: AlertCircle, color: '#6B7280' }, // Gray for low
-    };
-
-    return categoryIcons[category] || { icon: Bell, color: '#475569' };
-  };
-
   return (
     <View style={{ flex: 1, backgroundColor: currentColors.background }}>
       <StatusBar
@@ -206,6 +170,9 @@ export default function Home() {
         title="Dispatch Dashboard"
         showBackButton={false}
         logoutPressed={handleLogout}
+        recentReports={recentReports}
+        reportsLoading={reportsLoading}
+        onRefreshReports={fetchRecentReports}
       />
 
       {/* Main Content */}
@@ -228,168 +195,8 @@ export default function Home() {
           </View>
         </View>
 
-        {/* Key Metrics */}
+        {/* Quick Actions */}
         <View style={{ marginBottom: 32, marginTop: 24, paddingHorizontal: 16 }}>
-          <Text
-            style={{
-              marginBottom: 16,
-              fontSize: 18,
-              fontWeight: 'bold',
-              color: currentColors.sectionHeading,
-            }}>
-            Key Metrics
-          </Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-            <TouchableOpacity
-              style={{
-                width: '48%',
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: currentColors.cardBorder,
-                backgroundColor: currentColors.cardBg,
-                padding: 12,
-              }}
-              onPress={() => router.push('/trust-score')}>
-              <View style={{ alignItems: 'center' }}>
-                <View
-                  style={{
-                    marginBottom: 8,
-                    height: 32,
-                    width: 32,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: 8,
-                    backgroundColor: currentColors.cardIconBg,
-                  }}>
-                  <Shield size={20} color={currentColors.cardIcon} />
-                </View>
-                <Text style={{ fontSize: 20, fontWeight: 'bold', color: currentColors.cardText }}>
-                  0%
-                </Text>
-                <Text
-                  style={{
-                    textAlign: 'center',
-                    fontSize: 12,
-                    fontWeight: '500',
-                    color: currentColors.cardSubtext,
-                  }}>
-                  Trust Score
-                </Text>
-              </View>
-            </TouchableOpacity>
-            <View
-              style={{
-                width: '48%',
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: currentColors.cardBorder,
-                backgroundColor: currentColors.cardBg,
-                padding: 12,
-              }}>
-              <View style={{ alignItems: 'center' }}>
-                <View
-                  style={{
-                    marginBottom: 8,
-                    height: 32,
-                    width: 32,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: 8,
-                    backgroundColor: currentColors.cardIconBg,
-                  }}>
-                  <FileText size={20} color={currentColors.cardIcon} />
-                </View>
-                <Text style={{ fontSize: 20, fontWeight: 'bold', color: currentColors.cardText }}>
-                  {reportCount ?? '—'}
-                </Text>
-                <Text
-                  style={{
-                    textAlign: 'center',
-                    fontSize: 12,
-                    fontWeight: '500',
-                    color: currentColors.cardSubtext,
-                  }}>
-                  Reports
-                </Text>
-              </View>
-            </View>
-            <View
-              style={{
-                width: '48%',
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: currentColors.cardBorder,
-                backgroundColor: currentColors.cardBg,
-                padding: 12,
-              }}>
-              <View style={{ alignItems: 'center' }}>
-                <View
-                  style={{
-                    marginBottom: 8,
-                    height: 32,
-                    width: 32,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: 8,
-                    backgroundColor: currentColors.cardIconBg,
-                  }}>
-                  <CheckCircle size={20} color={currentColors.cardIcon} />
-                </View>
-                <Text style={{ fontSize: 20, fontWeight: 'bold', color: currentColors.cardText }}>
-                  0
-                </Text>
-                <Text
-                  style={{
-                    textAlign: 'center',
-                    fontSize: 12,
-                    fontWeight: '500',
-                    color: currentColors.cardSubtext,
-                  }}>
-                  Verified
-                </Text>
-              </View>
-            </View>
-            <View
-              style={{
-                width: '48%',
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: currentColors.cardBorder,
-                backgroundColor: currentColors.cardBg,
-                padding: 12,
-              }}>
-              <View style={{ alignItems: 'center' }}>
-                <View
-                  style={{
-                    marginBottom: 8,
-                    height: 32,
-                    width: 32,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: 8,
-                    backgroundColor: currentColors.cardIconBg,
-                  }}>
-                  <Zap size={20} color={currentColors.cardIcon} />
-                </View>
-                <Text style={{ fontSize: 20, fontWeight: 'bold', color: currentColors.cardText }}>
-                  0min
-                </Text>
-                <Text
-                  style={{
-                    textAlign: 'center',
-                    fontSize: 12,
-                    fontWeight: '500',
-                    color: currentColors.cardSubtext,
-                  }}>
-                  Response
-                </Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Emergency Actions */}
-        <View style={{ marginBottom: 32, paddingHorizontal: 16 }}>
           <View style={{ marginBottom: 16, flexDirection: 'row', alignItems: 'center' }}>
             <AlertTriangle size={24} color={currentColors.cardIcon} />
             <Text
@@ -519,10 +326,10 @@ export default function Home() {
             Quick Access
           </Text>
 
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+          <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'center' }}>
             <TouchableOpacity
               style={{
-                width: '31%',
+                width: '48%',
                 borderRadius: 8,
                 borderWidth: 1,
                 borderColor: currentColors.cardBorder,
@@ -557,42 +364,7 @@ export default function Home() {
 
             <TouchableOpacity
               style={{
-                width: '31%',
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: currentColors.cardBorder,
-                backgroundColor: currentColors.cardBg,
-                padding: 16,
-              }}
-              onPress={() => router.push('/cases')}>
-              <View style={{ alignItems: 'center' }}>
-                <View
-                  style={{
-                    marginBottom: 12,
-                    height: 40,
-                    width: 40,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    borderRadius: 8,
-                    backgroundColor: currentColors.cardIconBg,
-                  }}>
-                  <FileText size={24} color={currentColors.cardIcon} />
-                </View>
-                <Text
-                  style={{
-                    textAlign: 'center',
-                    fontSize: 14,
-                    fontWeight: '600',
-                    color: currentColors.cardText,
-                  }}>
-                  Cases
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={{
-                width: '31%',
+                width: '48%',
                 borderRadius: 8,
                 borderWidth: 1,
                 borderColor: currentColors.cardBorder,
@@ -627,151 +399,165 @@ export default function Home() {
           </View>
         </View>
 
-        {/* Recent Activity */}
+        {/* Key Metrics */}
         <View style={{ marginBottom: 32, paddingHorizontal: 16 }}>
-          <View
+          <Text
             style={{
               marginBottom: 16,
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
+              fontSize: 18,
+              fontWeight: 'bold',
+              color: currentColors.sectionHeading,
             }}>
-            <Text style={{ fontSize: 18, fontWeight: 'bold', color: currentColors.sectionHeading }}>
-              Recent Activity
-            </Text>
+            Key Metrics
+          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
             <TouchableOpacity
-              onPress={fetchRecentReports}
-              disabled={reportsLoading}
               style={{
+                width: '48%',
                 borderRadius: 8,
-                backgroundColor: currentColors.cardIconBg,
-                padding: 8,
-              }}>
-              <Clock
-                size={16}
-                color={reportsLoading ? currentColors.cardSubtext : currentColors.cardIcon}
-              />
+                borderWidth: 1,
+                borderColor: currentColors.cardBorder,
+                backgroundColor: currentColors.cardBg,
+                padding: 12,
+              }}
+              onPress={() => router.push('/trust-score')}>
+              <View style={{ alignItems: 'center' }}>
+                <View
+                  style={{
+                    marginBottom: 8,
+                    height: 32,
+                    width: 32,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 8,
+                    backgroundColor: currentColors.cardIconBg,
+                  }}>
+                  <Shield size={20} color={currentColors.cardIcon} />
+                </View>
+                <Text style={{ fontSize: 20, fontWeight: 'bold', color: currentColors.cardText }}>
+                  0%
+                </Text>
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    fontSize: 12,
+                    fontWeight: '500',
+                    color: currentColors.cardSubtext,
+                  }}>
+                  Trust Score
+                </Text>
+              </View>
             </TouchableOpacity>
-          </View>
-
-          <View style={{ gap: 12 }}>
-            {reportsLoading ? (
-              <View
-                style={{
-                  borderRadius: 8,
-                  borderWidth: 1,
-                  borderColor: currentColors.cardBorder,
-                  backgroundColor: currentColors.cardBg,
-                  padding: 16,
-                }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View
-                    style={{
-                      marginRight: 12,
-                      height: 32,
-                      width: 32,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderRadius: 8,
-                      backgroundColor: currentColors.cardIconBg,
-                    }}>
-                    <Clock size={20} color={currentColors.cardSubtext} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text
-                      style={{ fontSize: 14, fontWeight: '600', color: currentColors.cardText }}>
-                      Loading recent activity...
-                    </Text>
-                  </View>
+            <TouchableOpacity
+              style={{
+                width: '48%',
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: currentColors.cardBorder,
+                backgroundColor: currentColors.cardBg,
+                padding: 12,
+              }}
+              onPress={() => router.push('/cases')}>
+              <View style={{ alignItems: 'center' }}>
+                <View
+                  style={{
+                    marginBottom: 8,
+                    height: 32,
+                    width: 32,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 8,
+                    backgroundColor: currentColors.cardIconBg,
+                  }}>
+                  <FileText size={20} color={currentColors.cardIcon} />
                 </View>
+                <Text style={{ fontSize: 20, fontWeight: 'bold', color: currentColors.cardText }}>
+                  {reportCount ?? '—'}
+                </Text>
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    fontSize: 12,
+                    fontWeight: '500',
+                    color: currentColors.cardSubtext,
+                  }}>
+                  Reports
+                </Text>
               </View>
-            ) : recentReports.length > 0 ? (
-              recentReports.map((report) => {
-                const activityIcon = getActivityIcon(report.incident_category || '');
-                const IconComponent = activityIcon.icon;
-                return (
-                  <View
-                    key={report.id}
-                    style={{
-                      borderRadius: 8,
-                      borderWidth: 1,
-                      borderColor: currentColors.cardBorder,
-                      backgroundColor: currentColors.cardBg,
-                      padding: 16,
-                    }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <View
-                        style={{
-                          marginRight: 12,
-                          height: 32,
-                          width: 32,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          borderRadius: 8,
-                          backgroundColor: currentColors.cardIconBg,
-                        }}>
-                        <IconComponent size={20} color={activityIcon.color} />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text
-                          style={{
-                            fontSize: 14,
-                            fontWeight: '600',
-                            color: currentColors.cardText,
-                          }}>
-                          {report.incident_title || 'Incident Report'}
-                          {report.id && (
-                            <Text style={{ fontSize: 12, color: currentColors.cardSubtext }}>
-                              {' '}
-                              #{report.id}
-                            </Text>
-                          )}
-                        </Text>
-                        <Text style={{ fontSize: 12, color: currentColors.cardSubtext }}>
-                          {report.incident_category || 'General Incident'}
-                        </Text>
-                      </View>
-                      <Text style={{ fontSize: 12, color: currentColors.cardSubtext }}>
-                        {report.created_at ? formatTimeAgo(report.created_at) : 'Recently'}
-                      </Text>
-                    </View>
-                  </View>
-                );
-              })
-            ) : (
-              <View
-                style={{
-                  borderRadius: 8,
-                  borderWidth: 1,
-                  borderColor: currentColors.cardBorder,
-                  backgroundColor: currentColors.cardBg,
-                  padding: 16,
-                }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View
-                    style={{
-                      marginRight: 12,
-                      height: 32,
-                      width: 32,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderRadius: 8,
-                      backgroundColor: currentColors.cardIconBg,
-                    }}>
-                    <Bell size={20} color={currentColors.cardSubtext} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text
-                      style={{ fontSize: 14, fontWeight: '600', color: currentColors.cardText }}>
-                      No recent activity
-                    </Text>
-                    <Text style={{ fontSize: 12, color: currentColors.cardSubtext }}>
-                      Your recent reports will appear here
-                    </Text>
-                  </View>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={{
+                width: '48%',
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: currentColors.cardBorder,
+                backgroundColor: currentColors.cardBg,
+                padding: 12,
+              }}
+              onPress={() => router.push('/cases')}>
+              <View style={{ alignItems: 'center' }}>
+                <View
+                  style={{
+                    marginBottom: 8,
+                    height: 32,
+                    width: 32,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 8,
+                    backgroundColor: currentColors.cardIconBg,
+                  }}>
+                  <CheckCircle size={20} color={currentColors.cardIcon} />
                 </View>
+                <Text style={{ fontSize: 20, fontWeight: 'bold', color: currentColors.cardText }}>
+                  0
+                </Text>
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    fontSize: 12,
+                    fontWeight: '500',
+                    color: currentColors.cardSubtext,
+                  }}>
+                  Verified
+                </Text>
               </View>
-            )}
+            </TouchableOpacity>
+            <View
+              style={{
+                width: '48%',
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: currentColors.cardBorder,
+                backgroundColor: currentColors.cardBg,
+                padding: 12,
+              }}>
+              <View style={{ alignItems: 'center' }}>
+                <View
+                  style={{
+                    marginBottom: 8,
+                    height: 32,
+                    width: 32,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 8,
+                    backgroundColor: currentColors.cardIconBg,
+                  }}>
+                  <Zap size={20} color={currentColors.cardIcon} />
+                </View>
+                <Text style={{ fontSize: 20, fontWeight: 'bold', color: currentColors.cardText }}>
+                  0min
+                </Text>
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    fontSize: 12,
+                    fontWeight: '500',
+                    color: currentColors.cardSubtext,
+                  }}>
+                  Response
+                </Text>
+              </View>
+            </View>
           </View>
         </View>
 
