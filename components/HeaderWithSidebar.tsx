@@ -584,8 +584,12 @@ export default function HeaderWithSidebar({
                 const activityIcon = getActivityIcon(report.incident_category || '');
                 const IconComponent = activityIcon.icon;
                 return (
-                  <View
+                  <TouchableOpacity
                     key={report.id}
+                    onPress={() => {
+                      setIsSidebarOpen(false);
+                      router.push(`/cases/${report.id}`);
+                    }}
                     style={{
                       borderRadius: 8,
                       borderWidth: 1,
@@ -629,7 +633,7 @@ export default function HeaderWithSidebar({
                         {report.created_at ? formatTimeAgo(report.created_at) : 'Recently'}
                       </Text>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 );
               })
             ) : (
