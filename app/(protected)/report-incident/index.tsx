@@ -23,6 +23,7 @@ import { ReportData } from 'lib/types';
 import { reportService } from 'lib/services/reports';
 import { geocodingService } from 'lib/services/geocoding';
 import { useTheme } from 'components/ThemeContext';
+import { useCategories } from '../../../hooks/useCategories';
 
 interface UIState {
   showCategoryDropdown: boolean;
@@ -43,6 +44,7 @@ interface UIState {
 export default function ReportIncidentIndex() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const { categories, loading: categoriesLoading, error: categoriesError } = useCategories();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const dropdownAnim = useRef(new Animated.Value(0)).current;
@@ -337,11 +339,21 @@ export default function ReportIncidentIndex() {
     }
   };
 
-  const incidentCategories: { name: string; severity: string }[] = [];
+  // Transform categories from database to match component expectations
+  const incidentCategories: { name: string; severity: string }[] = categories.map(category => ({
+    name: category.name,
+    severity: 'Medium' // Default severity since database doesn't have severity field
+  }));
 
   const injuryOptions: { name: string; severity: string; icon: string }[] = [];
 
+  // Create subcategories mapping from categories data
   const subcategories: Record<string, string[]> = {};
+  categories.forEach(category => {
+    if (category.sub_categories && category.sub_categories.length > 0) {
+      subcategories[category.name] = category.sub_categories;
+    }
+  });
 
   const hourOptions: string[] = [];
   const minuteOptions: string[] = [];
@@ -495,6 +507,8 @@ export default function ReportIncidentIndex() {
               selectedPeriod={uiState.selectedPeriod}
               validationErrors={uiState.validationErrors}
               onUseCurrentDateTime={handleUseCurrentDateTime}
+              categoriesLoading={categoriesLoading}
+              categoriesError={categoriesError}
             />
 
             {/* Step 2: Location Information */}

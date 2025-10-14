@@ -28,6 +28,8 @@ interface BasicInfoStepProps {
   selectedPeriod: string;
   validationErrors: Record<string, string>;
   onUseCurrentDateTime: () => void;
+  categoriesLoading?: boolean;
+  categoriesError?: string | null;
 }
 
 export default function BasicInfoStep({
@@ -46,6 +48,8 @@ export default function BasicInfoStep({
   selectedPeriod,
   validationErrors,
   onUseCurrentDateTime,
+  categoriesLoading = false,
+  categoriesError = null,
 }: BasicInfoStepProps) {
   const { colors } = useTheme();
 
@@ -65,14 +69,26 @@ export default function BasicInfoStep({
             Incident Category <Text className="text-red-600">*</Text>
           </Text>
           <TouchableOpacity
-            onPress={() => onOpenDropdown('category')}
+            onPress={() => !categoriesLoading && onOpenDropdown('category')}
             className="mb-3 flex-row items-center justify-between rounded-lg px-4 py-3"
-            style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }}>
+            style={{ 
+              backgroundColor: colors.surface, 
+              borderColor: colors.border, 
+              borderWidth: 1,
+              opacity: categoriesLoading ? 0.6 : 1
+            }}>
             <Text style={{ color: formData.incident_category ? colors.text : colors.textSecondary }}>
-              {formData.incident_category || 'Select incident category'}
+              {categoriesLoading ? 'Loading categories...' : (formData.incident_category || 'Select incident category')}
             </Text>
-            <Text style={{ color: colors.textSecondary }}>▼</Text>
+            <Text style={{ color: colors.textSecondary }}>
+              {categoriesLoading ? '⏳' : '▼'}
+            </Text>
           </TouchableOpacity>
+          {categoriesError && (
+            <Text className="mt-1 mb-3 text-sm text-red-600">
+              Failed to load categories: {categoriesError}
+            </Text>
+          )}
           {validationErrors.incident_category && (
             <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.incident_category}</Text>
           )}
@@ -180,29 +196,6 @@ export default function BasicInfoStep({
         renderItem={({ item }) => (
           <View className="px-4 py-3">
             <Text className="font-medium text-slate-900">{item.name}</Text>
-            <View
-              className={`mt-1 self-start rounded-md px-2 py-1 ${
-                item.severity === 'Critical'
-                  ? 'bg-red-100'
-                  : item.severity === 'High'
-                    ? 'bg-orange-100'
-                    : item.severity === 'Medium'
-                      ? 'bg-yellow-100'
-                      : 'bg-gray-100'
-              }`}>
-              <Text
-                className={`text-xs font-medium ${
-                  item.severity === 'Critical'
-                    ? 'text-red-700'
-                    : item.severity === 'High'
-                      ? 'text-orange-700'
-                      : item.severity === 'Medium'
-                        ? 'text-yellow-700'
-                        : 'text-gray-700'
-                }`}>
-                {item.severity}
-              </Text>
-            </View>
           </View>
         )}
         title="Select Incident Category"
