@@ -9,7 +9,7 @@ import {
 	Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import MapView, { Marker, Heatmap, PROVIDER_GOOGLE, Circle, Region } from 'react-native-maps';
 import HeaderWithSidebar from 'components/HeaderWithSidebar';
 import { useTheme } from 'components/ThemeContext';
@@ -25,7 +25,8 @@ import {
 	Calendar,
 	MapPinned,
 	Filter,
-	X
+	X,
+	RotateCcw
 } from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
@@ -65,6 +66,7 @@ export default function MapPage() {
 	const [showFilters, setShowFilters] = useState(false);
 	const [mapRegion, setMapRegion] = useState<Region | null>(null);
 	const [activeClusterTab, setActiveClusterTab] = useState<'all' | CrimeCategory>('all');
+	const mapRef = useRef<MapView>(null);
 
 	useEffect(() => {
 		loadCrimeData();
@@ -198,6 +200,12 @@ export default function MapPage() {
 		longitudeDelta: 0.15,
 	};
 
+	// Function to reset map to initial region
+	const resetMapRegion = () => {
+		mapRef.current?.animateToRegion(initialRegion, 1000);
+		setMapRegion(initialRegion);
+	};
+
 	// Convert crimes data to heatmap points
 	const heatmapPoints = filteredCrimes.map((crime) => ({
 		latitude: crime.lat,
@@ -235,6 +243,7 @@ export default function MapPage() {
 					</View>
 				) : (
 				<MapView
+					ref={mapRef}
 					provider={PROVIDER_GOOGLE}
 						style={styles.map}
 						initialRegion={initialRegion}
@@ -543,16 +552,33 @@ export default function MapPage() {
 						</View>
 
 						{/* Tabs */}
-						<View className="mb-3 flex-row items-center">
+						<ScrollView 
+							horizontal 
+							showsHorizontalScrollIndicator={false}
+							className="mb-3"
+							contentContainerStyle={{ paddingRight: 16 }}
+						>
 							{(() => {
 								// Show all tabs when filterCategory is 'all', otherwise show only 'all' and current category
 								const tabsToShow = filterCategory === 'all' 
 									? (['all','violent','property','drug','traffic','other'] as const)
 									: (['all', filterCategory] as const);
 								
-								return tabsToShow.map((tab) => {
-									const label = tab === 'all' ? 'All' : tab.charAt(0).toUpperCase() + tab.slice(1);
-									const count = tab === 'all' ? selectedCluster.length : selectedCluster.filter(c => getCrimeCategory(c) === tab).length;
+								const tabsWithCounts = tabsToShow
+									.map((tab) => {
+										const label = tab === 'all' ? 'All' : tab.charAt(0).toUpperCase() + tab.slice(1);
+										const count = tab === 'all' ? selectedCluster.length : selectedCluster.filter(c => getCrimeCategory(c) === tab).length;
+										return { tab, label, count };
+									})
+									.filter(({ count }) => count > 0); // Hide tabs with 0 items
+								
+								// If current active tab is not available, switch to 'all' tab
+								const availableTabs = tabsWithCounts.map(({ tab }) => tab);
+								if (!availableTabs.includes(activeClusterTab)) {
+									setActiveClusterTab('all');
+								}
+								
+								return tabsWithCounts.map(({ tab, label, count }) => {
 									const active = activeClusterTab === tab;
 									return (
 										<TouchableOpacity
@@ -568,7 +594,7 @@ export default function MapPage() {
 									);
 								});
 							})()}
-						</View>
+						</ScrollView>
 
 						{/* List */}
 						<ScrollView style={{ maxHeight: 260 }} showsVerticalScrollIndicator={false}>
@@ -599,6 +625,18 @@ export default function MapPage() {
 							<Filter size={20} color={colors.primary} />
 							<Text className="ml-2 font-semibold" style={{ color: colors.text }}>
 								Filters
+							</Text>
+						</TouchableOpacity>
+
+						{/* Reset Camera Button */}
+						<TouchableOpacity
+							className="absolute left-4 top-20 flex-row items-center rounded-xl px-4 py-3 shadow-lg"
+							style={{ backgroundColor: colors.card }}
+							onPress={resetMapRegion}
+						>
+							<RotateCcw size={20} color={colors.primary} />
+							<Text className="ml-2 font-semibold" style={{ color: colors.text }}>
+								Reset View
 							</Text>
 						</TouchableOpacity>
 
