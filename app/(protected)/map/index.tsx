@@ -295,16 +295,34 @@ export default function MapPage() {
 							}
 							
 							// Multiple crimes - show cluster with count
-							// Use category color when filter is applied, otherwise use mixed color logic
+							// Use category color when filter is applied, otherwise use most common category color
 							let baseColor;
 							if (filterCategory !== 'all') {
 								// When a specific category is filtered, use that category's color
 								baseColor = getCrimeColor(filterCategory);
 							} else {
-								// When showing all categories, derive color intensity by share of violent crimes
-								const violentCount = cluster.items.filter(c => getCrimeCategory(c) === 'violent').length;
-								const ratio = total > 0 ? violentCount / total : 0;
-								baseColor = ratio > 0.5 ? '#DC2626' : ratio > 0.25 ? '#F59E0B' : '#3B82F6';
+								// When showing all categories, use the color of the most common category
+								const categoryCounts: Record<CrimeCategory, number> = {
+									violent: 0,
+									property: 0,
+									drug: 0,
+									traffic: 0,
+									other: 0
+								};
+								
+								// Count occurrences of each category
+								cluster.items.forEach(crime => {
+									const category = getCrimeCategory(crime);
+									categoryCounts[category]++;
+								});
+								
+								// Find the category with the highest count
+								const mostCommonCategory = Object.entries(categoryCounts)
+									.reduce((max, [category, count]) => 
+										count > max.count ? { category: category as CrimeCategory, count } : max
+									, { category: 'other' as CrimeCategory, count: 0 });
+								
+								baseColor = getCrimeColor(mostCommonCategory.category);
 							}
 							return (
 								<Marker
