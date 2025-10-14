@@ -295,10 +295,17 @@ export default function MapPage() {
 							}
 							
 							// Multiple crimes - show cluster with count
-							// derive a color intensity by share of violent crimes
-							const violentCount = cluster.items.filter(c => getCrimeCategory(c) === 'violent').length;
-							const ratio = total > 0 ? violentCount / total : 0;
-							const baseColor = ratio > 0.5 ? '#DC2626' : ratio > 0.25 ? '#F59E0B' : '#3B82F6';
+							// Use category color when filter is applied, otherwise use mixed color logic
+							let baseColor;
+							if (filterCategory !== 'all') {
+								// When a specific category is filtered, use that category's color
+								baseColor = getCrimeColor(filterCategory);
+							} else {
+								// When showing all categories, derive color intensity by share of violent crimes
+								const violentCount = cluster.items.filter(c => getCrimeCategory(c) === 'violent').length;
+								const ratio = total > 0 ? violentCount / total : 0;
+								baseColor = ratio > 0.5 ? '#DC2626' : ratio > 0.25 ? '#F59E0B' : '#3B82F6';
+							}
 							return (
 								<Marker
 									key={`cluster-${idx}`}
