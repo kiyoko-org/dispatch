@@ -35,6 +35,7 @@ export default function LocationStep({
   const [mapRegion, setMapRegion] = useState<Region | null>(null);
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<{latitude: number, longitude: number} | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
   const mapRef = useRef<MapView>(null);
   const { colors } = useTheme();
 
@@ -63,13 +64,22 @@ export default function LocationStep({
   // Handle location update (used by both drag and tap)
   const updateLocation = async (latitude: number, longitude: number) => {
     setIsUpdatingLocation(true);
+    setLocationError(null);
     
     // Update selected location state immediately for visual feedback
     setSelectedLocation({ latitude, longitude });
     
     try {
-      // Reverse geocode the new location
-      const geocodeResults = await reverseGeocode(latitude, longitude);
+      // Create a timeout promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Location update timed out')), 10000); // 10 second timeout
+      });
+      
+      // Create the geocoding promise
+      const geocodePromise = reverseGeocode(latitude, longitude);
+      
+      // Race between geocoding and timeout
+      const geocodeResults = await Promise.race([geocodePromise, timeoutPromise]) as any[];
       const address = geocodeResults[0];
       
       // Update form data with new coordinates and address
@@ -90,6 +100,14 @@ export default function LocationStep({
       mapRef.current?.animateToRegion(newRegion, 1000);
     } catch (error) {
       console.error('Error updating location:', error);
+      
+      // Set error message based on error type
+      if (error instanceof Error && error.message === 'Location update timed out') {
+        setLocationError('Location update timed out. Please try again.');
+      } else {
+        setLocationError('Failed to get address for this location. Coordinates saved.');
+      }
+      
       // Still update coordinates even if geocoding fails
       onUpdateFormData({
         latitude,
@@ -111,6 +129,14 @@ export default function LocationStep({
   const handleMapPress = async (event: any) => {
     const { latitude, longitude } = event.nativeEvent.coordinate;
     await updateLocation(latitude, longitude);
+  };
+
+  // Retry location update
+  const retryLocationUpdate = async () => {
+    if (selectedLocation) {
+      setLocationError(null);
+      await updateLocation(selectedLocation.latitude, selectedLocation.longitude);
+    }
   };
 
   // Handle current location button press
@@ -322,6 +348,49 @@ export default function LocationStep({
                 <Text className="mt-2 font-medium" style={{ color: colors.text }}>
                   Updating location...
                 </Text>
+              </View>
+            </View>
+          )}
+
+          {/* Error Overlay */}
+          {locationError && !isUpdatingLocation && (
+            <View
+              className="absolute inset-0 items-center justify-center"
+              style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}
+            >
+              <View
+                className="items-center rounded-lg px-6 py-4 mx-4"
+                style={{ backgroundColor: colors.card }}
+              >
+                <View className="mb-3 rounded-full p-3" style={{ backgroundColor: '#DC262620' }}>
+                  <X size={24} color="#DC2626" />
+                </View>
+                <Text className="text-center font-medium mb-2" style={{ color: colors.text }}>
+                  Location Update Failed
+                </Text>
+                <Text className="text-center text-sm mb-4" style={{ color: colors.textSecondary }}>
+                  {locationError}
+                </Text>
+                <View className="flex-row space-x-3">
+                  <TouchableOpacity
+                    onPress={() => setLocationError(null)}
+                    className="px-4 py-2 rounded-lg"
+                    style={{ backgroundColor: colors.surfaceVariant }}
+                  >
+                    <Text className="font-medium" style={{ color: colors.text }}>
+                      Dismiss
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={retryLocationUpdate}
+                    className="px-4 py-2 rounded-lg"
+                    style={{ backgroundColor: colors.primary }}
+                  >
+                    <Text className="font-medium text-white">
+                      Retry
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           )}
