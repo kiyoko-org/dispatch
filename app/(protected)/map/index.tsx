@@ -155,7 +155,6 @@ export default function MapPage() {
 	// Simple grid-based clustering (degrees-based, responsive to current map region)
 	const clusters = useMemo(() => {
 		if (!mapRegion) return [] as { lat: number; lon: number; items: CrimeData[] }[];
-		if (filterCategory !== 'all') return [] as { lat: number; lon: number; items: CrimeData[] }[];
 
 		const cellSizeLat = Math.max(mapRegion.latitudeDelta / 20, 0.0005);
 		const cellSizeLon = Math.max(mapRegion.longitudeDelta / 20, 0.0005);
@@ -189,7 +188,7 @@ export default function MapPage() {
 			});
 		}
 		return result;
-	}, [filteredCrimes, filterCategory, mapRegion]);
+	}, [filteredCrimes, mapRegion]);
 
 	// Calculate center of Tuguegarao City
 	const initialRegion = {
@@ -258,9 +257,35 @@ export default function MapPage() {
 							/>
 						)}
 
-						{/* Markers: cluster when All, otherwise individual */}
-						{showMarkers && filterCategory === 'all' && clusters.map((cluster, idx) => {
+						{/* Markers: cluster all crimes, show count when multiple */}
+						{showMarkers && clusters.map((cluster, idx) => {
 							const total = cluster.items.length;
+							
+							// If single crime, show individual marker
+							if (total === 1) {
+								const crime = cluster.items[0];
+								const category = getCrimeCategory(crime);
+								const markerColor = getCrimeColor(category);
+								return (
+									<Marker
+										key={`single-${idx}`}
+										coordinate={{ latitude: cluster.lat, longitude: cluster.lon }}
+										onPress={() => { setSelectedCrime(crime); setSelectedCluster(null); }}
+									>
+										<View style={[styles.markerContainer, { backgroundColor: markerColor }]}> 
+											<View style={styles.markerInner}>
+												{category === 'violent' && <AlertTriangle size={14} color="#FFF" />}
+												{category === 'property' && <ShoppingBag size={14} color="#FFF" />}
+												{category === 'drug' && <Activity size={14} color="#FFF" />}
+												{category === 'traffic' && <Car size={14} color="#FFF" />}
+												{category === 'other' && <MapPin size={14} color="#FFF" />}
+											</View>
+										</View>
+									</Marker>
+								);
+							}
+							
+							// Multiple crimes - show cluster with count
 							// derive a color intensity by share of violent crimes
 							const violentCount = cluster.items.filter(c => getCrimeCategory(c) === 'violent').length;
 							const ratio = total > 0 ? violentCount / total : 0;
@@ -269,32 +294,10 @@ export default function MapPage() {
 								<Marker
 									key={`cluster-${idx}`}
 									coordinate={{ latitude: cluster.lat, longitude: cluster.lon }}
-									onPress={() => { setSelectedCrime(null); setSelectedCluster(cluster.items); setActiveClusterTab('all'); }}
+									onPress={() => { setSelectedCrime(null); setSelectedCluster(cluster.items); setActiveClusterTab(filterCategory === 'all' ? 'all' : filterCategory); }}
 								>
 									<View style={[styles.clusterContainer, { backgroundColor: baseColor }]}> 
 										<Text style={styles.clusterText}>{total}</Text>
-									</View>
-								</Marker>
-							);
-						})}
-
-						{showMarkers && filterCategory !== 'all' && filteredCrimes.map((crime, index) => {
-							const category = getCrimeCategory(crime);
-							const markerColor = getCrimeColor(category);
-							return (
-								<Marker
-									key={`crime-${index}`}
-									coordinate={{ latitude: crime.lat, longitude: crime.lon }}
-									onPress={() => { setSelectedCluster(null); setSelectedCrime(crime); }}
-								>
-									<View style={[styles.markerContainer, { backgroundColor: markerColor }]}> 
-										<View style={styles.markerInner}>
-											{category === 'violent' && <AlertTriangle size={14} color="#FFF" />}
-											{category === 'property' && <ShoppingBag size={14} color="#FFF" />}
-											{category === 'drug' && <Activity size={14} color="#FFF" />}
-											{category === 'traffic' && <Car size={14} color="#FFF" />}
-											{category === 'other' && <MapPin size={14} color="#FFF" />}
-										</View>
 									</View>
 								</Marker>
 							);
@@ -541,23 +544,30 @@ export default function MapPage() {
 
 						{/* Tabs */}
 						<View className="mb-3 flex-row items-center">
-							{(['all','violent','property','drug','traffic','other'] as const).map((tab) => {
-								const label = tab === 'all' ? 'All' : tab.charAt(0).toUpperCase() + tab.slice(1);
-								const count = tab === 'all' ? selectedCluster.length : selectedCluster.filter(c => getCrimeCategory(c) === tab).length;
-								const active = activeClusterTab === tab;
-								return (
-									<TouchableOpacity
-										key={tab}
-										className="mr-2 rounded-full px-3 py-1"
-										style={{ backgroundColor: active ? colors.primary + '20' : colors.background, borderWidth: 1, borderColor: active ? colors.primary : colors.border }}
-										onPress={() => setActiveClusterTab(tab)}
-									>
-										<Text style={{ color: active ? colors.primary : colors.textSecondary, fontWeight: '600' }}>
-											{label} ({count})
-										</Text>
-									</TouchableOpacity>
-								);
-							})}
+							{(() => {
+								// Show all tabs when filterCategory is 'all', otherwise show only 'all' and current category
+								const tabsToShow = filterCategory === 'all' 
+									? (['all','violent','property','drug','traffic','other'] as const)
+									: (['all', filterCategory] as const);
+								
+								return tabsToShow.map((tab) => {
+									const label = tab === 'all' ? 'All' : tab.charAt(0).toUpperCase() + tab.slice(1);
+									const count = tab === 'all' ? selectedCluster.length : selectedCluster.filter(c => getCrimeCategory(c) === tab).length;
+									const active = activeClusterTab === tab;
+									return (
+										<TouchableOpacity
+											key={tab}
+											className="mr-2 rounded-full px-3 py-1"
+											style={{ backgroundColor: active ? colors.primary + '20' : colors.background, borderWidth: 1, borderColor: active ? colors.primary : colors.border }}
+											onPress={() => setActiveClusterTab(tab)}
+										>
+											<Text style={{ color: active ? colors.primary : colors.textSecondary, fontWeight: '600' }}>
+												{label} ({count})
+											</Text>
+										</TouchableOpacity>
+									);
+								});
+							})()}
 						</View>
 
 						{/* List */}
