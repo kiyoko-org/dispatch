@@ -35,7 +35,6 @@ import { Card } from 'components/ui/Card';
 import HeaderWithSidebar from 'components/HeaderWithSidebar';
 import { ContactsService } from 'lib/services/contacts';
 import { EmergencyContact } from 'lib/types';
-import * as Cellular from 'expo-cellular';
 import * as Haptics from 'expo-haptics';
 import VolumeManager from 'react-native-volume-manager';
 import { emergencyCallService } from 'lib/services/emergency-calls';
@@ -97,9 +96,6 @@ export default function EmergencyScreen() {
     hotline: false,
   });
 
-  const [voipSupport, setVoipSupport] = useState<boolean | null>(null);
-  const [isCheckingVoip, setIsCheckingVoip] = useState(true);
-  const [status, requestPermission] = Cellular.usePermissions();
 
   const defaultEmergencyContacts = [
     {
@@ -132,36 +128,6 @@ export default function EmergencyScreen() {
     })),
   ];
 
-  const checkVoipSupport = useCallback(async () => {
-    setIsCheckingVoip(true);
-    try {
-      console.log('Cellular permission status:', status);
-
-      if (status?.granted === false) {
-        console.log('Requesting cellular permission...');
-        const permissionResult = await requestPermission();
-        if (permissionResult?.granted === false) {
-          console.log('Cellular permission denied');
-          setVoipSupport(false);
-          return;
-        }
-      }
-
-      console.log('Checking VOIP support...');
-      const isSupported = await Cellular.allowsVoipAsync();
-      console.log('VOIP support result:', isSupported);
-      setVoipSupport(isSupported);
-    } catch (error) {
-      console.error('Error checking VOIP support:', error);
-      setVoipSupport(false);
-    } finally {
-      setIsCheckingVoip(false);
-    }
-  }, [status, requestPermission]);
-
-  useEffect(() => {
-    checkVoipSupport();
-  }, []); // Empty dependency array - only run once when component mounts
 
   // Get screen dimensions for responsive design
   const { width, height } = Dimensions.get('window');
@@ -762,19 +728,6 @@ export default function EmergencyScreen() {
         }}
         className="mt-6">
         <Container maxWidth={isTablet ? 'lg' : 'md'} padding="sm">
-          {/* VOIP Status Display */}
-          <View className="mb-4 rounded-lg p-3" style={{ backgroundColor: colors.surfaceVariant, borderColor: colors.border, borderWidth: 1 }}>
-            <Text className="text-sm font-medium" style={{ color: colors.text }}>
-              VOIP Status:{' '}
-              {isCheckingVoip
-                ? 'Checking...'
-                : voipSupport === null
-                  ? 'Unknown'
-                  : voipSupport
-                    ? '✓ Supported'
-                    : '✗ Not Supported'}
-            </Text>
-          </View>
 
           {/* Quick Contacts */}
 
