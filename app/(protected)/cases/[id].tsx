@@ -129,6 +129,16 @@ export default function ReportDetails() {
 		return category || { name: 'Unknown Category', severity: 'Unknown' };
 	};
 
+	// Get subcategory information from context
+	const getSubcategoryInfo = (categoryId: number | null, subCategoryIndex: number | null) => {
+		if (!categoryId || subCategoryIndex === null) return null;
+		const category = categories.find(cat => cat.id === categoryId);
+		if (!category || !category.sub_categories || subCategoryIndex >= category.sub_categories.length) {
+			return null;
+		}
+		return category.sub_categories[subCategoryIndex];
+	};
+
 	// Get status color
 	const getStatusColor = (status: string) => {
 		switch (status?.toLowerCase()) {
@@ -200,6 +210,13 @@ export default function ReportDetails() {
 											{getCategoryInfo(reportInfo.category_id).name}
 										</Text>
 									</View>
+									{reportInfo.sub_category !== null && reportInfo.sub_category !== undefined && (
+										<View className="mt-1 ml-5">
+											<Text className="text-sm" style={{ color: colors.textSecondary }}>
+												• {getSubcategoryInfo(reportInfo.category_id, reportInfo.sub_category) || 'Unknown Subcategory'}
+											</Text>
+										</View>
+									)}
 								</View>
 							)}
 
