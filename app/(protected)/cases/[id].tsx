@@ -44,6 +44,8 @@ export default function ReportDetails() {
 					return;
 				}
 
+				console.log("Fetched report:", report.data);
+
 				setReportInfo(report.data);
 			}
 			setLoading(false);
@@ -82,13 +84,36 @@ export default function ReportDetails() {
 	}
 
 	// Format date and time
-	const formatDate = (dateString: string) => {
-		const date = new Date(dateString);
-		return date.toLocaleDateString('en-US', {
-			year: 'numeric',
-			month: 'long',
-			day: 'numeric'
-		});
+	const formatDate = (dateString: string | null | undefined) => {
+		if (!dateString) return 'Not specified';
+		
+		try {
+			// Handle different date formats
+			let date: Date;
+			
+			// Check if it's already in MM/DD/YYYY format
+			if (typeof dateString === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
+				const [month, day, year] = dateString.split('/');
+				date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+			} else {
+				// Try parsing as ISO string or other formats
+				date = new Date(dateString);
+			}
+			
+			// Check if date is valid
+			if (isNaN(date.getTime())) {
+				return 'Invalid date';
+			}
+			
+			return date.toLocaleDateString('en-US', {
+				year: 'numeric',
+				month: 'long',
+				day: 'numeric'
+			});
+		} catch (error) {
+			console.error('Error formatting date:', error);
+			return 'Invalid date';
+		}
 	};
 
 	const formatTime = (timeString: string) => {
@@ -155,7 +180,7 @@ export default function ReportDetails() {
 									<View className="flex-row items-center">
 										<Calendar size={16} color={colors.textSecondary} style={{ marginRight: 4 }} />
 										<Text className="text-base" style={{ color: colors.text }}>
-											{reportInfo.incident_date ? formatDate(reportInfo.incident_date) : 'Not specified'}
+											{formatDate(reportInfo.incident_date)}
 										</Text>
 									</View>
 								</View>
