@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView 
 } from "react-native";
 import { useTheme } from "components/ThemeContext";
+import { useDispatchClient } from "components/DispatchProvider";
 import HeaderWithSidebar from "components/HeaderWithSidebar";
 import { Card } from "components/ui/Card";
 import { ShimmerCard } from "components/ui/Shimmer";
@@ -30,6 +31,7 @@ export default function ReportDetails() {
 	const { id } = useLocalSearchParams<{ id: string }>();
 	const { getReportInfo } = useReports();
 	const { colors, isDark } = useTheme();
+	const { categories } = useDispatchClient();
 	const [reportInfo, setReportInfo] = useState<Database["public"]["Tables"]["reports"]["Row"] | null>(null);
 	const [loading, setLoading] = useState(true);
 
@@ -120,6 +122,13 @@ export default function ReportDetails() {
 		return timeString || 'Not specified';
 	};
 
+	// Get category information from context
+	const getCategoryInfo = (categoryId: number | null) => {
+		if (!categoryId) return { name: 'Unknown Category', severity: 'Unknown' };
+		const category = categories.find(cat => cat.id === categoryId);
+		return category || { name: 'Unknown Category', severity: 'Unknown' };
+	};
+
 	// Get status color
 	const getStatusColor = (status: string) => {
 		switch (status?.toLowerCase()) {
@@ -181,6 +190,19 @@ export default function ReportDetails() {
 						<View className="space-y-4">
 
 
+							{/* Category Information */}
+							{reportInfo.category_id && (
+								<View>
+									<Text className="mb-1 text-sm font-medium" style={{ color: colors.textSecondary }}>Category</Text>
+									<View className="flex-row items-center">
+										<AlertTriangle size={16} color={colors.textSecondary} style={{ marginRight: 4 }} />
+										<Text className="text-base" style={{ color: colors.text }}>
+											{getCategoryInfo(reportInfo.category_id).name}
+										</Text>
+									</View>
+								</View>
+							)}
+
 							<View className="flex-row space-x-4">
 								<View className="flex-1">
 									<Text className="mb-1 text-sm font-medium" style={{ color: colors.textSecondary }}>Date</Text>
@@ -195,14 +217,11 @@ export default function ReportDetails() {
 									<Text className="mb-1 text-sm font-medium" style={{ color: colors.textSecondary }}>Time</Text>
 									<View className="flex-row items-center">
 										<Clock size={16} color={colors.textSecondary} style={{ marginRight: 4 }} />
-							<Text className="text-base" style={{ color: colors.text }}>
-								{formatTime(reportInfo.incident_time ?? '')}
-							</Text>
+										<Text className="text-base" style={{ color: colors.text }}>
+											{formatTime(reportInfo.incident_time ?? '')}
+										</Text>
 									</View>
 								</View>
-							</View>
-
-							<View>
 							</View>
 						</View>
 					</Card>

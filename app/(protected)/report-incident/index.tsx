@@ -22,7 +22,7 @@ import * as Location from 'expo-location';
 import { ReportData } from 'lib/types';
 import { geocodingService } from 'lib/services/geocoding';
 import { useTheme } from 'components/ThemeContext';
-import { useCategories } from '../../../hooks/useCategories';
+import { useDispatchClient } from 'components/DispatchProvider';
 import { useReports } from '@kiyoko-org/dispatch-lib';
 
 interface UIState {
@@ -44,7 +44,7 @@ interface UIState {
 export default function ReportIncidentIndex() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { categories, loading: categoriesLoading, error: categoriesError } = useCategories();
+  const { categories, categoriesLoading, categoriesError } = useDispatchClient();
   const { addReport } = useReports();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
