@@ -9,8 +9,8 @@ import {
 	Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState, useRef } from 'react';
-import MapView, { Marker, Heatmap, PROVIDER_GOOGLE, Circle, Region } from 'react-native-maps';
+import { useEffect, useState } from 'react';
+import MapView, { Marker, Heatmap, PROVIDER_GOOGLE, Circle } from 'react-native-maps';
 import HeaderWithSidebar from 'components/HeaderWithSidebar';
 import { useTheme } from 'components/ThemeContext';
 import Papa from 'papaparse';
@@ -25,8 +25,7 @@ import {
 	Calendar,
 	MapPinned,
 	Filter,
-	X,
-	RotateCcw
+	X
 } from 'lucide-react-native';
 
 const { width } = Dimensions.get('window');
@@ -59,14 +58,10 @@ export default function MapPage() {
 	const [crimes, setCrimes] = useState<CrimeData[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [selectedCrime, setSelectedCrime] = useState<CrimeData | null>(null);
-	const [selectedCluster, setSelectedCluster] = useState<CrimeData[] | null>(null);
 	const [showHeatmap, setShowHeatmap] = useState(true);
 	const [showMarkers, setShowMarkers] = useState(true);
 	const [filterCategory, setFilterCategory] = useState<CrimeCategory | 'all'>('all');
 	const [showFilters, setShowFilters] = useState(false);
-	const [mapRegion, setMapRegion] = useState<Region | null>(null);
-	const [activeClusterTab, setActiveClusterTab] = useState<'all' | CrimeCategory>('all');
-	const mapRef = useRef<MapView>(null);
 
 	useEffect(() => {
 		loadCrimeData();
@@ -154,56 +149,12 @@ export default function MapPage() {
 		? crimes 
 		: crimes.filter(crime => getCrimeCategory(crime) === filterCategory);
 
-	// Simple grid-based clustering (degrees-based, responsive to current map region)
-	const clusters = useMemo(() => {
-		if (!mapRegion) return [] as { lat: number; lon: number; items: CrimeData[] }[];
-
-		const cellSizeLat = Math.max(mapRegion.latitudeDelta / 20, 0.0005);
-		const cellSizeLon = Math.max(mapRegion.longitudeDelta / 20, 0.0005);
-		const cellKey = (lat: number, lon: number) => {
-			const r = Math.floor((lat - mapRegion.latitude + mapRegion.latitudeDelta / 2) / cellSizeLat);
-			const c = Math.floor((lon - mapRegion.longitude + mapRegion.longitudeDelta / 2) / cellSizeLon);
-			return `${r}:${c}`;
-		};
-
-		const grid: Record<string, CrimeData[]> = {};
-		for (const crime of filteredCrimes) {
-			const key = cellKey(crime.lat, crime.lon);
-			if (!grid[key]) grid[key] = [];
-			grid[key].push(crime);
-		}
-
-		const result: { lat: number; lon: number; items: CrimeData[] }[] = [];
-		for (const key in grid) {
-			const items = grid[key];
-			// centroid
-			let sumLat = 0;
-			let sumLon = 0;
-			for (const it of items) {
-				sumLat += it.lat;
-				sumLon += it.lon;
-			}
-			result.push({
-				lat: sumLat / items.length,
-				lon: sumLon / items.length,
-				items,
-			});
-		}
-		return result;
-	}, [filteredCrimes, mapRegion]);
-
 	// Calculate center of Tuguegarao City
 	const initialRegion = {
 		latitude: 17.6132,
 		longitude: 121.7270,
 		latitudeDelta: 0.15,
 		longitudeDelta: 0.15,
-	};
-
-	// Function to reset map to initial region
-	const resetMapRegion = () => {
-		mapRef.current?.animateToRegion(initialRegion, 1000);
-		setMapRegion(initialRegion);
 	};
 
 	// Convert crimes data to heatmap points
@@ -243,11 +194,9 @@ export default function MapPage() {
 					</View>
 				) : (
 				<MapView
-					ref={mapRef}
 					provider={PROVIDER_GOOGLE}
 						style={styles.map}
 						initialRegion={initialRegion}
-						onRegionChangeComplete={(region) => setMapRegion(region)}
 						showsUserLocation={true}
 						showsMyLocationButton={true}
 						customMapStyle={isDark ? darkMapStyle : []}
@@ -266,72 +215,28 @@ export default function MapPage() {
 							/>
 						)}
 
-						{/* Markers: cluster all crimes, show count when multiple */}
-						{showMarkers && clusters.map((cluster, idx) => {
-							const total = cluster.items.length;
+						{/* Individual Crime Markers */}
+						{showMarkers && filteredCrimes.map((crime, index) => {
+							const category = getCrimeCategory(crime);
+							const markerColor = getCrimeColor(category);
 							
-							// If single crime, show individual marker
-							if (total === 1) {
-								const crime = cluster.items[0];
-								const category = getCrimeCategory(crime);
-								const markerColor = getCrimeColor(category);
-								return (
-									<Marker
-										key={`single-${idx}`}
-										coordinate={{ latitude: cluster.lat, longitude: cluster.lon }}
-										onPress={() => { setSelectedCrime(crime); setSelectedCluster(null); }}
-									>
-										<View style={[styles.markerContainer, { backgroundColor: markerColor }]}> 
-											<View style={styles.markerInner}>
-												{category === 'violent' && <AlertTriangle size={14} color="#FFF" />}
-												{category === 'property' && <ShoppingBag size={14} color="#FFF" />}
-												{category === 'drug' && <Activity size={14} color="#FFF" />}
-												{category === 'traffic' && <Car size={14} color="#FFF" />}
-												{category === 'other' && <MapPin size={14} color="#FFF" />}
-											</View>
-										</View>
-									</Marker>
-								);
-							}
-							
-							// Multiple crimes - show cluster with count
-							// Use category color when filter is applied, otherwise use most common category color
-							let baseColor;
-							if (filterCategory !== 'all') {
-								// When a specific category is filtered, use that category's color
-								baseColor = getCrimeColor(filterCategory);
-							} else {
-								// When showing all categories, use the color of the most common category
-								const categoryCounts: Record<CrimeCategory, number> = {
-									violent: 0,
-									property: 0,
-									drug: 0,
-									traffic: 0,
-									other: 0
-								};
-								
-								// Count occurrences of each category
-								cluster.items.forEach(crime => {
-									const category = getCrimeCategory(crime);
-									categoryCounts[category]++;
-								});
-								
-								// Find the category with the highest count
-								const mostCommonCategory = Object.entries(categoryCounts)
-									.reduce((max, [category, count]) => 
-										count > max.count ? { category: category as CrimeCategory, count } : max
-									, { category: 'other' as CrimeCategory, count: 0 });
-								
-								baseColor = getCrimeColor(mostCommonCategory.category);
-							}
 							return (
 								<Marker
-									key={`cluster-${idx}`}
-									coordinate={{ latitude: cluster.lat, longitude: cluster.lon }}
-									onPress={() => { setSelectedCrime(null); setSelectedCluster(cluster.items); setActiveClusterTab(filterCategory === 'all' ? 'all' : filterCategory); }}
+									key={`crime-${index}`}
+									coordinate={{
+										latitude: crime.lat,
+										longitude: crime.lon,
+									}}
+									onPress={() => setSelectedCrime(crime)}
 								>
-									<View style={[styles.clusterContainer, { backgroundColor: baseColor }]}> 
-										<Text style={styles.clusterText}>{total}</Text>
+									<View style={[styles.markerContainer, { backgroundColor: markerColor }]}>
+										<View style={styles.markerInner}>
+											{category === 'violent' && <AlertTriangle size={14} color="#FFF" />}
+											{category === 'property' && <ShoppingBag size={14} color="#FFF" />}
+											{category === 'drug' && <Activity size={14} color="#FFF" />}
+											{category === 'traffic' && <Car size={14} color="#FFF" />}
+											{category === 'other' && <MapPin size={14} color="#FFF" />}
+										</View>
 									</View>
 								</Marker>
 							);
@@ -497,7 +402,7 @@ export default function MapPage() {
 				)}
 
 				{/* Crime Details Card */}
-				{selectedCrime && !showFilters && !selectedCluster && (
+				{selectedCrime && !showFilters && (
 					<View 
 						className="absolute bottom-24 left-4 right-4 rounded-xl p-4 shadow-2xl"
 						style={{ backgroundColor: colors.card }}
@@ -558,86 +463,6 @@ export default function MapPage() {
 					</View>
 				)}
 
-				{/* Cluster Details Card with Tabs */}
-				{selectedCluster && !showFilters && (
-					<View 
-						className="absolute bottom-24 left-4 right-4 rounded-xl p-4 shadow-2xl"
-						style={{ backgroundColor: colors.card }}
-					>
-						<View className="mb-3 flex-row items-start justify-between">
-							<View className="flex-1">
-								<Text className="text-lg font-bold" style={{ color: colors.text }}>
-									Incidents in this area
-								</Text>
-								<Text className="text-xs" style={{ color: colors.textSecondary }}>{selectedCluster.length} total</Text>
-							</View>
-							<TouchableOpacity onPress={() => setSelectedCluster(null)}>
-								<XCircle size={24} color={colors.textSecondary} />
-							</TouchableOpacity>
-						</View>
-
-						{/* Tabs */}
-						<ScrollView 
-							horizontal 
-							showsHorizontalScrollIndicator={false}
-							className="mb-3"
-							contentContainerStyle={{ paddingRight: 16 }}
-						>
-							{(() => {
-								// Show all tabs when filterCategory is 'all', otherwise show only 'all' and current category
-								const tabsToShow = filterCategory === 'all' 
-									? (['all','violent','property','drug','traffic','other'] as const)
-									: (['all', filterCategory] as const);
-								
-								const tabsWithCounts = tabsToShow
-									.map((tab) => {
-										const label = tab === 'all' ? 'All' : tab.charAt(0).toUpperCase() + tab.slice(1);
-										const count = tab === 'all' ? selectedCluster.length : selectedCluster.filter(c => getCrimeCategory(c) === tab).length;
-										return { tab, label, count };
-									})
-									.filter(({ count }) => count > 0); // Hide tabs with 0 items
-								
-								// If current active tab is not available, switch to 'all' tab
-								const availableTabs = tabsWithCounts.map(({ tab }) => tab);
-								if (!availableTabs.includes(activeClusterTab)) {
-									setActiveClusterTab('all');
-								}
-								
-								return tabsWithCounts.map(({ tab, label, count }) => {
-									const active = activeClusterTab === tab;
-									return (
-										<TouchableOpacity
-											key={tab}
-											className="mr-2 rounded-full px-3 py-1"
-											style={{ backgroundColor: active ? colors.primary + '20' : colors.background, borderWidth: 1, borderColor: active ? colors.primary : colors.border }}
-											onPress={() => setActiveClusterTab(tab)}
-										>
-											<Text style={{ color: active ? colors.primary : colors.textSecondary, fontWeight: '600' }}>
-												{label} ({count})
-											</Text>
-										</TouchableOpacity>
-									);
-								});
-							})()}
-						</ScrollView>
-
-						{/* List */}
-						<ScrollView style={{ maxHeight: 260 }} showsVerticalScrollIndicator={false}>
-							{(activeClusterTab === 'all' ? selectedCluster : selectedCluster.filter(c => getCrimeCategory(c) === activeClusterTab)).map((crime, idx) => (
-								<View key={idx} className="mb-2 rounded-lg p-3" style={{ backgroundColor: colors.background }}>
-									<View className="mb-1 flex-row items-center justify-between">
-										<Text className="font-semibold" style={{ color: colors.text }}>{crime.incidentType}</Text>
-										<View className="self-start rounded-full px-2 py-0.5" style={{ backgroundColor: getCrimeColor(getCrimeCategory(crime)) + '20' }}>
-											<Text className="text-xs" style={{ color: getCrimeColor(getCrimeCategory(crime)) }}>{getCrimeCategory(crime)}</Text>
-										</View>
-									</View>
-									<Text className="text-xs" style={{ color: colors.textSecondary }}>{crime.barangay}, {crime.municipal} • {crime.dateCommitted} {crime.timeCommitted}</Text>
-								</View>
-							))}
-						</ScrollView>
-					</View>
-				)}
-
 				{/* Control Buttons */}
 				{!showFilters && (
 					<>
@@ -650,18 +475,6 @@ export default function MapPage() {
 							<Filter size={20} color={colors.primary} />
 							<Text className="ml-2 font-semibold" style={{ color: colors.text }}>
 								Filters
-							</Text>
-						</TouchableOpacity>
-
-						{/* Reset Camera Button */}
-						<TouchableOpacity
-							className="absolute left-4 top-20 flex-row items-center rounded-xl px-4 py-3 shadow-lg"
-							style={{ backgroundColor: colors.card }}
-							onPress={resetMapRegion}
-						>
-							<RotateCcw size={20} color={colors.primary} />
-							<Text className="ml-2 font-semibold" style={{ color: colors.text }}>
-								Reset View
 							</Text>
 						</TouchableOpacity>
 
@@ -725,22 +538,6 @@ const styles = StyleSheet.create({
 		borderRadius: 14,
 		alignItems: 'center',
 		justifyContent: 'center',
-	},
-	clusterContainer: {
-		width: 40,
-		height: 40,
-		borderRadius: 20,
-		alignItems: 'center',
-		justifyContent: 'center',
-		shadowColor: '#000',
-		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.3,
-		shadowRadius: 4,
-		elevation: 5,
-	},
-	clusterText: {
-		color: '#FFF',
-		fontWeight: '700',
 	},
 });
 

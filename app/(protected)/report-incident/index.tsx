@@ -110,9 +110,23 @@ export default function ReportIncidentIndex() {
 
   // Helper function to transform ReportData to dispatch-lib schema
   const transformToDispatchLibSchema = (data: ReportData, attachments: string[]) => {
+
+		console.log("payload", data)
+		console.log("Categories available:", categories);
+		console.log("Looking for category:", data.incident_category);
+
     // Find the category ID from the categories list
     const category = categories.find(cat => cat.name === data.incident_category);
+    console.log("Found category:", category);
     const categoryId = category?.id || null;
+    console.log("Category ID:", categoryId);
+
+    // If no category found, throw an error with helpful information
+    if (!category && data.incident_category) {
+      console.error("Category not found:", data.incident_category);
+      console.error("Available categories:", categories.map(c => c.name));
+      throw new Error(`Category "${data.incident_category}" not found. Available categories: ${categories.map(c => c.name).join(', ')}`);
+    }
 
     // Find the subcategory ID if it exists
     let subCategoryId = null;
@@ -412,6 +426,21 @@ export default function ReportIncidentIndex() {
   }, []);
 
   const handleSubmitReport = async () => {
+    // Check if categories are loaded
+    if (categoriesLoading) {
+      Alert.alert('Loading', 'Please wait while categories are being loaded...', [
+        { text: 'OK' },
+      ]);
+      return;
+    }
+
+    if (categories.length === 0) {
+      Alert.alert('Error', 'Categories are not available. Please refresh the page and try again.', [
+        { text: 'OK' },
+      ]);
+      return;
+    }
+
     // Run validation first
     const errors = validateForm(formData);
 
