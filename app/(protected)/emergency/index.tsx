@@ -36,7 +36,6 @@ import HeaderWithSidebar from 'components/HeaderWithSidebar';
 import { ContactsService } from 'lib/services/contacts';
 import { EmergencyContact } from 'lib/types';
 import * as Haptics from 'expo-haptics';
-import VolumeManager from 'react-native-volume-manager';
 import { emergencyCallService } from 'lib/services/emergency-calls';
 import * as Location from 'expo-location';
 import { useTheme } from 'components/ThemeContext';
@@ -65,8 +64,6 @@ export default function EmergencyScreen() {
   // Emergency activation settings
   const [emergencySettings, setEmergencySettings] = useState({
     hapticEnabled: true,
-    volumeHoldEnabled: true,
-    volumeHoldDuration: 3000, // 3 seconds
     multiPressEnabled: true,
     multiPressCount: 5,
     multiPressWindow: 2000, // 2 seconds
@@ -77,9 +74,6 @@ export default function EmergencyScreen() {
 
   // Hardware button detection state
   const [volumePressCount, setVolumePressCount] = useState(0);
-  const [volumeHoldTimer, setVolumeHoldTimer] = useState<ReturnType<typeof setTimeout> | null>(
-    null
-  );
   const [emergencyButtonPressCount, setEmergencyButtonPressCount] = useState(0);
   const [multiPressTimer, setMultiPressTimer] = useState<ReturnType<typeof setTimeout> | null>(
     null
@@ -220,65 +214,12 @@ export default function EmergencyScreen() {
     let volumeTimer: ReturnType<typeof setTimeout> | null = null;
     let pressStartTime = 0;
 
-    const handleVolumeChange = () => {
-      if (!emergencySettings.volumeHoldEnabled) return;
 
-      triggerHapticFeedback('light');
-      pressStartTime = Date.now();
-
-      if (volumeTimer) {
-        clearTimeout(volumeTimer);
-      }
-
-      volumeTimer = setTimeout(() => {
-        const holdDuration = Date.now() - pressStartTime;
-        if (holdDuration >= emergencySettings.volumeHoldDuration - 100) {
-          // 100ms tolerance
-          triggerHapticFeedback('emergency');
-          Alert.alert(
-            'Emergency via Volume Hold',
-            'Emergency protocol activated via volume button hold!',
-            [
-              {
-                text: 'Cancel',
-                style: 'cancel',
-              },
-              {
-                text: 'Confirm Emergency',
-                style: 'destructive',
-                onPress: activateEmergencyProtocol,
-              },
-            ]
-          );
-        }
-      }, emergencySettings.volumeHoldDuration);
-    };
-
-    // Enable volume change detection
-    const enableVolumeListener = async () => {
-      try {
-        await VolumeManager.enable(true);
-        VolumeManager.addVolumeListener(handleVolumeChange);
-      } catch (error) {
-        console.warn('Volume manager error:', error);
-      }
-    };
-
-    if (emergencySettings.volumeHoldEnabled) {
-      enableVolumeListener();
-    }
 
     return () => {
-      try {
-        VolumeManager.enable(false);
-        // Note: removeVolumeListener might not exist in this version
-        // VolumeManager.removeVolumeListener();
-      } catch (error) {
-        console.warn('Volume manager cleanup error:', error);
-      }
       if (volumeTimer) clearTimeout(volumeTimer);
     };
-  }, [emergencySettings.volumeHoldEnabled, emergencySettings.volumeHoldDuration]);
+  }, []);
 
   useEffect(() => {
     const flash = () => {
@@ -914,13 +855,11 @@ export default function EmergencyScreen() {
                   EMERGENCY
                 </Text>
               </View>
-              {(emergencySettings.volumeHoldEnabled ||
-                emergencySettings.powerButtonEnabled) && (
+              {emergencySettings.powerButtonEnabled && (
                 <View className="mt-2 flex-row items-center">
                   <Zap size={16} color="white" />
                   <Text className="ml-1 text-xs text-white opacity-80">
-                    {emergencySettings.volumeHoldEnabled && 'Vol Hold'}
-                    {emergencySettings.powerButtonEnabled && ' • Power 3x'}
+                    Power 3x
                   </Text>
                 </View>
               )}
