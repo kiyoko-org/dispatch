@@ -160,7 +160,7 @@ export default function ReportDetails() {
 							<View className="mr-3 h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: colors.surfaceVariant }}>
 								<FileText size={20} color={colors.text} />
 							</View>
-							<Text className="text-xl font-bold" style={{ color: colors.text }}>Basic Information</Text>
+					<Text className="text-xl font-bold" style={{ color: colors.text }}>{reportInfo.incident_title || 'Untitled Report'}</Text>
 						</View>
 
 						<View className="space-y-4">
