@@ -23,6 +23,7 @@ export default function MyReports() {
   const [sortBy, setSortBy] = useState<'date' | 'category' | 'title'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showFilterModal, setShowFilterModal] = useState(false);
+  const [showSortModal, setShowSortModal] = useState(false);
 
   // Function to fetch reports
   const handleFetchReports = useCallback(async () => {
@@ -87,6 +88,13 @@ export default function MyReports() {
       ...categories.map(cat => ({ id: cat.id?.toString() || '', name: cat.name || 'Unknown Category' }))
     ];
   }, [categories]);
+
+  // Sort options for dropdown
+  const sortOptions = [
+    { id: 'date', name: 'Date' },
+    { id: 'category', name: 'Category' },
+    { id: 'title', name: 'Title' },
+  ];
 
   // Filter and sort reports
   const filteredAndSortedReports = useMemo(() => {
@@ -233,15 +241,7 @@ export default function MyReports() {
 
               {/* Sort Field Button */}
               <TouchableOpacity
-                onPress={() => {
-                  if (sortBy === 'date') {
-                    setSortBy('category');
-                  } else if (sortBy === 'category') {
-                    setSortBy('title');
-                  } else {
-                    setSortBy('date');
-                  }
-                }}
+                onPress={() => setShowSortModal(true)}
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
@@ -254,7 +254,7 @@ export default function MyReports() {
                   minWidth: 80,
                 }}>
                 <Text style={{ fontSize: 14, color: colors.text, marginRight: 4 }}>
-                  {sortBy === 'date' ? 'Date' : sortBy === 'category' ? 'Category' : 'Title'}
+                  {sortOptions.find(option => option.id === sortBy)?.name || 'Date'}
                 </Text>
                 <ChevronDown size={16} color={colors.textSecondary} />
               </TouchableOpacity>
@@ -540,6 +540,82 @@ export default function MyReports() {
                       color: selectedCategory === category.id ? colors.surface : colors.text,
                     }}>
                     {category.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Sort Modal */}
+      <Modal
+        visible={showSortModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowSortModal(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+          <View
+            style={{
+              backgroundColor: colors.background,
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              padding: 20,
+              maxHeight: '50%',
+            }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <Text style={{ fontSize: 18, fontWeight: 'bold', color: colors.text }}>Sort by</Text>
+              <TouchableOpacity onPress={() => setShowSortModal(false)}>
+                <X size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {sortOptions.map((option) => (
+                <TouchableOpacity
+                  key={option.id}
+                  onPress={() => {
+                    setSortBy(option.id as 'date' | 'category' | 'title');
+                    setShowSortModal(false);
+                  }}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    paddingVertical: 12,
+                    paddingHorizontal: 16,
+                    borderRadius: 8,
+                    backgroundColor: sortBy === option.id ? colors.primary : 'transparent',
+                    marginBottom: 4,
+                  }}>
+                  <View
+                    style={{
+                      width: 20,
+                      height: 20,
+                      borderRadius: 10,
+                      borderWidth: 2,
+                      borderColor: sortBy === option.id ? colors.surface : colors.border,
+                      backgroundColor: sortBy === option.id ? colors.surface : 'transparent',
+                      marginRight: 12,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                    {sortBy === option.id && (
+                      <View
+                        style={{
+                          width: 8,
+                          height: 8,
+                          borderRadius: 4,
+                          backgroundColor: colors.primary,
+                        }}
+                      />
+                    )}
+                  </View>
+                  <Text
+                    style={{
+                      fontSize: 16,
+                      color: sortBy === option.id ? colors.surface : colors.text,
+                    }}>
+                    {option.name}
                   </Text>
                 </TouchableOpacity>
               ))}
