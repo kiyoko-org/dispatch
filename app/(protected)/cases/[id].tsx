@@ -160,19 +160,26 @@ export default function ReportDetails() {
 							<View className="mr-3 h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: colors.surfaceVariant }}>
 								<FileText size={20} color={colors.text} />
 							</View>
-					<Text className="text-xl font-bold" style={{ color: colors.text }}>{reportInfo.incident_title || 'Untitled Report'}</Text>
+					<View>
+						<Text className="text-xl font-bold" style={{ color: colors.text }}>{reportInfo.incident_title || 'Untitled Report'}</Text>
+						<View className="flex-row items-center">
+							<View 
+								className="w-1.5 h-1.5 rounded-full mr-2"
+								style={{ backgroundColor: getStatusColor(reportInfo.status || 'pending') }}
+							/>
+							<Text 
+								className="text-sm font-medium capitalize"
+								style={{ color: getStatusColor(reportInfo.status || 'pending') }}
+							>
+								{reportInfo.status || 'Pending'}
+							</Text>
+						</View>
+						<Text className="text-sm" style={{ color: colors.textSecondary }}>#{reportInfo.id}</Text>
+					</View>
 						</View>
 
 						<View className="space-y-4">
-							<View>
-								<Text className="mb-1 text-sm font-medium" style={{ color: colors.textSecondary }}>Report ID</Text>
-								<Text className="text-base" style={{ color: colors.text }}>#{reportInfo.id}</Text>
-							</View>
 
-							<View>
-								<Text className="mb-1 text-sm font-medium" style={{ color: colors.textSecondary }}>Title</Text>
-								<Text className="text-base" style={{ color: colors.text }}>{reportInfo.incident_title || 'No title provided'}</Text>
-							</View>
 
 							<View className="flex-row space-x-4">
 								<View className="flex-1">
@@ -188,27 +195,14 @@ export default function ReportDetails() {
 									<Text className="mb-1 text-sm font-medium" style={{ color: colors.textSecondary }}>Time</Text>
 									<View className="flex-row items-center">
 										<Clock size={16} color={colors.textSecondary} style={{ marginRight: 4 }} />
-										<Text className="text-base" style={{ color: colors.text }}>
-											{formatTime(reportInfo.incident_time)}
-										</Text>
+							<Text className="text-base" style={{ color: colors.text }}>
+								{formatTime(reportInfo.incident_time ?? '')}
+							</Text>
 									</View>
 								</View>
 							</View>
 
 							<View>
-								<Text className="mb-1 text-sm font-medium" style={{ color: colors.textSecondary }}>Status</Text>
-								<View className="flex-row items-center">
-									<View 
-										className="w-3 h-3 rounded-full mr-2"
-										style={{ backgroundColor: getStatusColor(reportInfo.status || 'pending') }}
-									/>
-									<Text 
-										className="text-base font-medium capitalize"
-										style={{ color: getStatusColor(reportInfo.status || 'pending') }}
-									>
-										{reportInfo.status || 'Pending'}
-									</Text>
-								</View>
 							</View>
 						</View>
 					</Card>
@@ -341,14 +335,7 @@ export default function ReportDetails() {
 								</Text>
 							</View>
 
-							{reportInfo.updated_at && reportInfo.updated_at !== reportInfo.created_at && (
-								<View>
-									<Text className="mb-1 text-sm font-medium" style={{ color: colors.textSecondary }}>Last Updated</Text>
-									<Text className="text-base" style={{ color: colors.text }}>
-										{formatDate(reportInfo.updated_at)}
-									</Text>
-								</View>
-							)}
+						{/* last updated hidden: not present on row type */}
 						</View>
 					</Card>
 				</View>
