@@ -23,7 +23,7 @@ export default function ReportDetails() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuthContext();
   const { colors, isDark } = useTheme();
-  const { reports } = useReports();
+  const { getReportInfo } = useReports();
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -36,28 +36,34 @@ export default function ReportDetails() {
       setLoading(true);
       setError(null);
       
-      // Find the report from the reports array
-      const foundReport = reports.find(r => r.id === parseInt(id));
+      // Use the getReportInfo function from the hook
+      const result = await getReportInfo(parseInt(id));
 
-      if (!foundReport) {
+      if (result.error) {
+        console.error('Error fetching report details:', result.error);
+        setError('Failed to load report details');
+        return;
+      }
+
+      if (!result.data) {
         setError('Report not found');
         return;
       }
 
       // Verify the user owns this report
-      if (foundReport.reporter_id !== session.user.id) {
+      if (result.data.reporter_id !== session.user.id) {
         setError('You do not have permission to view this report');
         return;
       }
 
-      setReport(foundReport);
+      setReport(result.data);
     } catch (err) {
       console.error('Error fetching report details:', err);
       setError('Failed to load report details');
     } finally {
       setLoading(false);
     }
-  }, [id, session?.user?.id, reports]);
+  }, [id, session?.user?.id, getReportInfo]);
 
   useEffect(() => {
     fetchReportDetails();
