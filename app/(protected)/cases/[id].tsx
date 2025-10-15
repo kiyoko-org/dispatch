@@ -1,31 +1,29 @@
-import { View, Text, ScrollView, TouchableOpacity, StatusBar, Alert } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StatusBar } from 'react-native';
 import { 
-  ArrowLeft, 
   Calendar, 
   Clock, 
   MapPin, 
-  User, 
   FileText, 
   AlertTriangle, 
   AlertCircle, 
   Bell,
-  Eye,
-  MessageSquare,
-  Shield,
-  Users
+  Shield
 } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import HeaderWithSidebar from '../../../components/HeaderWithSidebar';
 import { useAuthContext } from 'components/AuthProvider';
 import { useTheme } from 'components/ThemeContext';
-import { db, Report } from 'lib/database';
+import { useReports } from '@kiyoko-org/dispatch-lib';
+import type { Database } from '@kiyoko-org/dispatch-lib';
+
+type Report = Database['public']['Tables']['reports']['Row'];
 
 export default function ReportDetails() {
-  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuthContext();
   const { colors, isDark } = useTheme();
+  const { reports } = useReports();
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -37,28 +35,29 @@ export default function ReportDetails() {
     try {
       setLoading(true);
       setError(null);
-      const result = await db.reports.getById(parseInt(id));
+      
+      // Find the report from the reports array
+      const foundReport = reports.find(r => r.id === parseInt(id));
 
-      if (result.error) {
-        console.error('Error fetching report details:', result.error);
-        setError('Failed to load report details');
+      if (!foundReport) {
+        setError('Report not found');
         return;
       }
 
       // Verify the user owns this report
-      if (result.data?.reporter_id !== session.user.id) {
+      if (foundReport.reporter_id !== session.user.id) {
         setError('You do not have permission to view this report');
         return;
       }
 
-      setReport(result.data);
+      setReport(foundReport);
     } catch (err) {
       console.error('Error fetching report details:', err);
       setError('Failed to load report details');
     } finally {
       setLoading(false);
     }
-  }, [id, session?.user?.id]);
+  }, [id, session?.user?.id, reports]);
 
   useEffect(() => {
     fetchReportDetails();

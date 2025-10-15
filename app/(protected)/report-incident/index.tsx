@@ -20,10 +20,10 @@ import { useRouter } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
 import * as Location from 'expo-location';
 import { ReportData } from 'lib/types';
-import { reportService } from 'lib/services/reports';
 import { geocodingService } from 'lib/services/geocoding';
 import { useTheme } from 'components/ThemeContext';
 import { useCategories } from '../../../hooks/useCategories';
+import { useReports } from '@kiyoko-org/dispatch-lib';
 
 interface UIState {
   showCategoryDropdown: boolean;
@@ -45,6 +45,7 @@ export default function ReportIncidentIndex() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const { categories, loading: categoriesLoading, error: categoriesError } = useCategories();
+  const { addReport } = useReports();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const dropdownAnim = useRef(new Animated.Value(0)).current;
@@ -105,6 +106,42 @@ export default function ReportIncidentIndex() {
 
   const updateUIState = (updates: Partial<UIState>) => {
     setUIState((prev) => ({ ...prev, ...updates }));
+  };
+
+  // Helper function to transform ReportData to dispatch-lib schema
+  const transformToDispatchLibSchema = (data: ReportData, attachments: string[]) => {
+    // Find the category ID from the categories list
+    const category = categories.find(cat => cat.name === data.incident_category);
+    const categoryId = category?.id || null;
+
+    // Find the subcategory ID if it exists
+    let subCategoryId = null;
+    if (category && category.sub_categories && data.incident_subcategory) {
+      const subCategoryIndex = category.sub_categories.findIndex(sub => sub === data.incident_subcategory);
+      subCategoryId = subCategoryIndex >= 0 ? subCategoryIndex : null;
+    }
+
+    return {
+      incident_title: data.incident_title,
+      incident_date: data.incident_date,
+      incident_time: data.incident_time,
+      street_address: data.street_address,
+      nearby_landmark: data.nearby_landmark,
+      latitude: data.latitude || parseFloat(currentLocation.latitude),
+      longitude: data.longitude || parseFloat(currentLocation.longitude),
+      what_happened: data.what_happened,
+      who_was_involved: data.who_was_involved,
+      number_of_witnesses: data.number_of_witnesses,
+      injuries_reported: data.injuries_reported,
+      property_damage: data.property_damage,
+      suspect_description: data.suspect_description,
+      witness_contact_info: data.witness_contact_info,
+      category_id: categoryId,
+      sub_category: subCategoryId,
+      attachments: attachments.length > 0 ? attachments : null,
+      status: 'pending',
+      is_archived: false,
+    };
   };
 
   // Function to handle using current date and time
@@ -391,11 +428,8 @@ export default function ReportIncidentIndex() {
     updateUIState({ isSubmitting: true, validationErrors: {} });
 
     try {
-      // Prepare report data for API submission
-      const reportData: ReportData = {
-        ...formData,
-        // Add any additional fields if needed
-      };
+      // Transform data to dispatch-lib schema
+      const reportPayload = transformToDispatchLibSchema(formData, attachments);
 
       // Create a timeout promise (60 seconds)
       const timeoutPromise = new Promise((_, reject) => {
@@ -406,16 +440,16 @@ export default function ReportIncidentIndex() {
 
       // Race between the API call and timeout
       const result = (await Promise.race([
-        reportService.addReport(reportData, attachments),
+        addReport(reportPayload),
         timeoutPromise,
-      ])) as Awaited<ReturnType<typeof reportService.addReport>>;
+      ])) as Awaited<ReturnType<typeof addReport>>;
 
       if (result.error) {
         throw new Error(result.error.message || 'Failed to submit report');
       }
 
       // Success - show report ID in the success message
-      const reportId = result.data?.id;
+      const reportId = result.data?.[0]?.id;
       Alert.alert(
         'Report Submitted Successfully!',
         `Your incident report has been submitted${reportId ? ` with ID: ${reportId}` : ''}. It will be reviewed by authorities within 24 hours.`,

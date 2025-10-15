@@ -15,7 +15,7 @@ import HeaderWithSidebar from '../../components/HeaderWithSidebar';
 import { useAuthContext } from 'components/AuthProvider';
 import { useTheme } from 'components/ThemeContext';
 import { supabase } from 'lib/supabase';
-import { db, Report } from 'lib/database';
+import { useReports } from '@kiyoko-org/dispatch-lib';
 import Splash from 'components/ui/Splash';
 
 type Profile = {
@@ -26,11 +26,14 @@ export default function Home() {
   const router = useRouter();
   const { session, signOut } = useAuthContext();
   const { colors, selectedColorTheme, setSelectedColorTheme, isDark } = useTheme();
+  const { reports, fetchReports } = useReports();
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<Profile>();
-  const [recentReports, setRecentReports] = useState<Report[]>([]);
   const [reportsLoading, setReportsLoading] = useState(false);
   const [reportCount, setReportCount] = useState<number | null>(null);
+
+  // Get recent reports from the hook
+  const recentReports = reports.slice(0, 5);
 
   // Get current theme colors
   const getCurrentColors = () => {
@@ -84,23 +87,20 @@ export default function Home() {
 
     try {
       setReportsLoading(true);
-      const result = await db.reports.getByReporterId(session.user.id);
+      const result = await fetchReports?.();
 
-      if (result.error) {
+      if (result?.error) {
         console.error('Error fetching recent reports:', result.error);
         return;
       }
 
-      // Get the 5 most recent reports
-      const recentReports = result.data?.slice(0, 5) || [];
-      setRecentReports(recentReports);
-      setReportCount(result.data?.length ?? 0);
+      setReportCount(reports.length);
     } catch (error) {
       console.error('Error fetching recent reports:', error);
     } finally {
       setReportsLoading(false);
     }
-  }, [session?.user?.id]);
+  }, [session?.user?.id, fetchReports, reports.length]);
 
   useEffect(() => {
     if (session?.user?.id) {

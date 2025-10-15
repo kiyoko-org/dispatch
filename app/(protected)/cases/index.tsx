@@ -5,53 +5,51 @@ import { useCallback, useEffect, useState } from 'react';
 import HeaderWithSidebar from '../../../components/HeaderWithSidebar';
 import { useAuthContext } from 'components/AuthProvider';
 import { useTheme } from 'components/ThemeContext';
-import { db, Report } from 'lib/database';
+import { useReports } from '@kiyoko-org/dispatch-lib';
 
 export default function MyReports() {
   const router = useRouter();
   const { session } = useAuthContext();
   const { colors, isDark } = useTheme();
-  const [reports, setReports] = useState<Report[]>([]);
+  const { reports, fetchReports } = useReports();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Function to fetch reports
-  const fetchReports = useCallback(async () => {
+  const handleFetchReports = useCallback(async () => {
     if (!session?.user?.id) return;
 
     try {
       setLoading(true);
       setError(null);
-      const result = await db.reports.getByReporterId(session.user.id);
+      const result = await fetchReports?.();
 
-      if (result.error) {
+      if (result?.error) {
         console.error('Error fetching reports:', result.error);
         setError('Failed to load reports');
         return;
       }
-
-      setReports(result.data || []);
     } catch (err) {
       console.error('Error fetching reports:', err);
       setError('Failed to load reports');
     } finally {
       setLoading(false);
     }
-  }, [session?.user?.id]);
+  }, [session?.user?.id, fetchReports]);
 
   useEffect(() => {
     if (session?.user?.id) {
-      fetchReports();
+      handleFetchReports();
     }
-  }, [session?.user?.id, fetchReports]);
+  }, [session?.user?.id, handleFetchReports]);
 
   // Refresh reports when screen comes into focus
   useFocusEffect(
     useCallback(() => {
       if (session?.user?.id) {
-        fetchReports();
+        handleFetchReports();
       }
-    }, [session?.user?.id, fetchReports])
+    }, [session?.user?.id, handleFetchReports])
   );
 
   // Utility function to format timestamps as "time ago"

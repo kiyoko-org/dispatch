@@ -17,7 +17,9 @@ import { useRouter } from 'expo-router';
 import { useTheme } from './ThemeContext';
 import { useAuthContext } from './AuthProvider';
 import { supabase } from 'lib/supabase';
-import { Report } from 'lib/database';
+import type { Database } from '@kiyoko-org/dispatch-lib';
+
+type Report = Database['public']['Tables']['reports']['Row'];
 
 interface HeaderWithSidebarProps {
   title: string;
