@@ -9,6 +9,7 @@ type AuthState = {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
+  isLoggingOut: boolean;
 };
 
 type AuthContextType = AuthState & {
@@ -22,6 +23,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user: null,
     session: null,
     isLoading: true,
+    isLoggingOut: false,
   });
 
   const router = useRouter();
@@ -50,6 +52,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             user: session?.user ?? null,
             session,
             isLoading: false,
+            isLoggingOut: false,
           });
         }
       } catch (error) {
@@ -59,6 +62,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             user: null,
             session: null,
             isLoading: false,
+            isLoggingOut: false,
           });
         }
       }
@@ -76,6 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           user: session?.user ?? null,
           session,
           isLoading: false,
+          isLoggingOut: false,
         });
       }
     });
@@ -142,10 +147,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
+      // Set loading state
+      setAuthState(prev => ({ ...prev, isLoggingOut: true }));
+      
+      // Create a timeout promise
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Logout timeout')), 10000); // 10 second timeout
+      });
+      
+      // Race between logout and timeout
+      await Promise.race([
+        supabase.auth.signOut(),
+        timeoutPromise
+      ]);
+      
       router.replace('/auth/login');
     } catch (error) {
       console.error('Error signing out:', error);
+      // Reset loading state on error
+      setAuthState(prev => ({ ...prev, isLoggingOut: false }));
     }
   };
 

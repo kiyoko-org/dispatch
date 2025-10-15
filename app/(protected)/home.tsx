@@ -17,6 +17,7 @@ import { useTheme } from 'components/ThemeContext';
 import { supabase } from 'lib/supabase';
 import { useReports } from '@kiyoko-org/dispatch-lib';
 import Splash from 'components/ui/Splash';
+import { LogoutOverlay } from 'components/LogoutOverlay';
 
 type Profile = {
   first_name: string;
@@ -24,7 +25,7 @@ type Profile = {
 
 export default function Home() {
   const router = useRouter();
-  const { session, signOut } = useAuthContext();
+  const { session, signOut, isLoggingOut } = useAuthContext();
   const { colors, selectedColorTheme, setSelectedColorTheme, isDark } = useTheme();
   const { reports, fetchReports } = useReports();
   const [loading, setLoading] = useState(false);
@@ -564,6 +565,9 @@ export default function Home() {
         {/* Bottom Spacing */}
         <View style={{ height: 32 }} />
       </ScrollView>
+      
+      {/* Logout Overlay */}
+      <LogoutOverlay visible={isLoggingOut} />
     </View>
   );
 }

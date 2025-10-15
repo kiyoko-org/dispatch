@@ -28,6 +28,7 @@ import { useAuthContext } from 'components/AuthProvider';
 import { useTheme } from 'components/ThemeContext';
 import HeaderWithSidebar from 'components/HeaderWithSidebar';
 import { supabase } from 'lib/supabase';
+import { LogoutOverlay } from 'components/LogoutOverlay';
 
 type Profile = {
   id: string;
@@ -56,7 +57,7 @@ type MenuItem = {
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { session, signOut } = useAuthContext();
+  const { session, signOut, isLoggingOut } = useAuthContext();
   const { colors, isDark, selectedColorTheme, themeMode, setSelectedColorTheme, setThemeMode } = useTheme();
 
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -375,6 +376,9 @@ export default function ProfilePage() {
         {/* Bottom Spacing */}
         <View className="h-8" />
       </ScrollView>
+      
+      {/* Logout Overlay */}
+      <LogoutOverlay visible={isLoggingOut} />
     </View>
   );
 }
