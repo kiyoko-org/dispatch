@@ -5,16 +5,15 @@ import HeaderWithSidebar from "components/HeaderWithSidebar"
 import { useTheme } from "components/ThemeContext"
 import { useUserData } from "contexts/UserDataContext"
 
-type CustomGroup = {
-  id: string;
-  name: string;
-  hotlineIds: string[];
-};
-
 export default function HotlinesPage() {
   const { colors, isDark } = useTheme();
-  const { hotlines, deleteHotline: deleteHotlineFromContext } = useUserData();
-  const [customGroups, setCustomGroups] = useState<CustomGroup[]>([]);
+  const { 
+    hotlines, 
+    hotlineGroups,
+    deleteHotline: deleteHotlineFromContext,
+    addHotlineGroup,
+    deleteHotlineGroup: deleteHotlineGroupFromContext
+  } = useUserData();
   const [selectedHotlines, setSelectedHotlines] = useState<Set<string>>(new Set());
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
@@ -39,7 +38,7 @@ export default function HotlinesPage() {
     setSelectedHotlines(new Set());
   };
 
-  const handleCreateGroup = () => {
+  const handleCreateGroup = async () => {
     if (!newGroupName.trim()) {
       Alert.alert("Error", "Please enter a group name");
       return;
@@ -49,18 +48,20 @@ export default function HotlinesPage() {
       return;
     }
 
-    const newGroup: CustomGroup = {
-      id: Date.now().toString(),
+    const success = await addHotlineGroup({
       name: newGroupName,
       hotlineIds: Array.from(selectedHotlines),
-    };
+    });
 
-    setCustomGroups([...customGroups, newGroup]);
-    setNewGroupName("");
-    setSelectedHotlines(new Set());
-    setShowCreateGroupModal(false);
-    setIsSelectionMode(false);
-    Alert.alert("Success", `Group "${newGroupName}" created with ${selectedHotlines.size} hotline(s)`);
+    if (success) {
+      setNewGroupName("");
+      setSelectedHotlines(new Set());
+      setShowCreateGroupModal(false);
+      setIsSelectionMode(false);
+      Alert.alert("Success", `Group "${newGroupName}" created with ${selectedHotlines.size} hotline(s)`);
+    } else {
+      Alert.alert("Error", "Failed to create group");
+    }
   };
 
   const deleteGroup = (groupId: string) => {
@@ -72,8 +73,8 @@ export default function HotlinesPage() {
         {
           text: "Delete",
           style: "destructive",
-          onPress: () => {
-            setCustomGroups(customGroups.filter(g => g.id !== groupId));
+          onPress: async () => {
+            await deleteHotlineGroupFromContext(groupId);
           },
         },
       ]
@@ -101,11 +102,7 @@ export default function HotlinesPage() {
           style: "destructive",
           onPress: async () => {
             await deleteHotlineFromContext(hotlineId);
-            // Also remove from any groups
-            setCustomGroups(customGroups.map(group => ({
-              ...group,
-              hotlineIds: group.hotlineIds.filter(id => id !== hotlineId),
-            })));
+            // Note: Groups with deleted hotlines will just not show them
           },
         },
       ]
@@ -201,13 +198,13 @@ export default function HotlinesPage() {
         )}
 
         {/* Custom Groups */}
-        {customGroups.length > 0 && (
+        {hotlineGroups.length > 0 && (
           <View className="px-6 py-4">
             <Text className="text-sm font-semibold uppercase tracking-wide mb-4" style={{ color: colors.textSecondary }}>
               My Groups
             </Text>
 
-            {customGroups.map((group) => (
+            {hotlineGroups.map((group) => (
               <View
                 key={group.id}
                 className="mb-3 rounded-2xl overflow-hidden"

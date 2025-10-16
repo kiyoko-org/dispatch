@@ -6,6 +6,7 @@ const QUICK_CONTACTS_KEY = '@dispatch/quick_contacts';
 const COMMUNITY_CONTACTS_KEY = '@dispatch/community_contacts';
 const EMERGENCY_CONTACTS_KEY = '@dispatch/emergency_contacts';
 const HOTLINES_KEY = 'hotlines';
+const HOTLINE_GROUPS_KEY = '@dispatch/hotline_groups';
 const LAST_SYNC_KEY = '@dispatch/last_sync';
 
 export interface Hotline {
@@ -16,6 +17,12 @@ export interface Hotline {
   description?: string;
 }
 
+export interface HotlineGroup {
+  id: string;
+  name: string;
+  hotlineIds: string[];
+}
+
 export interface UserData {
   contacts: {
     quick: EmergencyContact[];
@@ -23,6 +30,7 @@ export interface UserData {
     emergency: EmergencyContact[];
   };
   hotlines: Hotline[];
+  hotlineGroups: HotlineGroup[];
   lastModified: string;
 }
 
@@ -36,11 +44,12 @@ export class UserDataService {
    */
   static async getLocalData(): Promise<UserData> {
     try {
-      const [quickContacts, communityContacts, emergencyContacts, hotlines] = await Promise.all([
+      const [quickContacts, communityContacts, emergencyContacts, hotlines, hotlineGroups] = await Promise.all([
         AsyncStorage.getItem(QUICK_CONTACTS_KEY),
         AsyncStorage.getItem(COMMUNITY_CONTACTS_KEY),
         AsyncStorage.getItem(EMERGENCY_CONTACTS_KEY),
         AsyncStorage.getItem(HOTLINES_KEY),
+        AsyncStorage.getItem(HOTLINE_GROUPS_KEY),
       ]);
 
       return {
@@ -50,6 +59,7 @@ export class UserDataService {
           emergency: emergencyContacts ? JSON.parse(emergencyContacts) : [],
         },
         hotlines: hotlines ? JSON.parse(hotlines) : [],
+        hotlineGroups: hotlineGroups ? JSON.parse(hotlineGroups) : [],
         lastModified: new Date().toISOString(),
       };
     } catch (error) {
@@ -57,6 +67,7 @@ export class UserDataService {
       return {
         contacts: { quick: [], community: [], emergency: [] },
         hotlines: [],
+        hotlineGroups: [],
         lastModified: new Date().toISOString(),
       };
     }
@@ -72,6 +83,7 @@ export class UserDataService {
         AsyncStorage.setItem(COMMUNITY_CONTACTS_KEY, JSON.stringify(data.contacts.community)),
         AsyncStorage.setItem(EMERGENCY_CONTACTS_KEY, JSON.stringify(data.contacts.emergency)),
         AsyncStorage.setItem(HOTLINES_KEY, JSON.stringify(data.hotlines)),
+        AsyncStorage.setItem(HOTLINE_GROUPS_KEY, JSON.stringify(data.hotlineGroups || [])),
       ]);
       return true;
     } catch (error) {
