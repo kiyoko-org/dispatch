@@ -95,13 +95,15 @@ export default function Home() {
         return;
       }
 
-      setReportCount(reports.length);
+      // Filter reports to only include those reported by the current user
+      const userReports = reports.filter(report => report.reporter_id === session?.user?.id);
+      setReportCount(userReports.length);
     } catch (error) {
       console.error('Error fetching recent reports:', error);
     } finally {
       setReportsLoading(false);
     }
-  }, [session?.user?.id, fetchReports, reports.length]);
+  }, [session?.user?.id, fetchReports, reports]);
 
   useEffect(() => {
     if (session?.user?.id) {
