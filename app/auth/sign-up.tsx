@@ -32,8 +32,6 @@ export default function RootLayout() {
 	const [loading, setLoading] = useState(false);
 	const [email, setEmail] = useState('');
 	const [password, setPassword] = useState('');
-	const [phoneNumber, setPhoneNumber] = useState('');
-	const [countryCode, setCountryCode] = useState('PH+63');
 	const [firstName, setFirstName] = useState('');
 	const [suffix, setSuffix] = useState('');
 	const [showSuffixDropdown, setShowSuffixDropdown] = useState(false);
@@ -77,8 +75,6 @@ export default function RootLayout() {
 					middle_name: middleName,
 					no_middle_name: noMiddleName,
 					last_name: lastName,
-					phone_number: phoneNumber,
-					country_code: countryCode,
 					user_type: userType,
 					role: "user",
           permanent_address_1: permanentAddress1,
@@ -103,6 +99,15 @@ export default function RootLayout() {
 	}
 
 	const suffixOptions: string[] = [];
+
+	// Validation function for step 1
+	const isStep1Valid = () => {
+		return firstName.trim() !== '' && 
+		       lastName.trim() !== '' && 
+		       userType !== '' &&
+		       email.trim() !== '' &&
+		       password.length >= 6;
+	};
 
 	const nextStep = () => {
 		if (currentStep < 3) {
@@ -346,39 +351,6 @@ export default function RootLayout() {
 									)}
 								</View>
 
-								<View className="mb-4">
-									<Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
-										Phone Number *
-									</Text>
-									<View className="flex-row gap-3">
-										<TouchableOpacity
-											className="rounded-xl px-4 py-4"
-											style={{
-												backgroundColor: colors.surfaceVariant,
-												borderWidth: 1,
-												borderColor: colors.border,
-											}}>
-											<Text className="text-base" style={{ color: colors.text }}>
-												{countryCode}
-											</Text>
-										</TouchableOpacity>
-
-										<TextInput
-											className="flex-1 rounded-xl px-4 py-4 text-base"
-											style={{
-												backgroundColor: colors.surfaceVariant,
-												borderWidth: 1,
-												borderColor: colors.border,
-												color: colors.text,
-											}}
-											placeholder="Enter your phone number"
-											value={phoneNumber}
-											onChangeText={setPhoneNumber}
-											placeholderTextColor={colors.textSecondary}
-											keyboardType="phone-pad"
-										/>
-									</View>
-								</View>
 
 								<View className="mb-4">
 									<Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
@@ -550,14 +522,21 @@ export default function RootLayout() {
 										secureTextEntry={true}
 										placeholderTextColor={colors.textSecondary}
 									/>
+									<Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
+										Password must be at least 6 characters long
+									</Text>
 								</View>
 							</View>
 
 							{/* Next Step Button */}
 							<TouchableOpacity
 								className="rounded-xl py-4"
-								style={{ backgroundColor: colors.primary }}
-								onPress={nextStep}>
+								style={{ 
+									backgroundColor: isStep1Valid() ? colors.primary : colors.border,
+									opacity: isStep1Valid() ? 1 : 0.5
+								}}
+								onPress={isStep1Valid() ? nextStep : undefined}
+								disabled={!isStep1Valid()}>
 								<Text className="text-center text-base font-semibold text-white">
 									NEXT STEP
 								</Text>
