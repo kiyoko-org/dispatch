@@ -3,6 +3,7 @@ import { initDispatchClient, type DispatchClient } from '@kiyoko-org/dispatch-li
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import type { Database } from '@kiyoko-org/dispatch-lib/database.types';
+import { supabase } from 'lib/supabase';
 
 type Category = Database["public"]["Tables"]["categories"]["Row"];
 
@@ -108,6 +109,25 @@ export function DispatchProvider({ children }: DispatchProviderProps) {
       fetchCategories();
     }
   }, [isInitialized, client, categories.length]);
+
+  // Listen for auth state changes and refetch categories on login
+  useEffect(() => {
+    if (!client) return;
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      // Refetch categories when user signs in
+      if (event === 'SIGNED_IN' && session) {
+        console.log('Auth state changed to SIGNED_IN, refetching categories');
+        fetchCategories();
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [client]);
 
   return (
     <DispatchContext.Provider value={{ 
