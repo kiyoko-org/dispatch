@@ -39,7 +39,7 @@ import * as Haptics from 'expo-haptics';
 import { emergencyCallService } from 'lib/services/emergency-calls';
 import * as Location from 'expo-location';
 import { useTheme } from 'components/ThemeContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useUserData } from 'contexts/UserDataContext';
 
 let ImmediatePhoneCallModule: any = null;
 try {
@@ -52,12 +52,17 @@ export default function EmergencyScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { colors, isDark } = useTheme();
+  const { 
+    quickContacts, 
+    emergencyContacts: savedEmergencyContacts,
+    addContact,
+    deleteContact,
+    addHotline 
+  } = useUserData();
   const [emergencyNumber, setEmergencyNumber] = useState('');
   const [emergencyProtocolActive, setEmergencyProtocolActive] = useState(false);
   const [pressedButtons, setPressedButtons] = useState<Set<string>>(new Set());
   const [isQuickContactsExpanded, setIsQuickContactsExpanded] = useState(false);
-  const [quickContacts, setQuickContacts] = useState<EmergencyContact[]>([]);
-  const [savedEmergencyContacts, setSavedEmergencyContacts] = useState<EmergencyContact[]>([]);
   const [isEmergencyContactsExpanded, setIsEmergencyContactsExpanded] = useState(false);
   const flashAnim = useRef(new Animated.Value(0)).current;
 
@@ -140,24 +145,7 @@ export default function EmergencyScreen() {
   }, [params.prefilledNumber]);
 
   // Load quick contacts when component mounts
-  const loadQuickContacts = useCallback(async () => {
-    const contacts = await ContactsService.getContacts('quick');
-    setQuickContacts(contacts);
-  }, []);
-
-  // Load saved emergency contacts when component mounts
-  const loadSavedEmergencyContacts = useCallback(async () => {
-    const contacts = await ContactsService.getContacts('emergency');
-    setSavedEmergencyContacts(contacts);
-  }, []);
-
-  // Refresh contacts when screen comes into focus
-  useFocusEffect(
-    useCallback(() => {
-      loadQuickContacts();
-      loadSavedEmergencyContacts();
-    }, [loadQuickContacts, loadSavedEmergencyContacts])
-  );
+  // Contacts are now managed by UserDataContext, no need to load manually
 
   // Hardware button detection
   useEffect(() => {
@@ -461,13 +449,8 @@ export default function EmergencyScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
-            const success = await ContactsService.deleteContact(contactId, contactType);
+            const success = await deleteContact(contactId, contactType);
             if (success) {
-              if (contactType === 'quick') {
-                loadQuickContacts(); // Refresh the quick contacts list
-              } else {
-                loadSavedEmergencyContacts(); // Refresh the emergency contacts list
-              }
               Alert.alert(
                 'Contact Deleted',
                 `${phoneNumber} has been removed from ${typeDisplayName}.`
@@ -513,28 +496,15 @@ export default function EmergencyScreen() {
     const results = await Promise.all(
       selectedCategoriesList.map(async (category) => {
         if (category === 'hotline') {
-          // Save to hotlines
-          try {
-            const hotlinesData = await AsyncStorage.getItem('hotlines');
-            const hotlines = hotlinesData ? JSON.parse(hotlinesData) : [];
-            
-            const newHotline = {
-              id: Date.now().toString(),
-              name: name || emergencyNumber.trim(),
-              number: emergencyNumber.trim(),
-              category: 'Emergency',
-              description: '',
-            };
-            
-            hotlines.push(newHotline);
-            await AsyncStorage.setItem('hotlines', JSON.stringify(hotlines));
-            return { category, success: true };
-          } catch (error) {
-            console.error('Error saving hotline:', error);
-            return { category, success: false };
-          }
+          const success = await addHotline({
+            name: name || emergencyNumber.trim(),
+            number: emergencyNumber.trim(),
+            category: 'Emergency',
+            description: '',
+          });
+          return { category, success };
         }
-        const success = await ContactsService.saveContact(emergencyNumber.trim(), category, name);
+        const success = await addContact(emergencyNumber.trim(), category, name);
         return { category, success };
       })
     );
@@ -556,17 +526,9 @@ export default function EmergencyScreen() {
         `${emergencyNumber}${name ? ` (${name})` : ''} has been saved to: ${savedToNames}.`
       );
 
-      // Refresh the appropriate contact lists
-      if (successfulSaves.some((r) => r.category === 'quick')) {
-        loadQuickContacts();
-      }
-      if (successfulSaves.some((r) => r.category === 'emergency')) {
-        loadSavedEmergencyContacts();
-      }
-
-      setEmergencyNumber(''); // Clear the input
-      setContactName(''); // Clear the name input
-      setSelectedCategories({ quick: false, emergency: false, hotline: false }); // Reset selections
+      setEmergencyNumber('');
+      setContactName('');
+      setSelectedCategories({ quick: false, emergency: false, hotline: false });
       setShowSaveModal(false);
     }
 

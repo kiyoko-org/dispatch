@@ -1,18 +1,9 @@
-import { useState, useEffect, useCallback } from "react"
+import { useState, useCallback } from "react"
 import { View, StatusBar, ScrollView, Text, TouchableOpacity, TextInput, Modal, Alert } from "react-native"
 import { Phone, Plus, Check, FolderPlus, Edit3, Trash2, ChevronDown, ChevronUp } from "lucide-react-native"
 import HeaderWithSidebar from "components/HeaderWithSidebar"
 import { useTheme } from "components/ThemeContext"
-import AsyncStorage from '@react-native-async-storage/async-storage'
-import { useFocusEffect } from 'expo-router'
-
-type Hotline = {
-  id: string;
-  name: string;
-  number: string;
-  category: string;
-  description?: string;
-};
+import { useUserData } from "contexts/UserDataContext"
 
 type CustomGroup = {
   id: string;
@@ -22,37 +13,13 @@ type CustomGroup = {
 
 export default function HotlinesPage() {
   const { colors, isDark } = useTheme();
-  const [hotlines, setHotlines] = useState<Hotline[]>([]);
+  const { hotlines, deleteHotline: deleteHotlineFromContext } = useUserData();
   const [customGroups, setCustomGroups] = useState<CustomGroup[]>([]);
   const [selectedHotlines, setSelectedHotlines] = useState<Set<string>>(new Set());
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
-
-  // Load hotlines from AsyncStorage
-  const loadHotlines = useCallback(async () => {
-    try {
-      const hotlinesData = await AsyncStorage.getItem('hotlines');
-      if (hotlinesData) {
-        const parsedHotlines = JSON.parse(hotlinesData);
-        setHotlines(parsedHotlines);
-      }
-    } catch (error) {
-      console.error('Error loading hotlines:', error);
-    }
-  }, []);
-
-  // Load hotlines when component mounts and when screen comes into focus
-  useEffect(() => {
-    loadHotlines();
-  }, [loadHotlines]);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadHotlines();
-    }, [loadHotlines])
-  );
 
   const toggleHotlineSelection = (id: string) => {
     const newSelected = new Set(selectedHotlines);
@@ -133,14 +100,7 @@ export default function HotlinesPage() {
           text: "Delete",
           style: "destructive",
           onPress: async () => {
-            const updatedHotlines = hotlines.filter(h => h.id !== hotlineId);
-            setHotlines(updatedHotlines);
-            // Save to AsyncStorage
-            try {
-              await AsyncStorage.setItem('hotlines', JSON.stringify(updatedHotlines));
-            } catch (error) {
-              console.error('Error saving hotlines:', error);
-            }
+            await deleteHotlineFromContext(hotlineId);
             // Also remove from any groups
             setCustomGroups(customGroups.map(group => ({
               ...group,
@@ -169,7 +129,7 @@ export default function HotlinesPage() {
         backgroundColor={colors.background} 
       />
 
-      <HeaderWithSidebar title="Emergency Hotlines" showBackButton={false} />
+      <HeaderWithSidebar title="Emergency Hotlines" showBackButton={false} showSyncIndicator />
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Action Buttons */}

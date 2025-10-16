@@ -17,6 +17,7 @@ import { useRouter } from 'expo-router';
 import { useTheme } from './ThemeContext';
 import { useAuthContext } from './AuthProvider';
 import { supabase } from 'lib/supabase';
+import { SyncIndicator } from './SyncIndicator';
 import type { Database } from '@kiyoko-org/dispatch-lib';
 
 type Report = Database['public']['Tables']['reports']['Row'];
@@ -37,6 +38,7 @@ interface HeaderWithSidebarProps {
   recentReports?: Report[];
   reportsLoading?: boolean;
   onRefreshReports?: () => void;
+  showSyncIndicator?: boolean;
 }
 
 export default function HeaderWithSidebar({
@@ -49,6 +51,7 @@ export default function HeaderWithSidebar({
   recentReports = [],
   reportsLoading = false,
   onRefreshReports,
+  showSyncIndicator = false,
 }: HeaderWithSidebarProps) {
   const router = useRouter();
   const { colors } = useTheme();
@@ -319,6 +322,13 @@ export default function HeaderWithSidebar({
               {title}
             </Text>
           </View>
+
+          {/* Sync Indicator */}
+          {showSyncIndicator && (
+            <View className="mr-2">
+              <SyncIndicator compact />
+            </View>
+          )}
 
           {/* Activity Bell Icon - Top Right */}
           <TouchableOpacity
