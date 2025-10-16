@@ -24,3 +24,5 @@ Follow these steps for development and building:
    - Run `bunx expo prebuild --clean` (only needed once, unless you need to regenerate native code).
 3. **Build for Android (Windows)**
    - Run `./scripts/build-android-on-windows.ps1` every time you build the project.
+  
+   - trigger
