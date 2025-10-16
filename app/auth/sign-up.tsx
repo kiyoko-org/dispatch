@@ -677,7 +677,24 @@ export default function RootLayout() {
                     }}
                     placeholder="Enter your email"
                     value={email}
-                    onChangeText={setEmail}
+                    onChangeText={(text) => {
+                      setEmail(text);
+                      // Validate email in real-time
+                      if (text.trim()) {
+                        const result = z.string().email().safeParse(text.trim());
+                        if (!result.success) {
+                          setValidationErrors((prev) => ({
+                            ...prev,
+                            email: 'Please enter a valid email address',
+                          }));
+                        } else {
+                          setValidationErrors((prev) => {
+                            const { email, ...rest } = prev;
+                            return rest;
+                          });
+                        }
+                      }
+                    }}
                     placeholderTextColor={colors.textSecondary}
                     keyboardType="email-address"
                     autoCapitalize="none"
