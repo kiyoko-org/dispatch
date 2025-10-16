@@ -100,10 +100,17 @@ export default function RootLayout() {
 
 	const suffixOptions: string[] = [];
 
+	// Validation function for name fields (3-20 characters)
+	const isNameValid = (name: string) => {
+		const trimmed = name.trim();
+		return trimmed.length >= 3 && trimmed.length <= 20;
+	};
+
 	// Validation function for step 1
 	const isStep1Valid = () => {
-		return firstName.trim() !== '' && 
-		       lastName.trim() !== '' && 
+		return isNameValid(firstName) && 
+		       isNameValid(lastName) && 
+		       (noMiddleName || middleName.trim() === '' || isNameValid(middleName)) &&
 		       userType !== '' &&
 		       email.trim() !== '' &&
 		       password.length >= 6;
@@ -237,7 +244,7 @@ export default function RootLayout() {
 										style={{
 											backgroundColor: colors.surfaceVariant,
 											borderWidth: 1,
-											borderColor: colors.border,
+											borderColor: firstName.trim() !== '' && !isNameValid(firstName) ? '#EF4444' : colors.border,
 											color: colors.text,
 										}}
 										value={firstName}
@@ -245,6 +252,16 @@ export default function RootLayout() {
 										placeholder="Enter your first name"
 										placeholderTextColor={colors.textSecondary}
 									/>
+									{firstName.trim() !== '' && !isNameValid(firstName) && (
+										<Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
+											First name must be 3-20 characters long
+										</Text>
+									)}
+									{firstName.trim() === '' && (
+										<Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
+											First name must be 3-20 characters long
+										</Text>
+									)}
 								</View>
 
 								<View className="mb-4">
@@ -256,7 +273,7 @@ export default function RootLayout() {
 										style={{
 											backgroundColor: colors.surfaceVariant,
 											borderWidth: 1,
-											borderColor: colors.border,
+											borderColor: middleName.trim() !== '' && !isNameValid(middleName) ? '#EF4444' : colors.border,
 											color: colors.text,
 											opacity: noMiddleName ? 0.5 : 1,
 										}}
@@ -266,6 +283,16 @@ export default function RootLayout() {
 										placeholderTextColor={colors.textSecondary}
 										editable={!noMiddleName}
 									/>
+									{middleName.trim() !== '' && !isNameValid(middleName) && !noMiddleName && (
+										<Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
+											Middle name must be 3-20 characters long
+										</Text>
+									)}
+									{!noMiddleName && middleName.trim() === '' && (
+										<Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
+											Middle name must be 3-20 characters long (optional)
+										</Text>
+									)}
 									<TouchableOpacity
 										className="mt-2 flex-row items-center"
 										onPress={() => {
@@ -297,7 +324,7 @@ export default function RootLayout() {
 											style={{
 												backgroundColor: colors.surfaceVariant,
 												borderWidth: 1,
-												borderColor: colors.border,
+												borderColor: lastName.trim() !== '' && !isNameValid(lastName) ? '#EF4444' : colors.border,
 												color: colors.text,
 											}}
 											value={lastName}
@@ -321,6 +348,17 @@ export default function RootLayout() {
 											</Text>
 										</TouchableOpacity>
 									</View>
+
+									{lastName.trim() !== '' && !isNameValid(lastName) && (
+										<Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
+											Last name must be 3-20 characters long
+										</Text>
+									)}
+									{lastName.trim() === '' && (
+										<Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
+											Last name must be 3-20 characters long
+										</Text>
+									)}
 
 									{/* Suffix Dropdown Options */}
 									{showSuffixDropdown && (
