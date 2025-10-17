@@ -83,6 +83,18 @@ const signUpSchema = z
       message: 'All temporary address fields are required for students and workers',
       path: ['temporaryStreet'],
     }
+  )
+  .refine(
+    (data) => {
+      if (!data.noMiddleName) {
+        return data.middleName.trim().length >= 3 && data.middleName.trim().length <= 20;
+      }
+      return true;
+    },
+    {
+      message: 'Middle name is required',
+      path: ['middleName'],
+    }
   );
 
 export default function RootLayout() {
@@ -410,7 +422,7 @@ export default function RootLayout() {
 
                 <View className="mb-4">
                   <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
-                    Middle Name
+                    Middle Name {!noMiddleName && '*'}
                   </Text>
                   <TextInput
                     className="rounded-xl px-4 py-4 text-base"
