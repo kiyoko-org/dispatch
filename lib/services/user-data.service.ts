@@ -44,13 +44,14 @@ export class UserDataService {
    */
   static async getLocalData(): Promise<UserData> {
     try {
-      const [quickContacts, communityContacts, emergencyContacts, hotlines, hotlineGroups] = await Promise.all([
-        AsyncStorage.getItem(QUICK_CONTACTS_KEY),
-        AsyncStorage.getItem(COMMUNITY_CONTACTS_KEY),
-        AsyncStorage.getItem(EMERGENCY_CONTACTS_KEY),
-        AsyncStorage.getItem(HOTLINES_KEY),
-        AsyncStorage.getItem(HOTLINE_GROUPS_KEY),
-      ]);
+      const [quickContacts, communityContacts, emergencyContacts, hotlines, hotlineGroups] =
+        await Promise.all([
+          AsyncStorage.getItem(QUICK_CONTACTS_KEY),
+          AsyncStorage.getItem(COMMUNITY_CONTACTS_KEY),
+          AsyncStorage.getItem(EMERGENCY_CONTACTS_KEY),
+          AsyncStorage.getItem(HOTLINES_KEY),
+          AsyncStorage.getItem(HOTLINE_GROUPS_KEY),
+        ]);
 
       return {
         contacts: {
@@ -97,7 +98,9 @@ export class UserDataService {
    */
   static async getRemoteData(): Promise<UserData | null> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         console.log('No user logged in, skipping remote fetch');
         return null;
@@ -130,7 +133,9 @@ export class UserDataService {
    */
   static async saveRemoteData(data: UserData): Promise<boolean> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         console.log('No user logged in, skipping remote save');
         return false;
@@ -138,12 +143,10 @@ export class UserDataService {
 
       data.lastModified = new Date().toISOString();
 
-      const { error } = await supabase
-        .from('user_data')
-        .upsert({
-          id: user.id,
-          settings_json: data,
-        });
+      const { error } = await supabase.from('user_data').upsert({
+        id: user.id,
+        settings_json: data,
+      });
 
       if (error) {
         console.error('Error saving remote data:', error);
@@ -165,7 +168,7 @@ export class UserDataService {
     try {
       const localData = await this.getLocalData();
       const success = await this.saveRemoteData(localData);
-      
+
       if (!success) {
         return { success: false, error: 'Failed to save to remote' };
       }
@@ -173,9 +176,9 @@ export class UserDataService {
       return { success: true };
     } catch (error) {
       console.error('Error syncing to remote:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -186,14 +189,14 @@ export class UserDataService {
   static async syncFromRemote(): Promise<{ success: boolean; error?: string }> {
     try {
       const remoteData = await this.getRemoteData();
-      
+
       if (!remoteData) {
         // No remote data, upload local data
         return await this.syncToRemote();
       }
 
       const success = await this.saveLocalData(remoteData);
-      
+
       if (!success) {
         return { success: false, error: 'Failed to save local data' };
       }
@@ -202,9 +205,9 @@ export class UserDataService {
       return { success: true };
     } catch (error) {
       console.error('Error syncing from remote:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -214,21 +217,21 @@ export class UserDataService {
    */
   private static hasContent(data: UserData | null): boolean {
     if (!data) return false;
-    
-    const hasContacts = 
+
+    const hasContacts =
       data.contacts?.quick?.length > 0 ||
       data.contacts?.community?.length > 0 ||
       data.contacts?.emergency?.length > 0;
-    
+
     const hasHotlines = data.hotlines?.length > 0;
-    
+
     return hasContacts || hasHotlines;
   }
 
   /**
    * Two-way sync with conflict resolution (server wins)
    */
-  static async sync(): Promise<{ success: boolean; error?: string }> {
+  static async sync(): Promise<{ success: boolean; error?: string; downloaded?: boolean }> {
     if (this.syncInProgress) {
       console.log('Sync already in progress, skipping');
       return { success: false, error: 'Sync already in progress' };
@@ -237,7 +240,9 @@ export class UserDataService {
     this.syncInProgress = true;
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         console.log('No user logged in, skipping sync');
         this.syncInProgress = false;
@@ -258,13 +263,13 @@ export class UserDataService {
           // Upload local data if it has content
           const result = await this.saveRemoteData(localData);
           this.syncInProgress = false;
-          return result 
-            ? { success: true } 
+          return result
+            ? { success: true, downloaded: false }
             : { success: false, error: 'Failed to upload initial data' };
         } else {
           // Both empty, nothing to sync
           this.syncInProgress = false;
-          return { success: true };
+          return { success: true, downloaded: false };
         }
       }
 
@@ -273,7 +278,7 @@ export class UserDataService {
         await this.saveLocalData(remoteData);
         await AsyncStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
         this.syncInProgress = false;
-        return { success: true };
+        return { success: true, downloaded: true };
       }
 
       // Both have content, compare timestamps - server wins in case of conflict
@@ -283,20 +288,25 @@ export class UserDataService {
       if (remoteTime > localTime) {
         // Remote is newer, download
         await this.saveLocalData(remoteData);
+        await AsyncStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
+        this.syncInProgress = false;
+        return { success: true, downloaded: true };
       } else if (localTime > remoteTime) {
         // Local is newer, upload
         await this.saveRemoteData(localData);
+        this.syncInProgress = false;
+        return { success: true, downloaded: false };
       }
 
       await AsyncStorage.setItem(LAST_SYNC_KEY, new Date().toISOString());
       this.syncInProgress = false;
-      return { success: true };
+      return { success: true, downloaded: false };
     } catch (error) {
       console.error('Error during sync:', error);
       this.syncInProgress = false;
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
