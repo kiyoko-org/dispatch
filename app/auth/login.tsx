@@ -46,6 +46,10 @@ export default function Login() {
           'Already Logged In',
           'Your account is currently logged in on another device. Please log out from that device first before signing in here.'
         );
+      } else if (error.message.includes('Invalid login credentials')) {
+        Alert.alert('Invalid Credentials', 'The email or password you entered is incorrect.');
+      } else {
+        Alert.alert('Error', error.message);
       }
       return;
     }
