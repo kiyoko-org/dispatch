@@ -11,6 +11,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState, useRef } from 'react';
 import MapView, { Marker, Heatmap, PROVIDER_GOOGLE, Circle, Region } from 'react-native-maps';
+import { useReports } from '@kiyoko-org/dispatch-lib';
 import HeaderWithSidebar from 'components/HeaderWithSidebar';
 import { useTheme } from 'components/ThemeContext';
 import Papa from 'papaparse';
@@ -62,15 +63,23 @@ export default function MapPage() {
 	const [selectedCluster, setSelectedCluster] = useState<CrimeData[] | null>(null);
 	const [showHeatmap, setShowHeatmap] = useState(true);
 	const [showMarkers, setShowMarkers] = useState(true);
+	const [showReports, setShowReports] = useState(true);
 	const [filterCategory, setFilterCategory] = useState<CrimeCategory | 'all'>('all');
 	const [showFilters, setShowFilters] = useState(false);
 	const [mapRegion, setMapRegion] = useState<Region | null>(null);
 	const [activeClusterTab, setActiveClusterTab] = useState<'all' | CrimeCategory>('all');
 	const mapRef = useRef<MapView>(null);
 
+	// Reports integration
+	const { reports, fetchReports } = useReports();
+
 	useEffect(() => {
 		loadCrimeData();
 	}, []);
+
+	useEffect(() => {
+		fetchReports?.();
+	}, [fetchReports]);
 
 	const loadCrimeData = async () => {
 		try {
@@ -334,8 +343,27 @@ export default function MapPage() {
 										<Text style={styles.clusterText}>{total}</Text>
 									</View>
 								</Marker>
-							);
-						})}
+								);
+								})}
+
+					{/* Report Markers */}
+					{showReports && reports.filter(report => report.latitude && report.longitude).map((report) => (
+						<Marker
+							key={`report-${report.id}`}
+							coordinate={{
+								latitude: report.latitude,
+								longitude: report.longitude,
+							}}
+							onPress={() => setSelectedCrime(null)} // Clear crime selection when selecting report
+							pinColor="#FF6B35" // Orange color for reports
+						>
+							<View style={styles.reportMarkerContainer}>
+								<View style={[styles.reportMarkerInner, { backgroundColor: '#FF6B35' }]}>
+									<AlertTriangle size={16} color="#FFF" />
+								</View>
+							</View>
+						</Marker>
+					))}
 				</MapView>
 				)}
 
@@ -491,8 +519,29 @@ export default function MapPage() {
 										/>
 									</View>
 								</TouchableOpacity>
-							</View>
-						</ScrollView>
+
+								  <TouchableOpacity
+								className="flex-row items-center justify-between rounded-lg p-3"
+								style={{ backgroundColor: colors.background }}
+								onPress={() => setShowReports(!showReports)}
+							>
+								<Text className="font-medium" style={{ color: colors.text }}>
+									Show Reports
+								</Text>
+								<View
+									className="h-6 w-11 rounded-full p-1"
+									style={{ backgroundColor: showReports ? '#FF6B35' : colors.border }}
+								>
+									<View
+										className="h-4 w-4 rounded-full bg-white"
+										style={{
+											transform: [{ translateX: showReports ? 20 : 0 }]
+										}}
+									/>
+								</View>
+							</TouchableOpacity>
+						</View>
+					</ScrollView>
 					</View>
 				)}
 
@@ -741,6 +790,25 @@ const styles = StyleSheet.create({
 	clusterText: {
 		color: '#FFF',
 		fontWeight: '700',
+	},
+	reportMarkerContainer: {
+		width: 32,
+		height: 32,
+		borderRadius: 16,
+		alignItems: 'center',
+		justifyContent: 'center',
+		shadowColor: '#000',
+		shadowOffset: { width: 0, height: 2 },
+		shadowOpacity: 0.3,
+		shadowRadius: 4,
+		elevation: 5,
+	},
+	reportMarkerInner: {
+		width: 28,
+		height: 28,
+		borderRadius: 14,
+		alignItems: 'center',
+		justifyContent: 'center',
 	},
 });
 

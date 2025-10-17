@@ -99,16 +99,19 @@ export default function MyReports() {
   // Filter and sort reports
   const filteredAndSortedReports = useMemo(() => {
     let filtered = reports.filter(report => {
+      // User filter - only show reports reported by the current user
+      const matchesUser = report.reporter_id === session?.user?.id;
+
       // Search filter
-      const matchesSearch = !searchQuery || 
+      const matchesSearch = !searchQuery ||
         report.incident_title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         report.what_happened?.toLowerCase().includes(searchQuery.toLowerCase());
-      
+
       // Category filter - check if report's category_id matches selected category
-      const matchesCategory = selectedCategory === 'all' || 
+      const matchesCategory = selectedCategory === 'all' ||
         report.category_id?.toString() === selectedCategory;
-      
-      return matchesSearch && matchesCategory;
+
+      return matchesUser && matchesSearch && matchesCategory;
     });
 
     // Sort reports
@@ -136,7 +139,7 @@ export default function MyReports() {
     });
 
     return filtered;
-  }, [reports, searchQuery, selectedCategory, sortBy, sortOrder, categories]);
+  }, [reports, searchQuery, selectedCategory, sortBy, sortOrder, categories, session?.user?.id]);
 
   // Utility function to get appropriate icon based on incident category
   const getActivityIcon = (categoryId: number | null) => {

@@ -1,13 +1,14 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { EmergencyContact, ContactStorageType } from '../types';
+import { UserDataService } from './user-data.service';
 
-const QUICK_CONTACTS_KEY = '@dispatch/quick_contacts';
-const COMMUNITY_CONTACTS_KEY = '@dispatch/community_contacts';
-const EMERGENCY_CONTACTS_KEY = '@dispatch/emergency_contacts';
-
+/**
+ * @deprecated Use UserDataContext (useUserData hook) instead for better state management and sync
+ * This service is kept for backward compatibility
+ */
 export class ContactsService {
   /**
    * Save an emergency contact
+   * @deprecated Use useUserData().addContact() instead
    */
   static async saveContact(phoneNumber: string, type: ContactStorageType, name?: string): Promise<boolean> {
     try {
@@ -19,11 +20,8 @@ export class ContactsService {
         createdAt: new Date().toISOString(),
       };
 
-      const storageKey = 
-        type === 'quick' ? QUICK_CONTACTS_KEY : 
-        type === 'community' ? COMMUNITY_CONTACTS_KEY : 
-        EMERGENCY_CONTACTS_KEY;
-      const existingContacts = await this.getContacts(type);
+      const currentData = await UserDataService.getLocalData();
+      const existingContacts = currentData.contacts[type];
       
       // Check if contact already exists
       const contactExists = existingContacts.some(c => c.phoneNumber === phoneNumber);
@@ -31,8 +29,13 @@ export class ContactsService {
         return false; // Contact already exists
       }
 
-      const updatedContacts = [...existingContacts, contact];
-      await AsyncStorage.setItem(storageKey, JSON.stringify(updatedContacts));
+      currentData.contacts[type] = [...existingContacts, contact];
+      await UserDataService.saveLocalData(currentData);
+      
+      // Trigger sync in background
+      UserDataService.syncToRemote().catch(err => 
+        console.error('Background sync failed:', err)
+      );
       
       return true;
     } catch (error) {
@@ -43,20 +46,12 @@ export class ContactsService {
 
   /**
    * Get contacts by type
+   * @deprecated Use useUserData() context values instead
    */
   static async getContacts(type: ContactStorageType): Promise<EmergencyContact[]> {
     try {
-      const storageKey = 
-        type === 'quick' ? QUICK_CONTACTS_KEY : 
-        type === 'community' ? COMMUNITY_CONTACTS_KEY : 
-        EMERGENCY_CONTACTS_KEY;
-      const contactsJson = await AsyncStorage.getItem(storageKey);
-      
-      if (!contactsJson) {
-        return [];
-      }
-
-      return JSON.parse(contactsJson);
+      const data = await UserDataService.getLocalData();
+      return data.contacts[type];
     } catch (error) {
       console.error('Error getting contacts:', error);
       return [];
@@ -65,17 +60,19 @@ export class ContactsService {
 
   /**
    * Delete a contact
+   * @deprecated Use useUserData().deleteContact() instead
    */
   static async deleteContact(contactId: string, type: ContactStorageType): Promise<boolean> {
     try {
-      const existingContacts = await this.getContacts(type);
-      const updatedContacts = existingContacts.filter(c => c.id !== contactId);
+      const currentData = await UserDataService.getLocalData();
+      currentData.contacts[type] = currentData.contacts[type].filter(c => c.id !== contactId);
       
-      const storageKey = 
-        type === 'quick' ? QUICK_CONTACTS_KEY : 
-        type === 'community' ? COMMUNITY_CONTACTS_KEY : 
-        EMERGENCY_CONTACTS_KEY;
-      await AsyncStorage.setItem(storageKey, JSON.stringify(updatedContacts));
+      await UserDataService.saveLocalData(currentData);
+      
+      // Trigger sync in background
+      UserDataService.syncToRemote().catch(err => 
+        console.error('Background sync failed:', err)
+      );
       
       return true;
     } catch (error) {
@@ -86,14 +83,20 @@ export class ContactsService {
 
   /**
    * Clear all contacts of a specific type
+   * @deprecated Use useUserData().clearContacts() instead
    */
   static async clearContacts(type: ContactStorageType): Promise<boolean> {
     try {
-      const storageKey = 
-        type === 'quick' ? QUICK_CONTACTS_KEY : 
-        type === 'community' ? COMMUNITY_CONTACTS_KEY : 
-        EMERGENCY_CONTACTS_KEY;
-      await AsyncStorage.removeItem(storageKey);
+      const currentData = await UserDataService.getLocalData();
+      currentData.contacts[type] = [];
+      
+      await UserDataService.saveLocalData(currentData);
+      
+      // Trigger sync in background
+      UserDataService.syncToRemote().catch(err => 
+        console.error('Background sync failed:', err)
+      );
+      
       return true;
     } catch (error) {
       console.error('Error clearing contacts:', error);
