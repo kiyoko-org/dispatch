@@ -20,6 +20,7 @@ import { verifyNationalIdQR } from 'lib/id';
 import { useTheme } from 'components/ThemeContext';
 import Dropdown from 'components/Dropdown';
 import { z } from 'zod';
+import { useBarangays } from '@kiyoko-org/dispatch-lib';
 
 const signUpSchema = z
   .object({
@@ -87,6 +88,7 @@ const signUpSchema = z
 export default function RootLayout() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const { barangays: barangaysList, loading: barangaysLoading } = useBarangays();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
@@ -98,13 +100,13 @@ export default function RootLayout() {
   const [noMiddleName, setNoMiddleName] = useState(false);
   const [lastName, setLastName] = useState('');
   const [userType, setUserType] = useState<'resident' | 'student' | 'work'>('resident');
-  
+
   // Permanent Address Fields
   const [permanentStreet, setPermanentStreet] = useState('');
   const [permanentBarangay, setPermanentBarangay] = useState('');
   const [permanentCity, setPermanentCity] = useState('Tuguegarao City');
   const [permanentProvince, setPermanentProvince] = useState('Cagayan');
-  
+
   // Temporary Address Fields
   const [temporaryStreet, setTemporaryStreet] = useState('');
   const [temporaryBarangay, setTemporaryBarangay] = useState('');
@@ -123,6 +125,8 @@ export default function RootLayout() {
   const provinces: string[] = [];
   const cities: Record<string, string[]> = {};
   const barangays: Record<string, string[]> = {};
+
+  const tuguegaraoBarangays = barangaysList.map((b) => b.name);
 
   // Camera + scanning state
   const [cameraModalVisible, setCameraModalVisible] = useState(false);
@@ -162,7 +166,7 @@ export default function RootLayout() {
     });
 
     // Simulate a brief loading delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
 
     setLoading(false);
     Alert.alert('Development Mode', 'Sign-up data logged. Proceeding without authentication.');
@@ -643,7 +647,7 @@ export default function RootLayout() {
                   <Text className="mb-2 text-sm font-semibold" style={{ color: colors.text }}>
                     Permanent Address *
                   </Text>
-                  
+
                   {/* Street */}
                   <TextInput
                     className="mb-3 rounded-xl px-4 py-4 text-base"
@@ -721,7 +725,9 @@ export default function RootLayout() {
                       borderColor: validationErrors.permanentProvince ? '#EF4444' : colors.border,
                       opacity: userType === 'resident' ? 0.7 : 1,
                     }}
-                    onPress={() => userType !== 'resident' && setShowPermanentProvinceDropdown(true)}
+                    onPress={() =>
+                      userType !== 'resident' && setShowPermanentProvinceDropdown(true)
+                    }
                     disabled={userType === 'resident'}>
                     <Text
                       style={{
@@ -1329,7 +1335,13 @@ export default function RootLayout() {
         isVisible={showPermanentBarangayDropdown}
         onClose={() => setShowPermanentBarangayDropdown(false)}
         onSelect={(item: string) => setPermanentBarangay(item)}
-        data={permanentCity ? barangays[permanentCity] || [] : []}
+        data={
+          permanentCity === 'Tuguegarao City'
+            ? tuguegaraoBarangays
+            : permanentCity
+              ? barangays[permanentCity] || []
+              : []
+        }
         keyExtractor={(item, index) => `${item}-${index}`}
         renderItem={({ item }) => (
           <View className="px-4 py-3">
@@ -1383,7 +1395,13 @@ export default function RootLayout() {
         isVisible={showTemporaryBarangayDropdown}
         onClose={() => setShowTemporaryBarangayDropdown(false)}
         onSelect={(item: string) => setTemporaryBarangay(item)}
-        data={temporaryCity ? barangays[temporaryCity] || [] : []}
+        data={
+          temporaryCity === 'Tuguegarao City'
+            ? tuguegaraoBarangays
+            : temporaryCity
+              ? barangays[temporaryCity] || []
+              : []
+        }
         keyExtractor={(item, index) => `${item}-${index}`}
         renderItem={({ item }) => (
           <View className="px-4 py-3">
