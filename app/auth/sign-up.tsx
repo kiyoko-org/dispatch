@@ -145,33 +145,6 @@ export default function RootLayout() {
   async function signUpWithEmail() {
     setLoading(true);
 
-    // DEVELOPMENT MODE: Skip authentication
-    console.log('Development Mode - Skipping authentication');
-    console.log('User Data:', {
-      email,
-      firstName,
-      suffix,
-      middleName,
-      noMiddleName,
-      lastName,
-      userType,
-      permanentStreet,
-      permanentBarangay,
-      permanentCity,
-      permanentProvince,
-      temporaryStreet,
-      temporaryBarangay,
-      temporaryCity,
-      temporaryProvince,
-    });
-
-    // Simulate a brief loading delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    setLoading(false);
-    Alert.alert('Development Mode', 'Sign-up data logged. Proceeding without authentication.');
-
-    /* PRODUCTION CODE - Uncomment when ready for production
     console.log('Redirect URL: ', createURL('/home'));
 
     const {
@@ -181,7 +154,6 @@ export default function RootLayout() {
       email: email,
       password: password,
       options: {
-        emailRedirectTo: createURL('/home'),
         data: {
           first_name: firstName,
           suffix: suffix,
@@ -209,7 +181,6 @@ export default function RootLayout() {
     if (!session) {
       Alert.alert('Please check your inbox for email verification!');
     }
-    */
   }
 
   const suffixOptions: string[] = [];
