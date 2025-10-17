@@ -1,22 +1,57 @@
-import { useState, useCallback } from "react"
-import { View, StatusBar, ScrollView, Text, TouchableOpacity, TextInput, Modal, Alert } from "react-native"
-import { Phone, Plus, Check, FolderPlus, Edit3, Trash2, ChevronDown, ChevronUp } from "lucide-react-native"
-import HeaderWithSidebar from "components/HeaderWithSidebar"
-import { useTheme } from "components/ThemeContext"
-import { useUserData } from "contexts/UserDataContext"
+import { useState, useCallback } from 'react';
+import {
+  View,
+  StatusBar,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  TextInput,
+  Modal,
+  Alert,
+} from 'react-native';
+import {
+  Phone,
+  Plus,
+  Check,
+  FolderPlus,
+  Edit3,
+  Trash2,
+  ChevronDown,
+  ChevronUp,
+} from 'lucide-react-native';
+import HeaderWithSidebar from 'components/HeaderWithSidebar';
+import { useTheme } from 'components/ThemeContext';
+import { useUserData } from 'contexts/UserDataContext';
+import { useHotlines } from '@kiyoko-org/dispatch-lib';
+
+type Hotline = {
+  id: string;
+  name: string;
+  number: string;
+  category: string;
+  description?: string;
+};
 
 export default function HotlinesPage() {
   const { colors, isDark } = useTheme();
-  const { 
-    hotlines, 
+  const {
     hotlineGroups,
-    deleteHotline: deleteHotlineFromContext,
     addHotlineGroup,
-    deleteHotlineGroup: deleteHotlineGroupFromContext
+    deleteHotlineGroup: deleteHotlineGroupFromContext,
   } = useUserData();
+
+  const { hotlines: serverHotlines, deleteHotline: deleteHotlineFromServer } = useHotlines();
+
+  const hotlines: Hotline[] = serverHotlines.map((h) => ({
+    id: h.id.toString(),
+    name: h.name,
+    number: h.phone_number,
+    category: 'Emergency',
+    description: h.description || undefined,
+  }));
   const [selectedHotlines, setSelectedHotlines] = useState<Set<string>>(new Set());
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
-  const [newGroupName, setNewGroupName] = useState("");
+  const [newGroupName, setNewGroupName] = useState('');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
 
@@ -31,7 +66,7 @@ export default function HotlinesPage() {
   };
 
   const selectAll = () => {
-    setSelectedHotlines(new Set(hotlines.map(h => h.id)));
+    setSelectedHotlines(new Set(hotlines.map((h) => h.id)));
   };
 
   const deselectAll = () => {
@@ -40,11 +75,11 @@ export default function HotlinesPage() {
 
   const handleCreateGroup = async () => {
     if (!newGroupName.trim()) {
-      Alert.alert("Error", "Please enter a group name");
+      Alert.alert('Error', 'Please enter a group name');
       return;
     }
     if (selectedHotlines.size === 0) {
-      Alert.alert("Error", "Please select at least one hotline");
+      Alert.alert('Error', 'Please select at least one hotline');
       return;
     }
 
@@ -54,31 +89,30 @@ export default function HotlinesPage() {
     });
 
     if (success) {
-      setNewGroupName("");
+      setNewGroupName('');
       setSelectedHotlines(new Set());
       setShowCreateGroupModal(false);
       setIsSelectionMode(false);
-      Alert.alert("Success", `Group "${newGroupName}" created with ${selectedHotlines.size} hotline(s)`);
+      Alert.alert(
+        'Success',
+        `Group "${newGroupName}" created with ${selectedHotlines.size} hotline(s)`
+      );
     } else {
-      Alert.alert("Error", "Failed to create group");
+      Alert.alert('Error', 'Failed to create group');
     }
   };
 
   const deleteGroup = (groupId: string) => {
-    Alert.alert(
-      "Delete Group",
-      "Are you sure you want to delete this group?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            await deleteHotlineGroupFromContext(groupId);
-          },
+    Alert.alert('Delete Group', 'Are you sure you want to delete this group?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          await deleteHotlineGroupFromContext(groupId);
         },
-      ]
-    );
+      },
+    ]);
   };
 
   const toggleGroupExpansion = (groupId: string) => {
@@ -92,38 +126,39 @@ export default function HotlinesPage() {
   };
 
   const deleteHotline = (hotlineId: string) => {
-    Alert.alert(
-      "Delete Hotline",
-      "Are you sure you want to delete this hotline?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            await deleteHotlineFromContext(hotlineId);
-            // Note: Groups with deleted hotlines will just not show them
-          },
+    Alert.alert('Delete Hotline', 'Are you sure you want to delete this hotline?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          const { error } = await deleteHotlineFromServer(parseInt(hotlineId));
+          if (error) {
+            Alert.alert('Error', 'Failed to delete hotline');
+          }
         },
-      ]
-    );
+      },
+    ]);
   };
 
-  const getHotlineById = (id: string) => hotlines.find(h => h.id === id);
+  const getHotlineById = (id: string) => hotlines.find((h) => h.id === id);
 
-  const groupedHotlines = hotlines.reduce((acc, hotline) => {
-    if (!acc[hotline.category]) {
-      acc[hotline.category] = [];
-    }
-    acc[hotline.category].push(hotline);
-    return acc;
-  }, {} as Record<string, Hotline[]>);
+  const groupedHotlines = hotlines.reduce(
+    (acc, hotline) => {
+      if (!acc[hotline.category]) {
+        acc[hotline.category] = [];
+      }
+      acc[hotline.category].push(hotline);
+      return acc;
+    },
+    {} as Record<string, Hotline[]>
+  );
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <StatusBar 
-        barStyle={isDark ? 'light-content' : 'dark-content'} 
-        backgroundColor={colors.background} 
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
       />
 
       <HeaderWithSidebar title="Emergency Hotlines" showBackButton={false} showSyncIndicator />
@@ -136,58 +171,55 @@ export default function HotlinesPage() {
               {!isSelectionMode ? (
                 <TouchableOpacity
                   onPress={() => setIsSelectionMode(true)}
-                  className="flex-1 py-3 rounded-xl flex-row items-center justify-center"
-                  style={{ backgroundColor: colors.primary }}
-                >
+                  className="flex-1 flex-row items-center justify-center rounded-xl py-3"
+                  style={{ backgroundColor: colors.primary }}>
                   <FolderPlus size={20} color="#FFFFFF" />
-                  <Text className="text-base font-semibold text-white ml-2">
-                    Create Group
-                  </Text>
+                  <Text className="ml-2 text-base font-semibold text-white">Create Group</Text>
                 </TouchableOpacity>
               ) : (
-              <>
-                <TouchableOpacity
-                  onPress={() => {
-                    setIsSelectionMode(false);
-                    setSelectedHotlines(new Set());
-                  }}
-                  className="flex-1 py-3 rounded-xl items-center justify-center"
-                  style={{ backgroundColor: colors.surfaceVariant, borderWidth: 1, borderColor: colors.border }}
-                >
-                  <Text className="text-base font-semibold" style={{ color: colors.text }}>
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setShowCreateGroupModal(true)}
-                  className="flex-1 py-3 rounded-xl items-center justify-center"
-                  style={{ backgroundColor: colors.primary }}
-                  disabled={selectedHotlines.size === 0}
-                >
-                  <Text className="text-base font-semibold text-white">
-                    Save ({selectedHotlines.size})
-                  </Text>
-                </TouchableOpacity>
-              </>
-            )}
+                <>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setIsSelectionMode(false);
+                      setSelectedHotlines(new Set());
+                    }}
+                    className="flex-1 items-center justify-center rounded-xl py-3"
+                    style={{
+                      backgroundColor: colors.surfaceVariant,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                    }}>
+                    <Text className="text-base font-semibold" style={{ color: colors.text }}>
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setShowCreateGroupModal(true)}
+                    className="flex-1 items-center justify-center rounded-xl py-3"
+                    style={{ backgroundColor: colors.primary }}
+                    disabled={selectedHotlines.size === 0}>
+                    <Text className="text-base font-semibold text-white">
+                      Save ({selectedHotlines.size})
+                    </Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
 
             {isSelectionMode && (
-              <View className="flex-row gap-3 mt-3 px-6">
+              <View className="mt-3 flex-row gap-3 px-6">
                 <TouchableOpacity
                   onPress={selectAll}
-                  className="flex-1 py-2 rounded-lg items-center"
-                  style={{ backgroundColor: colors.surfaceVariant }}
-                >
+                  className="flex-1 items-center rounded-lg py-2"
+                  style={{ backgroundColor: colors.surfaceVariant }}>
                   <Text className="text-sm" style={{ color: colors.primary }}>
                     Select All
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={deselectAll}
-                  className="flex-1 py-2 rounded-lg items-center"
-                  style={{ backgroundColor: colors.surfaceVariant }}
-                >
+                  className="flex-1 items-center rounded-lg py-2"
+                  style={{ backgroundColor: colors.surfaceVariant }}>
                   <Text className="text-sm" style={{ color: colors.textSecondary }}>
                     Deselect All
                   </Text>
@@ -200,41 +232,41 @@ export default function HotlinesPage() {
         {/* Custom Groups */}
         {hotlineGroups.length > 0 && (
           <View className="px-6 py-4">
-            <Text className="text-sm font-semibold uppercase tracking-wide mb-4" style={{ color: colors.textSecondary }}>
+            <Text
+              className="mb-4 text-sm font-semibold uppercase tracking-wide"
+              style={{ color: colors.textSecondary }}>
               My Groups
             </Text>
 
             {hotlineGroups.map((group) => (
               <View
                 key={group.id}
-                className="mb-3 rounded-2xl overflow-hidden"
-                style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}
-              >
+                className="mb-3 overflow-hidden rounded-2xl"
+                style={{
+                  backgroundColor: colors.surface,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}>
                 <TouchableOpacity
                   onPress={() => toggleGroupExpansion(group.id)}
-                  className="px-4 py-4 flex-row items-center justify-between"
-                >
-                  <View className="flex-row items-center flex-1">
+                  className="flex-row items-center justify-between px-4 py-4">
+                  <View className="flex-1 flex-row items-center">
                     <View
-                      className="w-10 h-10 rounded-full items-center justify-center mr-3"
-                      style={{ backgroundColor: colors.primary + '20' }}
-                    >
+                      className="mr-3 h-10 w-10 items-center justify-center rounded-full"
+                      style={{ backgroundColor: colors.primary + '20' }}>
                       <FolderPlus size={20} color={colors.primary} />
                     </View>
                     <View className="flex-1">
                       <Text className="text-base font-semibold" style={{ color: colors.text }}>
                         {group.name}
                       </Text>
-                      <Text className="text-sm mt-1" style={{ color: colors.textSecondary }}>
+                      <Text className="mt-1 text-sm" style={{ color: colors.textSecondary }}>
                         {group.hotlineIds.length} hotline(s)
                       </Text>
                     </View>
                   </View>
                   <View className="flex-row items-center gap-2">
-                    <TouchableOpacity
-                      onPress={() => deleteGroup(group.id)}
-                      className="p-2"
-                    >
+                    <TouchableOpacity onPress={() => deleteGroup(group.id)} className="p-2">
                       <Trash2 size={18} color={colors.error} />
                     </TouchableOpacity>
                     {expandedGroups.has(group.id) ? (
@@ -253,13 +285,14 @@ export default function HotlinesPage() {
                       return (
                         <View
                           key={hotlineId}
-                          className="mb-2 p-3 rounded-xl"
-                          style={{ backgroundColor: colors.surfaceVariant }}
-                        >
+                          className="mb-2 rounded-xl p-3"
+                          style={{ backgroundColor: colors.surfaceVariant }}>
                           <Text className="text-sm font-medium" style={{ color: colors.text }}>
                             {hotline.name}
                           </Text>
-                          <Text className="text-base font-bold mt-1" style={{ color: colors.primary }}>
+                          <Text
+                            className="mt-1 text-base font-bold"
+                            style={{ color: colors.primary }}>
                             {hotline.number}
                           </Text>
                         </View>
@@ -275,94 +308,102 @@ export default function HotlinesPage() {
         {/* All Hotlines by Category */}
         {hotlines.length > 0 ? (
           <View className="px-6 py-4">
-            <Text className="text-sm font-semibold uppercase tracking-wide mb-4" style={{ color: colors.textSecondary }}>
+            <Text
+              className="mb-4 text-sm font-semibold uppercase tracking-wide"
+              style={{ color: colors.textSecondary }}>
               All Hotlines
             </Text>
 
             {Object.entries(groupedHotlines).map(([category, categoryHotlines]) => (
-            <View key={category} className="mb-6">
-              <Text className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: colors.textSecondary }}>
-                {category}
-              </Text>
+              <View key={category} className="mb-6">
+                <Text
+                  className="mb-3 text-xs font-semibold uppercase tracking-wide"
+                  style={{ color: colors.textSecondary }}>
+                  {category}
+                </Text>
 
-              <View
-                className="rounded-2xl overflow-hidden"
-                style={{ backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}
-              >
-                {categoryHotlines.map((hotline, index) => (
-                  <View key={hotline.id}>
-                    <TouchableOpacity
-                      onPress={() => isSelectionMode && toggleHotlineSelection(hotline.id)}
-                      className="px-4 py-4 flex-row items-center"
-                    >
-                      {isSelectionMode && (
-                        <TouchableOpacity
-                          onPress={() => toggleHotlineSelection(hotline.id)}
-                          className="w-6 h-6 rounded items-center justify-center mr-3"
-                          style={{
-                            backgroundColor: selectedHotlines.has(hotline.id) ? colors.primary : colors.surfaceVariant,
-                            borderWidth: 1,
-                            borderColor: selectedHotlines.has(hotline.id) ? colors.primary : colors.border,
-                          }}
-                        >
-                          {selectedHotlines.has(hotline.id) && (
-                            <Check size={16} color="#FFFFFF" />
-                          )}
-                        </TouchableOpacity>
-                      )}
-
-                      <View
-                        className="w-10 h-10 rounded-full items-center justify-center mr-3"
-                        style={{ backgroundColor: colors.surfaceVariant }}
-                      >
-                        <Phone size={20} color={colors.primary} />
-                      </View>
-
-                      <View className="flex-1">
-                        <Text className="text-base font-semibold" style={{ color: colors.text }}>
-                          {hotline.name}
-                        </Text>
-                        <Text className="text-sm font-bold mt-1" style={{ color: colors.primary }}>
-                          {hotline.number}
-                        </Text>
-                        {hotline.description && (
-                          <Text className="text-xs mt-1" style={{ color: colors.textSecondary }}>
-                            {hotline.description}
-                          </Text>
+                <View
+                  className="overflow-hidden rounded-2xl"
+                  style={{
+                    backgroundColor: colors.surface,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  }}>
+                  {categoryHotlines.map((hotline, index) => (
+                    <View key={hotline.id}>
+                      <TouchableOpacity
+                        onPress={() => isSelectionMode && toggleHotlineSelection(hotline.id)}
+                        className="flex-row items-center px-4 py-4">
+                        {isSelectionMode && (
+                          <TouchableOpacity
+                            onPress={() => toggleHotlineSelection(hotline.id)}
+                            className="mr-3 h-6 w-6 items-center justify-center rounded"
+                            style={{
+                              backgroundColor: selectedHotlines.has(hotline.id)
+                                ? colors.primary
+                                : colors.surfaceVariant,
+                              borderWidth: 1,
+                              borderColor: selectedHotlines.has(hotline.id)
+                                ? colors.primary
+                                : colors.border,
+                            }}>
+                            {selectedHotlines.has(hotline.id) && (
+                              <Check size={16} color="#FFFFFF" />
+                            )}
+                          </TouchableOpacity>
                         )}
-                      </View>
 
-                      {!isSelectionMode && (
-                        <TouchableOpacity
-                          onPress={() => deleteHotline(hotline.id)}
-                          className="p-2"
-                        >
-                          <Trash2 size={18} color={colors.error} />
-                        </TouchableOpacity>
+                        <View
+                          className="mr-3 h-10 w-10 items-center justify-center rounded-full"
+                          style={{ backgroundColor: colors.surfaceVariant }}>
+                          <Phone size={20} color={colors.primary} />
+                        </View>
+
+                        <View className="flex-1">
+                          <Text className="text-base font-semibold" style={{ color: colors.text }}>
+                            {hotline.name}
+                          </Text>
+                          <Text
+                            className="mt-1 text-sm font-bold"
+                            style={{ color: colors.primary }}>
+                            {hotline.number}
+                          </Text>
+                          {hotline.description && (
+                            <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
+                              {hotline.description}
+                            </Text>
+                          )}
+                        </View>
+
+                        {!isSelectionMode && (
+                          <TouchableOpacity
+                            onPress={() => deleteHotline(hotline.id)}
+                            className="p-2">
+                            <Trash2 size={18} color={colors.error} />
+                          </TouchableOpacity>
+                        )}
+                      </TouchableOpacity>
+
+                      {index < categoryHotlines.length - 1 && (
+                        <View className="ml-16 h-px" style={{ backgroundColor: colors.border }} />
                       )}
-                    </TouchableOpacity>
-
-                    {index < categoryHotlines.length - 1 && (
-                      <View className="h-px ml-16" style={{ backgroundColor: colors.border }} />
-                    )}
-                  </View>
-                ))}
+                    </View>
+                  ))}
+                </View>
               </View>
-            </View>
-          ))}
+            ))}
           </View>
         ) : (
-          <View className="px-6 py-12 items-center">
+          <View className="items-center px-6 py-12">
             <View
-              className="w-20 h-20 rounded-full items-center justify-center mb-4"
-              style={{ backgroundColor: colors.surfaceVariant }}
-            >
+              className="mb-4 h-20 w-20 items-center justify-center rounded-full"
+              style={{ backgroundColor: colors.surfaceVariant }}>
               <Phone size={32} color={colors.textSecondary} />
             </View>
-            <Text className="text-lg font-semibold mb-2" style={{ color: colors.text }}>
+            <Text className="mb-2 text-lg font-semibold" style={{ color: colors.text }}>
               No Hotlines Yet
             </Text>
-            <Text className="text-sm text-center" style={{ color: colors.textSecondary }}>
+            <Text className="text-center text-sm" style={{ color: colors.textSecondary }}>
               Go to Emergency page to save hotlines
             </Text>
           </View>
@@ -374,29 +415,26 @@ export default function HotlinesPage() {
         visible={showCreateGroupModal}
         transparent={true}
         animationType="fade"
-        onRequestClose={() => setShowCreateGroupModal(false)}
-      >
+        onRequestClose={() => setShowCreateGroupModal(false)}>
         <View
           className="flex-1 items-center justify-center"
-          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
-        >
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
           <View
             className="w-11/12 max-w-md rounded-3xl p-6"
-            style={{ backgroundColor: colors.surface }}
-          >
-            <View className="flex-row items-center mb-4">
+            style={{ backgroundColor: colors.surface }}>
+            <View className="mb-4 flex-row items-center">
               <FolderPlus size={24} color={colors.primary} />
-              <Text className="text-xl font-bold ml-2" style={{ color: colors.text }}>
+              <Text className="ml-2 text-xl font-bold" style={{ color: colors.text }}>
                 Create Group
               </Text>
             </View>
 
-            <Text className="text-sm mb-4" style={{ color: colors.textSecondary }}>
+            <Text className="mb-4 text-sm" style={{ color: colors.textSecondary }}>
               Save {selectedHotlines.size} selected hotline(s) to a custom group
             </Text>
 
             <View className="mb-6">
-              <Text className="text-xs font-medium mb-2" style={{ color: colors.textSecondary }}>
+              <Text className="mb-2 text-xs font-medium" style={{ color: colors.textSecondary }}>
                 GROUP NAME
               </Text>
               <TextInput
@@ -404,7 +442,7 @@ export default function HotlinesPage() {
                 onChangeText={setNewGroupName}
                 placeholder="e.g., Hospital, Police, Fire..."
                 placeholderTextColor={colors.textSecondary}
-                className="px-4 py-3 rounded-xl text-base"
+                className="rounded-xl px-4 py-3 text-base"
                 style={{
                   backgroundColor: colors.surfaceVariant,
                   color: colors.text,
@@ -418,15 +456,14 @@ export default function HotlinesPage() {
               <TouchableOpacity
                 onPress={() => {
                   setShowCreateGroupModal(false);
-                  setNewGroupName("");
+                  setNewGroupName('');
                 }}
-                className="flex-1 py-3 rounded-xl items-center"
+                className="flex-1 items-center rounded-xl py-3"
                 style={{
                   backgroundColor: colors.surfaceVariant,
                   borderWidth: 1,
                   borderColor: colors.border,
-                }}
-              >
+                }}>
                 <Text className="text-base font-semibold" style={{ color: colors.text }}>
                   Cancel
                 </Text>
@@ -434,18 +471,14 @@ export default function HotlinesPage() {
 
               <TouchableOpacity
                 onPress={handleCreateGroup}
-                className="flex-1 py-3 rounded-xl items-center"
-                style={{ backgroundColor: colors.primary }}
-              >
-                <Text className="text-base font-semibold text-white">
-                  Create
-                </Text>
+                className="flex-1 items-center rounded-xl py-3"
+                style={{ backgroundColor: colors.primary }}>
+                <Text className="text-base font-semibold text-white">Create</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
     </View>
-  )
+  );
 }
-
