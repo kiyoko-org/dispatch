@@ -8,6 +8,7 @@ import {
   TextInput,
   Modal,
   Alert,
+  Linking,
 } from 'react-native';
 import {
   Phone,
@@ -23,6 +24,7 @@ import HeaderWithSidebar from 'components/HeaderWithSidebar';
 import { useTheme } from 'components/ThemeContext';
 import { useUserData } from 'contexts/UserDataContext';
 import { useHotlines } from '@kiyoko-org/dispatch-lib';
+import { useRouter } from 'expo-router';
 
 type Hotline = {
   id: string;
@@ -34,6 +36,7 @@ type Hotline = {
 };
 
 export default function HotlinesPage() {
+  const router = useRouter();
   const { colors, isDark } = useTheme();
   const {
     hotlines: userHotlines,
@@ -166,6 +169,17 @@ export default function HotlinesPage() {
         },
       },
     ]);
+  };
+
+  const handleHotlineClick = (hotline: Hotline) => {
+    if (isSelectionMode) {
+      toggleHotlineSelection(hotline.id);
+    } else {
+      router.push({
+        pathname: '/(protected)/emergency',
+        params: { prefilledNumber: hotline.number },
+      });
+    }
   };
 
   const getHotlineById = (id: string) => hotlines.find((h) => h.id === id);
@@ -310,10 +324,12 @@ export default function HotlinesPage() {
                       const hotline = getHotlineById(hotlineId);
                       if (!hotline) return null;
                       return (
-                        <View
+                        <TouchableOpacity
                           key={hotlineId}
+                          onPress={() => handleHotlineClick(hotline)}
                           className="mb-2 rounded-xl p-3"
-                          style={{ backgroundColor: colors.surfaceVariant }}>
+                          style={{ backgroundColor: colors.surfaceVariant }}
+                          activeOpacity={0.7}>
                           <Text className="text-sm font-medium" style={{ color: colors.text }}>
                             {hotline.name}
                           </Text>
@@ -322,7 +338,7 @@ export default function HotlinesPage() {
                             style={{ color: colors.primary }}>
                             {hotline.number}
                           </Text>
-                        </View>
+                        </TouchableOpacity>
                       );
                     })}
                   </View>
@@ -359,7 +375,7 @@ export default function HotlinesPage() {
                   {categoryHotlines.map((hotline, index) => (
                     <View key={hotline.id}>
                       <TouchableOpacity
-                        onPress={() => isSelectionMode && toggleHotlineSelection(hotline.id)}
+                        onPress={() => handleHotlineClick(hotline)}
                         className="flex-row items-center px-4 py-4">
                         {isSelectionMode && (
                           <TouchableOpacity
