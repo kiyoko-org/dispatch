@@ -249,8 +249,6 @@ export default function Home() {
                     width: 48,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderRadius: 8,
-                    backgroundColor: 'rgba(255, 255, 255, 0.2)',
                   }}>
                   <AlertTriangle size={24} color="white" />
                 </View>
@@ -293,8 +291,6 @@ export default function Home() {
                     width: 48,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderRadius: 8,
-                    backgroundColor: currentColors.reportIconBg,
                   }}>
                   <Bell size={24} color={currentColors.reportText} />
                 </View>
@@ -348,8 +344,6 @@ export default function Home() {
                     width: 40,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderRadius: 8,
-                    backgroundColor: currentColors.cardIconBg,
                   }}>
                   <MapPin size={24} color={currentColors.cardIcon} />
                 </View>
@@ -383,8 +377,6 @@ export default function Home() {
                     width: 40,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderRadius: 8,
-                    backgroundColor: currentColors.cardIconBg,
                   }}>
                   <Phone size={24} color={currentColors.cardIcon} />
                 </View>
@@ -432,8 +424,6 @@ export default function Home() {
                     width: 32,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderRadius: 8,
-                    backgroundColor: currentColors.cardIconBg,
                   }}>
                   <Shield size={20} color={currentColors.cardIcon} />
                 </View>
@@ -469,8 +459,6 @@ export default function Home() {
                     width: 32,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderRadius: 8,
-                    backgroundColor: currentColors.cardIconBg,
                   }}>
                   <FileText size={20} color={currentColors.cardIcon} />
                 </View>
@@ -506,8 +494,6 @@ export default function Home() {
                     width: 32,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderRadius: 8,
-                    backgroundColor: currentColors.cardIconBg,
                   }}>
                   <CheckCircle size={20} color={currentColors.cardIcon} />
                 </View>
@@ -542,8 +528,6 @@ export default function Home() {
                     width: 32,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    borderRadius: 8,
-                    backgroundColor: currentColors.cardIconBg,
                   }}>
                   <Zap size={20} color={currentColors.cardIcon} />
                 </View>

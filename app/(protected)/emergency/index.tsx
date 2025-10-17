@@ -96,36 +96,12 @@ export default function EmergencyScreen() {
   });
 
 
-  const defaultEmergencyContacts = [
-    {
-      service: 'Police',
-      number: '911',
-      id: 'default-1',
-      isSaved: false,
-    },
-    {
-      service: 'Fire Department',
-      number: '9602955055',
-      id: 'default-2',
-      isSaved: false,
-    },
-    {
-      service: 'Ambulance',
-      number: '69420',
-      id: 'default-3',
-      isSaved: false,
-    },
-  ];
-
-  const emergencyContacts = [
-    ...defaultEmergencyContacts,
-    ...savedEmergencyContacts.map((contact) => ({
-      service: contact.name || 'Emergency Contact',
-      number: contact.phoneNumber,
-      id: contact.id,
-      isSaved: true,
-    })),
-  ];
+  const emergencyContacts = savedEmergencyContacts.map((contact) => ({
+    service: contact.name || 'Emergency Contact',
+    number: contact.phoneNumber,
+    id: contact.id,
+    isSaved: true,
+  }));
 
 
   // Get screen dimensions for responsive design
@@ -486,12 +462,23 @@ export default function EmergencyScreen() {
       .map(([category, _]) => category as 'quick' | 'emergency' | 'hotline');
 
     if (selectedCategoriesList.length === 0) {
+      triggerHapticFeedback('warning');
       Alert.alert(
         'No Categories Selected',
         'Please select at least one category to save the contact.'
       );
       return;
     }
+
+    // Validate phone number
+    if (!emergencyNumber.trim()) {
+      triggerHapticFeedback('warning');
+      Alert.alert('Invalid Number', 'Please enter a valid phone number.');
+      return;
+    }
+
+    // Trigger haptic feedback for saving
+    triggerHapticFeedback('medium');
 
     const results = await Promise.all(
       selectedCategoriesList.map(async (category) => {
@@ -513,37 +500,69 @@ export default function EmergencyScreen() {
     const failedSaves = results.filter((r) => !r.success);
 
     if (successfulSaves.length > 0) {
+      // Success haptic feedback
+      triggerHapticFeedback('heavy');
+      
       const categoryNames = {
         quick: 'Quick Contacts',
         emergency: 'Emergency Contacts',
-        hotline: 'Hotlines',
+        hotline: 'Hotline',
       };
 
       const savedToNames = successfulSaves.map((r) => categoryNames[r.category]).join(', ');
 
-      Alert.alert(
-        'Contact Saved',
-        `${emergencyNumber}${name ? ` (${name})` : ''} has been saved to: ${savedToNames}.`
-      );
+      // Auto-expand relevant sections
+      successfulSaves.forEach((r) => {
+        if (r.category === 'quick') {
+          setIsQuickContactsExpanded(true);
+        } else if (r.category === 'emergency') {
+          setIsEmergencyContactsExpanded(true);
+        }
+      });
 
-      setEmergencyNumber('');
+      // Close modal first
+      setShowSaveModal(false);
       setContactName('');
       setSelectedCategories({ quick: false, emergency: false, hotline: false });
-      setShowSaveModal(false);
+      
+      // Then show success alert
+      Alert.alert(
+        '✓ Contact Saved',
+        `${emergencyNumber}${name ? ` (${name})` : ''} has been saved to: ${savedToNames}.`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              setEmergencyNumber('');
+            }
+          }
+        ]
+      );
     }
 
     if (failedSaves.length > 0) {
+      triggerHapticFeedback('warning');
+      
       const categoryNames = {
         quick: 'Quick Contacts',
         emergency: 'Emergency Contacts',
-        hotline: 'Hotlines',
+        hotline: 'Hotline',
       };
 
       const failedNames = failedSaves.map((r) => categoryNames[r.category]).join(', ');
-      Alert.alert(
-        'Some Saves Failed',
-        `Contact already exists in or there was an error saving to: ${failedNames}.`
-      );
+      
+      // If all failed, keep modal open
+      if (successfulSaves.length === 0) {
+        Alert.alert(
+          'Save Failed',
+          `Contact already exists in or there was an error saving to: ${failedNames}.`
+        );
+      } else {
+        Alert.alert(
+          'Partially Saved',
+          `Contact saved successfully but already exists in or there was an error saving to: ${failedNames}.`
+        );
+      }
     }
   };
 
@@ -701,14 +720,14 @@ export default function EmergencyScreen() {
                   <Text
                     className={`text-center ${isTablet ? 'text-lg' : 'text-base'} ${isTablet ? 'py-8' : 'py-6'}`}
                     style={{ color: colors.textSecondary }}>
-                    No contacts added yet.{'\n'}Save emergency contacts for quick access.
+                    No contacts added yet.{'\n'}Save quick contacts for quick access.
                   </Text>
                 )}
               </View>
             )}
           </Card>
 
-          {/* Emergency Contacts */}
+          {/* Hotline */}
           <Card className={isTablet ? 'mb-8' : 'mb-6'}>
             <TouchableOpacity
               className="flex-row items-center justify-between"
@@ -719,7 +738,7 @@ export default function EmergencyScreen() {
                 <Text
                   className={`font-bold ${isTablet ? 'text-xl' : 'text-lg'} ml-3`}
                   style={{ color: colors.text }}>
-                  Emergency Contacts
+                  Hotline
                 </Text>
               </View>
               <View className="flex-row items-center">
@@ -740,46 +759,54 @@ export default function EmergencyScreen() {
               <View
                 className={`${isTablet ? 'mt-6' : 'mt-4'} ${isTablet ? 'pt-6' : 'pt-4'}`}
                 style={{ borderTopColor: colors.border, borderTopWidth: 1 }}>
-                <View className="space-y-4">
-                  {emergencyContacts.map((contact, index) => (
-                    <View
-                      key={contact.id || `default-${index}`}
-                      className="flex-row items-center justify-between rounded-xl px-3 py-4"
-                      style={{
-                        backgroundColor: colors.error + '20',
-                        borderColor: colors.error + '40',
-                        borderWidth: 1,
-                        shadowColor: colors.error,
-                        shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.1,
-                        shadowRadius: 4,
-                        elevation: 4,
-                      }}>
-                      <TouchableOpacity
-                        className="flex-1 flex-row items-center"
-                        onPress={() => handleEmergencyContactPress(contact.number)}
-                        activeOpacity={0.7}>
-                        <View className="mr-3 h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: colors.error + '30' }}>
-                          <Phone size={20} color={colors.error} />
-                        </View>
-                        <View className="flex-1">
-                          <Text className="font-medium" style={{ color: colors.textSecondary }}>{contact.service}</Text>
-                          <Text className="text-lg font-bold" style={{ color: colors.error }}>{contact.number}</Text>
-                        </View>
-                      </TouchableOpacity>
-                      {contact.isSaved && (
+                {emergencyContacts.length > 0 ? (
+                  <View className="space-y-4">
+                    {emergencyContacts.map((contact, index) => (
+                      <View
+                        key={contact.id || `default-${index}`}
+                        className="flex-row items-center justify-between rounded-xl px-3 py-4"
+                        style={{
+                          backgroundColor: '#FEE2E2',
+                          borderColor: '#FCA5A5',
+                          borderWidth: 1,
+                          shadowColor: colors.error,
+                          shadowOffset: { width: 0, height: 2 },
+                          shadowOpacity: 0.1,
+                          shadowRadius: 4,
+                          elevation: 4,
+                        }}>
                         <TouchableOpacity
-                          className="ml-3 p-2"
-                          onPress={() =>
-                            handleDeleteContact(contact.id, contact.number, 'emergency')
-                          }
+                          className="flex-1 flex-row items-center"
+                          onPress={() => handleEmergencyContactPress(contact.number)}
                           activeOpacity={0.7}>
-                          <Trash2 size={18} color={colors.error} />
+                          <View className="mr-3 h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: colors.error + '30' }}>
+                            <Phone size={20} color={colors.error} />
+                          </View>
+                          <View className="flex-1">
+                            <Text className="font-medium" style={{ color: colors.textSecondary }}>{contact.service}</Text>
+                            <Text className="text-lg font-bold" style={{ color: colors.error }}>{contact.number}</Text>
+                          </View>
                         </TouchableOpacity>
-                      )}
-                    </View>
-                  ))}
-                </View>
+                        {contact.isSaved && (
+                          <TouchableOpacity
+                            className="ml-3 p-2"
+                            onPress={() =>
+                              handleDeleteContact(contact.id, contact.number, 'emergency')
+                            }
+                            activeOpacity={0.7}>
+                            <Trash2 size={18} color={colors.error} />
+                          </TouchableOpacity>
+                        )}
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <Text
+                    className={`text-center ${isTablet ? 'text-lg' : 'text-base'} ${isTablet ? 'py-8' : 'py-6'}`}
+                    style={{ color: colors.textSecondary }}>
+                    No contacts added yet.{'\n'}Save hotline contacts for quick access.
+                  </Text>
+                )}
               </View>
             )}
           </Card>
@@ -1038,35 +1065,6 @@ export default function EmergencyScreen() {
               </TouchableOpacity>
 
               <TouchableOpacity
-                onPress={() => toggleCategory('emergency')}
-                className="flex-row items-center rounded-xl p-4"
-                style={{
-                  backgroundColor: selectedCategories.emergency ? colors.error + '30' : colors.surfaceVariant,
-                  borderColor: selectedCategories.emergency ? colors.error : colors.border,
-                  borderWidth: 1,
-                }}
-                activeOpacity={0.7}>
-                <View className="mr-3 h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: colors.error + '30' }}>
-                  <AlertTriangle size={20} color={colors.error} />
-                </View>
-                <View className="flex-1">
-                  <Text className="font-semibold" style={{ color: colors.text }}>Emergency Contacts</Text>
-                  <Text className="text-sm" style={{ color: colors.textSecondary }}>Dedicated emergency category</Text>
-                </View>
-                <View
-                  className="h-6 w-6 rounded items-center justify-center"
-                  style={{
-                    borderWidth: 2,
-                    borderColor: selectedCategories.emergency ? colors.error : colors.border,
-                    backgroundColor: selectedCategories.emergency ? colors.error : 'transparent',
-                  }}>
-                  {selectedCategories.emergency && (
-                    <Text className="text-xs font-bold text-white">✓</Text>
-                  )}
-                </View>
-              </TouchableOpacity>
-
-              <TouchableOpacity
                 onPress={() => toggleCategory('hotline')}
                 className="flex-row items-center rounded-xl p-4"
                 style={{
@@ -1079,8 +1077,8 @@ export default function EmergencyScreen() {
                   <Phone size={20} color={colors.success} />
                 </View>
                 <View className="flex-1">
-                  <Text className="font-semibold" style={{ color: colors.text }}>Hotlines</Text>
-                  <Text className="text-sm" style={{ color: colors.textSecondary }}>Save to emergency hotlines</Text>
+                  <Text className="font-semibold" style={{ color: colors.text }}>Hotline</Text>
+                  <Text className="text-sm" style={{ color: colors.textSecondary }}>Save to emergency hotline</Text>
                 </View>
                 <View
                   className="h-6 w-6 rounded items-center justify-center"

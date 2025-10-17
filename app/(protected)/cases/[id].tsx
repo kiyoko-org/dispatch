@@ -172,69 +172,68 @@ export default function ReportDetails() {
 				contentContainerStyle={{ paddingBottom: 32 }}
 				className="flex-1"
 			>
-				<View className="px-4 pt-2">
+				<View className="px-4 pt-4">
 					{/* Basic Information Card */}
-					<Card className="mb-5">
-						<View className="mb-4 flex-row items-center">
-							<View className="mr-3 h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: colors.surfaceVariant }}>
-								<FileText size={20} color={colors.text} />
+					<Card className="mb-5" style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 3 }}>
+						<View className="mb-5">
+							<View className="flex-row items-start justify-between mb-3">
+								<View className="flex-1 mr-3">
+									<Text className="text-2xl font-bold mb-2" style={{ color: colors.text }}>{reportInfo.incident_title || 'Untitled Report'}</Text>
+									<Text className="text-sm font-medium mb-1" style={{ color: colors.textSecondary }}>Report #{reportInfo.id}</Text>
+								</View>
+								<View 
+									className="px-4 py-2 rounded-full"
+									style={{ backgroundColor: `${getStatusColor(reportInfo.status || 'pending')}15` }}
+								>
+									<Text 
+										className="text-xs font-bold capitalize"
+										style={{ color: getStatusColor(reportInfo.status || 'pending') }}
+									>
+										{reportInfo.status?.replace('_', ' ') || 'Pending'}
+									</Text>
+								</View>
 							</View>
-					<View>
-						<Text className="text-xl font-bold" style={{ color: colors.text }}>{reportInfo.incident_title || 'Untitled Report'}</Text>
-						<View className="flex-row items-center">
-							<View 
-								className="w-1.5 h-1.5 rounded-full mr-2"
-								style={{ backgroundColor: getStatusColor(reportInfo.status || 'pending') }}
-							/>
-							<Text 
-								className="text-sm font-medium capitalize"
-								style={{ color: getStatusColor(reportInfo.status || 'pending') }}
-							>
-								{reportInfo.status || 'Pending'}
-							</Text>
-						</View>
-						<Text className="text-sm" style={{ color: colors.textSecondary }}>#{reportInfo.id}</Text>
-					</View>
+							<View className="h-px mb-4" style={{ backgroundColor: colors.border }} />
 						</View>
 
 						<View className="space-y-4">
-
-
 							{/* Category Information */}
 							{reportInfo.category_id && (
-								<View>
-									<Text className="mb-1 text-sm font-medium" style={{ color: colors.textSecondary }}>Category</Text>
-									<View className="flex-row items-center">
-										<AlertTriangle size={16} color={colors.textSecondary} style={{ marginRight: 4 }} />
-										<Text className="text-base" style={{ color: colors.text }}>
-											{getCategoryInfo(reportInfo.category_id).name}
-										</Text>
-									</View>
-									{reportInfo.sub_category !== null && reportInfo.sub_category !== undefined && (
-										<View className="mt-1 ml-5">
-											<Text className="text-sm" style={{ color: colors.textSecondary }}>
-												• {getSubcategoryInfo(reportInfo.category_id, reportInfo.sub_category) || 'Unknown Subcategory'}
-											</Text>
+								<View className="mb-4">
+									<Text className="mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: colors.textSecondary }}>Category</Text>
+									<View className="flex-row items-center p-3 rounded-lg" style={{ backgroundColor: colors.surfaceVariant }}>
+										<View className="mr-3 h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: colors.primary + '20' }}>
+											<AlertTriangle size={20} color={colors.primary} />
 										</View>
-									)}
+										<View className="flex-1">
+											<Text className="text-base font-semibold mb-0.5" style={{ color: colors.text }}>
+												{getCategoryInfo(reportInfo.category_id).name}
+											</Text>
+											{reportInfo.sub_category !== null && reportInfo.sub_category !== undefined && (
+												<Text className="text-sm" style={{ color: colors.textSecondary }}>
+													{getSubcategoryInfo(reportInfo.category_id, reportInfo.sub_category) || 'Unknown Subcategory'}
+												</Text>
+											)}
+										</View>
+									</View>
 								</View>
 							)}
 
-							<View className="flex-row space-x-4">
-								<View className="flex-1">
-									<Text className="mb-1 text-sm font-medium" style={{ color: colors.textSecondary }}>Date</Text>
+							<View className="flex-row space-x-3">
+								<View className="flex-1 p-3 rounded-lg" style={{ backgroundColor: colors.surfaceVariant }}>
+									<Text className="mb-1.5 text-xs font-semibold uppercase tracking-wider" style={{ color: colors.textSecondary }}>Date</Text>
 									<View className="flex-row items-center">
-										<Calendar size={16} color={colors.textSecondary} style={{ marginRight: 4 }} />
-										<Text className="text-base" style={{ color: colors.text }}>
+										<Calendar size={16} color={colors.primary} style={{ marginRight: 6 }} />
+										<Text className="text-sm font-medium" style={{ color: colors.text }}>
 											{formatDate(reportInfo.incident_date)}
 										</Text>
 									</View>
 								</View>
-								<View className="flex-1">
-									<Text className="mb-1 text-sm font-medium" style={{ color: colors.textSecondary }}>Time</Text>
+								<View className="flex-1 p-3 rounded-lg" style={{ backgroundColor: colors.surfaceVariant }}>
+									<Text className="mb-1.5 text-xs font-semibold uppercase tracking-wider" style={{ color: colors.textSecondary }}>Time</Text>
 									<View className="flex-row items-center">
-										<Clock size={16} color={colors.textSecondary} style={{ marginRight: 4 }} />
-										<Text className="text-base" style={{ color: colors.text }}>
+										<Clock size={16} color={colors.primary} style={{ marginRight: 6 }} />
+										<Text className="text-sm font-medium" style={{ color: colors.text }}>
 											{formatTime(reportInfo.incident_time ?? '')}
 										</Text>
 									</View>
@@ -244,32 +243,32 @@ export default function ReportDetails() {
 					</Card>
 
 					{/* Location Information Card */}
-					<Card className="mb-5">
+					<Card className="mb-5" style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 3 }}>
 						<View className="mb-4 flex-row items-center">
-							<View className="mr-3 h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: colors.surfaceVariant }}>
-								<MapPin size={20} color={colors.text} />
+							<View className="mr-3 h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: colors.primary + '20' }}>
+								<MapPin size={20} color={colors.primary} />
 							</View>
-							<Text className="text-xl font-bold" style={{ color: colors.text }}>Location Information</Text>
+							<Text className="text-lg font-bold" style={{ color: colors.text }}>Location Information</Text>
 						</View>
 
-						<View className="space-y-4">
-							<View>
-								<Text className="mb-1 text-sm font-medium" style={{ color: colors.textSecondary }}>Street Address</Text>
-								<Text className="text-base" style={{ color: colors.text }}>
+						<View className="space-y-3">
+							<View className="p-3 rounded-lg" style={{ backgroundColor: colors.surfaceVariant }}>
+								<Text className="mb-1.5 text-xs font-semibold uppercase tracking-wider" style={{ color: colors.textSecondary }}>Street Address</Text>
+								<Text className="text-sm leading-5" style={{ color: colors.text }}>
 									{reportInfo.street_address || 'No address provided'}
 								</Text>
 							</View>
 
 							{reportInfo.nearby_landmark && (
-								<View>
-									<Text className="mb-1 text-sm font-medium" style={{ color: colors.textSecondary }}>Nearby Landmark</Text>
-									<Text className="text-base" style={{ color: colors.text }}>{reportInfo.nearby_landmark}</Text>
+								<View className="p-3 rounded-lg" style={{ backgroundColor: colors.surfaceVariant }}>
+									<Text className="mb-1.5 text-xs font-semibold uppercase tracking-wider" style={{ color: colors.textSecondary }}>Nearby Landmark</Text>
+									<Text className="text-sm" style={{ color: colors.text }}>{reportInfo.nearby_landmark}</Text>
 								</View>
 							)}
 
-							<View>
-								<Text className="mb-1 text-sm font-medium" style={{ color: colors.textSecondary }}>Coordinates</Text>
-								<Text className="text-base" style={{ color: colors.text }}>
+							<View className="p-3 rounded-lg" style={{ backgroundColor: colors.surfaceVariant }}>
+								<Text className="mb-1.5 text-xs font-semibold uppercase tracking-wider" style={{ color: colors.textSecondary }}>Coordinates</Text>
+								<Text className="text-sm font-mono" style={{ color: colors.text }}>
 									{reportInfo.latitude && reportInfo.longitude 
 										? `${reportInfo.latitude.toFixed(6)}, ${reportInfo.longitude.toFixed(6)}`
 										: 'Coordinates not available'
@@ -280,40 +279,40 @@ export default function ReportDetails() {
 					</Card>
 
 					{/* Incident Details Card */}
-					<Card className="mb-5">
+					<Card className="mb-5" style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 3 }}>
 						<View className="mb-4 flex-row items-center">
-							<View className="mr-3 h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: colors.surfaceVariant }}>
-								<AlertTriangle size={20} color={colors.text} />
+							<View className="mr-3 h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: colors.primary + '20' }}>
+								<AlertTriangle size={20} color={colors.primary} />
 							</View>
-							<Text className="text-xl font-bold" style={{ color: colors.text }}>Incident Details</Text>
+							<Text className="text-lg font-bold" style={{ color: colors.text }}>Incident Details</Text>
 						</View>
 
-						<View className="space-y-4">
-							<View>
-								<Text className="mb-1 text-sm font-medium" style={{ color: colors.textSecondary }}>What Happened</Text>
-								<Text className="text-base leading-6" style={{ color: colors.text }}>
+						<View className="space-y-3">
+							<View className="p-4 rounded-lg" style={{ backgroundColor: colors.surfaceVariant }}>
+								<Text className="mb-2 text-xs font-semibold uppercase tracking-wider" style={{ color: colors.textSecondary }}>What Happened</Text>
+								<Text className="text-sm leading-6" style={{ color: colors.text }}>
 									{reportInfo.what_happened || 'No description provided'}
 								</Text>
 							</View>
 
 							{reportInfo.who_was_involved && (
-								<View>
-									<Text className="mb-1 text-sm font-medium" style={{ color: colors.textSecondary }}>People Involved</Text>
-									<Text className="text-base" style={{ color: colors.text }}>{reportInfo.who_was_involved}</Text>
+								<View className="p-3 rounded-lg" style={{ backgroundColor: colors.surfaceVariant }}>
+									<Text className="mb-1.5 text-xs font-semibold uppercase tracking-wider" style={{ color: colors.textSecondary }}>People Involved</Text>
+									<Text className="text-sm" style={{ color: colors.text }}>{reportInfo.who_was_involved}</Text>
 								</View>
 							)}
 
 							{reportInfo.suspect_description && (
-								<View>
-									<Text className="mb-1 text-sm font-medium" style={{ color: colors.textSecondary }}>Suspect Description</Text>
-									<Text className="text-base" style={{ color: colors.text }}>{reportInfo.suspect_description}</Text>
+								<View className="p-3 rounded-lg" style={{ backgroundColor: colors.surfaceVariant }}>
+									<Text className="mb-1.5 text-xs font-semibold uppercase tracking-wider" style={{ color: colors.textSecondary }}>Suspect Description</Text>
+									<Text className="text-sm" style={{ color: colors.text }}>{reportInfo.suspect_description}</Text>
 								</View>
 							)}
 
 							{reportInfo.property_damage && (
-								<View>
-									<Text className="mb-1 text-sm font-medium" style={{ color: colors.textSecondary }}>Property Damage</Text>
-									<Text className="text-base" style={{ color: colors.text }}>{reportInfo.property_damage}</Text>
+								<View className="p-3 rounded-lg" style={{ backgroundColor: colors.surfaceVariant }}>
+									<Text className="mb-1.5 text-xs font-semibold uppercase tracking-wider" style={{ color: colors.textSecondary }}>Property Damage</Text>
+									<Text className="text-sm" style={{ color: colors.text }}>{reportInfo.property_damage}</Text>
 								</View>
 							)}
 						</View>
@@ -321,26 +320,26 @@ export default function ReportDetails() {
 
 					{/* Witness Information Card */}
 					{(reportInfo.number_of_witnesses || reportInfo.witness_contact_info) && (
-						<Card className="mb-5">
+						<Card className="mb-5" style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 3 }}>
 							<View className="mb-4 flex-row items-center">
-								<View className="mr-3 h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: colors.surfaceVariant }}>
-									<UserCheck size={20} color={colors.text} />
+								<View className="mr-3 h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: colors.primary + '20' }}>
+									<UserCheck size={20} color={colors.primary} />
 								</View>
-								<Text className="text-xl font-bold" style={{ color: colors.text }}>Witness Information</Text>
+								<Text className="text-lg font-bold" style={{ color: colors.text }}>Witness Information</Text>
 							</View>
 
-							<View className="space-y-4">
+							<View className="space-y-3">
 								{reportInfo.number_of_witnesses && (
-									<View>
-										<Text className="mb-1 text-sm font-medium" style={{ color: colors.textSecondary }}>Number of Witnesses</Text>
-										<Text className="text-base" style={{ color: colors.text }}>{reportInfo.number_of_witnesses}</Text>
+									<View className="p-3 rounded-lg" style={{ backgroundColor: colors.surfaceVariant }}>
+										<Text className="mb-1.5 text-xs font-semibold uppercase tracking-wider" style={{ color: colors.textSecondary }}>Number of Witnesses</Text>
+										<Text className="text-sm font-medium" style={{ color: colors.text }}>{reportInfo.number_of_witnesses}</Text>
 									</View>
 								)}
 
 								{reportInfo.witness_contact_info && (
-									<View>
-										<Text className="mb-1 text-sm font-medium" style={{ color: colors.textSecondary }}>Witness Contact Information</Text>
-										<Text className="text-base" style={{ color: colors.text }}>{reportInfo.witness_contact_info}</Text>
+									<View className="p-3 rounded-lg" style={{ backgroundColor: colors.surfaceVariant }}>
+										<Text className="mb-1.5 text-xs font-semibold uppercase tracking-wider" style={{ color: colors.textSecondary }}>Witness Contact Information</Text>
+										<Text className="text-sm" style={{ color: colors.text }}>{reportInfo.witness_contact_info}</Text>
 									</View>
 								)}
 							</View>
@@ -348,25 +347,25 @@ export default function ReportDetails() {
 					)}
 
 					{/* Additional Information Card */}
-					<Card className="mb-5">
+					<Card className="mb-5" style={{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 3 }}>
 						<View className="mb-4 flex-row items-center">
-							<View className="mr-3 h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: colors.surfaceVariant }}>
-								<Shield size={20} color={colors.text} />
+							<View className="mr-3 h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: colors.primary + '20' }}>
+								<Shield size={20} color={colors.primary} />
 							</View>
-							<Text className="text-xl font-bold" style={{ color: colors.text }}>Additional Information</Text>
+							<Text className="text-lg font-bold" style={{ color: colors.text }}>Additional Information</Text>
 						</View>
 
-						<View className="space-y-4">
+						<View className="space-y-3">
 							{reportInfo.injuries_reported && (
-								<View>
-									<Text className="mb-1 text-sm font-medium" style={{ color: colors.textSecondary }}>Injuries Reported</Text>
-									<Text className="text-base" style={{ color: colors.text }}>{reportInfo.injuries_reported}</Text>
+								<View className="p-3 rounded-lg" style={{ backgroundColor: colors.surfaceVariant }}>
+									<Text className="mb-1.5 text-xs font-semibold uppercase tracking-wider" style={{ color: colors.textSecondary }}>Injuries Reported</Text>
+									<Text className="text-sm" style={{ color: colors.text }}>{reportInfo.injuries_reported}</Text>
 								</View>
 							)}
 
-							<View>
-								<Text className="mb-1 text-sm font-medium" style={{ color: colors.textSecondary }}>Reported On</Text>
-								<Text className="text-base" style={{ color: colors.text }}>
+							<View className="p-3 rounded-lg" style={{ backgroundColor: colors.surfaceVariant }}>
+								<Text className="mb-1.5 text-xs font-semibold uppercase tracking-wider" style={{ color: colors.textSecondary }}>Reported On</Text>
+								<Text className="text-sm font-medium" style={{ color: colors.text }}>
 									{reportInfo.created_at ? formatDate(reportInfo.created_at) : 'Date not available'}
 								</Text>
 							</View>

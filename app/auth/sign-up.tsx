@@ -10,7 +10,7 @@ import {
   TextInput,
   ScrollView,
 } from 'react-native';
-import { Shield, Camera as CameraIcon, Check } from 'lucide-react-native';
+import { Shield, Camera as CameraIcon, Check, ChevronDown } from 'lucide-react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -18,6 +18,7 @@ import { supabase } from 'lib/supabase';
 import { createURL } from 'expo-linking';
 import { verifyNationalIdQR } from 'lib/id';
 import { useTheme } from 'components/ThemeContext';
+import Dropdown from 'components/Dropdown';
 import { z } from 'zod';
 
 const signUpSchema = z
@@ -47,13 +48,15 @@ const signUpSchema = z
 
     userType: z.enum(['resident', 'student', 'work']),
 
-    permanentAddress1: z.string().trim().min(1, 'Street address is required'),
+    permanentStreet: z.string().trim().min(1, 'Street address is required'),
+    permanentBarangay: z.string().trim().min(1, 'Barangay is required'),
+    permanentCity: z.string().trim().min(1, 'City is required'),
+    permanentProvince: z.string().trim().min(1, 'Province is required'),
 
-    permanentAddress2: z.string().trim().min(1, 'City/Province is required'),
-
-    temporaryAddress1: z.string(),
-
-    temporaryAddress2: z.string(),
+    temporaryStreet: z.string(),
+    temporaryBarangay: z.string(),
+    temporaryCity: z.string(),
+    temporaryProvince: z.string(),
 
     email: z
       .string()
@@ -66,13 +69,18 @@ const signUpSchema = z
   .refine(
     (data) => {
       if (data.userType === 'student' || data.userType === 'work') {
-        return data.temporaryAddress1.trim().length > 0 && data.temporaryAddress2.trim().length > 0;
+        return (
+          data.temporaryStreet.trim().length > 0 &&
+          data.temporaryBarangay.trim().length > 0 &&
+          data.temporaryCity.trim().length > 0 &&
+          data.temporaryProvince.trim().length > 0
+        );
       }
       return true;
     },
     {
-      message: 'Temporary address is required for students and workers',
-      path: ['temporaryAddress1'],
+      message: 'All temporary address fields are required for students and workers',
+      path: ['temporaryStreet'],
     }
   );
 
@@ -90,10 +98,31 @@ export default function RootLayout() {
   const [noMiddleName, setNoMiddleName] = useState(false);
   const [lastName, setLastName] = useState('');
   const [userType, setUserType] = useState<'resident' | 'student' | 'work'>('resident');
-  const [permanentAddress1, setPermanentAddress1] = useState('');
-  const [permanentAddress2, setPermanentAddress2] = useState('Tuguegarao City, Cagayan');
-  const [temporaryAddress1, setTemporaryAddress1] = useState('');
-  const [temporaryAddress2, setTemporaryAddress2] = useState('');
+  
+  // Permanent Address Fields
+  const [permanentStreet, setPermanentStreet] = useState('');
+  const [permanentBarangay, setPermanentBarangay] = useState('');
+  const [permanentCity, setPermanentCity] = useState('Tuguegarao City');
+  const [permanentProvince, setPermanentProvince] = useState('Cagayan');
+  
+  // Temporary Address Fields
+  const [temporaryStreet, setTemporaryStreet] = useState('');
+  const [temporaryBarangay, setTemporaryBarangay] = useState('');
+  const [temporaryCity, setTemporaryCity] = useState('');
+  const [temporaryProvince, setTemporaryProvince] = useState('');
+
+  // Dropdown visibility states
+  const [showPermanentBarangayDropdown, setShowPermanentBarangayDropdown] = useState(false);
+  const [showPermanentCityDropdown, setShowPermanentCityDropdown] = useState(false);
+  const [showPermanentProvinceDropdown, setShowPermanentProvinceDropdown] = useState(false);
+  const [showTemporaryBarangayDropdown, setShowTemporaryBarangayDropdown] = useState(false);
+  const [showTemporaryCityDropdown, setShowTemporaryCityDropdown] = useState(false);
+  const [showTemporaryProvinceDropdown, setShowTemporaryProvinceDropdown] = useState(false);
+
+  // Philippine address options
+  const provinces: string[] = [];
+  const cities: Record<string, string[]> = {};
+  const barangays: Record<string, string[]> = {};
 
   // Camera + scanning state
   const [cameraModalVisible, setCameraModalVisible] = useState(false);
@@ -112,6 +141,33 @@ export default function RootLayout() {
   async function signUpWithEmail() {
     setLoading(true);
 
+    // DEVELOPMENT MODE: Skip authentication
+    console.log('Development Mode - Skipping authentication');
+    console.log('User Data:', {
+      email,
+      firstName,
+      suffix,
+      middleName,
+      noMiddleName,
+      lastName,
+      userType,
+      permanentStreet,
+      permanentBarangay,
+      permanentCity,
+      permanentProvince,
+      temporaryStreet,
+      temporaryBarangay,
+      temporaryCity,
+      temporaryProvince,
+    });
+
+    // Simulate a brief loading delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    setLoading(false);
+    Alert.alert('Development Mode', 'Sign-up data logged. Proceeding without authentication.');
+
+    /* PRODUCTION CODE - Uncomment when ready for production
     console.log('Redirect URL: ', createURL('/home'));
 
     const {
@@ -130,10 +186,10 @@ export default function RootLayout() {
           last_name: lastName,
           user_type: userType,
           role: 'user',
-          permanent_address_1: permanentAddress1,
-          permanent_address_2: permanentAddress2,
-          temporary_address_1: temporaryAddress1,
-          temporary_address_2: temporaryAddress2,
+          permanent_address_1: `${permanentStreet}, ${permanentBarangay}`,
+          permanent_address_2: `${permanentCity}, ${permanentProvince}`,
+          temporary_address_1: `${temporaryStreet}, ${temporaryBarangay}`,
+          temporary_address_2: `${temporaryCity}, ${temporaryProvince}`,
         },
       },
     });
@@ -149,6 +205,7 @@ export default function RootLayout() {
     if (!session) {
       Alert.alert('Please check your inbox for email verification!');
     }
+    */
   }
 
   const suffixOptions: string[] = [];
@@ -169,10 +226,14 @@ export default function RootLayout() {
         lastName,
         suffix,
         userType,
-        permanentAddress1,
-        permanentAddress2,
-        temporaryAddress1,
-        temporaryAddress2,
+        permanentStreet,
+        permanentBarangay,
+        permanentCity,
+        permanentProvince,
+        temporaryStreet,
+        temporaryBarangay,
+        temporaryCity,
+        temporaryProvince,
         email,
         password,
       });
@@ -200,10 +261,14 @@ export default function RootLayout() {
         lastName,
         suffix,
         userType,
-        permanentAddress1,
-        permanentAddress2,
-        temporaryAddress1,
-        temporaryAddress2,
+        permanentStreet,
+        permanentBarangay,
+        permanentCity,
+        permanentProvince,
+        temporaryStreet,
+        temporaryBarangay,
+        temporaryCity,
+        temporaryProvince,
         email,
         password,
       });
@@ -524,7 +589,8 @@ export default function RootLayout() {
                       }}
                       onPress={() => {
                         setUserType('resident');
-                        setPermanentAddress2('Tuguegarao City, Cagayan');
+                        setPermanentCity('Tuguegarao City');
+                        setPermanentProvince('Cagayan');
                       }}>
                       <Text
                         className="text-center text-sm font-medium"
@@ -542,9 +608,8 @@ export default function RootLayout() {
                       }}
                       onPress={() => {
                         setUserType('student');
-                        if (permanentAddress2 === 'Tuguegarao City, Cagayan') {
-                          setPermanentAddress2('');
-                        }
+                        setPermanentCity('');
+                        setPermanentProvince('');
                       }}>
                       <Text
                         className="text-center text-sm font-medium"
@@ -562,9 +627,8 @@ export default function RootLayout() {
                       }}
                       onPress={() => {
                         setUserType('work');
-                        if (permanentAddress2 === 'Tuguegarao City, Cagayan') {
-                          setPermanentAddress2('');
-                        }
+                        setPermanentCity('');
+                        setPermanentProvince('');
                       }}>
                       <Text
                         className="text-center text-sm font-medium"
@@ -579,42 +643,97 @@ export default function RootLayout() {
                   <Text className="mb-2 text-sm font-semibold" style={{ color: colors.text }}>
                     Permanent Address *
                   </Text>
+                  
+                  {/* Street */}
                   <TextInput
                     className="mb-3 rounded-xl px-4 py-4 text-base"
                     style={{
                       backgroundColor: colors.surfaceVariant,
                       borderWidth: 1,
-                      borderColor: validationErrors.permanentAddress1 ? '#EF4444' : colors.border,
+                      borderColor: validationErrors.permanentStreet ? '#EF4444' : colors.border,
                       color: colors.text,
                     }}
-                    placeholder="Street, Barangay"
-                    value={permanentAddress1}
-                    onChangeText={setPermanentAddress1}
+                    placeholder="Street"
+                    value={permanentStreet}
+                    onChangeText={setPermanentStreet}
                     placeholderTextColor={colors.textSecondary}
                   />
-                  {validationErrors.permanentAddress1 && (
+                  {validationErrors.permanentStreet && (
                     <Text className="mb-3 text-xs" style={{ color: '#EF4444' }}>
-                      {validationErrors.permanentAddress1}
+                      {validationErrors.permanentStreet}
                     </Text>
                   )}
-                  <TextInput
-                    className="rounded-xl px-4 py-4 text-base"
+
+                  {/* Barangay Dropdown */}
+                  <TouchableOpacity
+                    className="mb-3 flex-row items-center justify-between rounded-xl px-4 py-4"
                     style={{
                       backgroundColor: colors.surfaceVariant,
                       borderWidth: 1,
-                      borderColor: validationErrors.permanentAddress2 ? '#EF4444' : colors.border,
-                      color: colors.text,
+                      borderColor: validationErrors.permanentBarangay ? '#EF4444' : colors.border,
+                    }}
+                    onPress={() => setShowPermanentBarangayDropdown(true)}>
+                    <Text
+                      style={{
+                        color: permanentBarangay ? colors.text : colors.textSecondary,
+                      }}>
+                      {permanentBarangay || 'Select Barangay'}
+                    </Text>
+                    <ChevronDown size={20} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                  {validationErrors.permanentBarangay && (
+                    <Text className="mb-3 text-xs" style={{ color: '#EF4444' }}>
+                      {validationErrors.permanentBarangay}
+                    </Text>
+                  )}
+
+                  {/* City Dropdown */}
+                  <TouchableOpacity
+                    className="mb-3 flex-row items-center justify-between rounded-xl px-4 py-4"
+                    style={{
+                      backgroundColor: colors.surfaceVariant,
+                      borderWidth: 1,
+                      borderColor: validationErrors.permanentCity ? '#EF4444' : colors.border,
                       opacity: userType === 'resident' ? 0.7 : 1,
                     }}
-                    placeholder="City, Province"
-                    value={permanentAddress2}
-                    onChangeText={setPermanentAddress2}
-                    placeholderTextColor={colors.textSecondary}
-                    editable={userType !== 'resident'}
-                  />
-                  {validationErrors.permanentAddress2 && (
+                    onPress={() => userType !== 'resident' && setShowPermanentCityDropdown(true)}
+                    disabled={userType === 'resident'}>
+                    <Text
+                      style={{
+                        color: permanentCity ? colors.text : colors.textSecondary,
+                      }}>
+                      {permanentCity || 'Select City'}
+                    </Text>
+                    <ChevronDown size={20} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                  {validationErrors.permanentCity && (
+                    <Text className="mb-3 text-xs" style={{ color: '#EF4444' }}>
+                      {validationErrors.permanentCity}
+                    </Text>
+                  )}
+
+                  {/* Province Dropdown */}
+                  <TouchableOpacity
+                    className="flex-row items-center justify-between rounded-xl px-4 py-4"
+                    style={{
+                      backgroundColor: colors.surfaceVariant,
+                      borderWidth: 1,
+                      borderColor: validationErrors.permanentProvince ? '#EF4444' : colors.border,
+                      opacity: userType === 'resident' ? 0.7 : 1,
+                    }}
+                    onPress={() => userType !== 'resident' && setShowPermanentProvinceDropdown(true)}
+                    disabled={userType === 'resident'}>
+                    <Text
+                      style={{
+                        color: permanentProvince ? colors.text : colors.textSecondary,
+                      }}>
+                      {permanentProvince || 'Select Province'}
+                    </Text>
+                    <ChevronDown size={20} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                  {validationErrors.permanentProvince && (
                     <Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
-                      {validationErrors.permanentAddress2}
+                      {validationErrors.permanentProvince}
                     </Text>
                   )}
                 </View>
@@ -624,40 +743,93 @@ export default function RootLayout() {
                     <Text className="mb-2 text-sm font-semibold" style={{ color: colors.text }}>
                       Temporary Address *
                     </Text>
+
+                    {/* Street */}
                     <TextInput
                       className="mb-3 rounded-xl px-4 py-4 text-base"
                       style={{
                         backgroundColor: colors.surfaceVariant,
                         borderWidth: 1,
-                        borderColor: validationErrors.temporaryAddress1 ? '#EF4444' : colors.border,
+                        borderColor: validationErrors.temporaryStreet ? '#EF4444' : colors.border,
                         color: colors.text,
                       }}
-                      placeholder="Street, Barangay"
-                      value={temporaryAddress1}
-                      onChangeText={setTemporaryAddress1}
+                      placeholder="Street"
+                      value={temporaryStreet}
+                      onChangeText={setTemporaryStreet}
                       placeholderTextColor={colors.textSecondary}
                     />
-                    {validationErrors.temporaryAddress1 && (
+                    {validationErrors.temporaryStreet && (
                       <Text className="mb-3 text-xs" style={{ color: '#EF4444' }}>
-                        {validationErrors.temporaryAddress1}
+                        {validationErrors.temporaryStreet}
                       </Text>
                     )}
-                    <TextInput
-                      className="rounded-xl px-4 py-4 text-base"
+
+                    {/* Barangay Dropdown */}
+                    <TouchableOpacity
+                      className="mb-3 flex-row items-center justify-between rounded-xl px-4 py-4"
                       style={{
                         backgroundColor: colors.surfaceVariant,
                         borderWidth: 1,
-                        borderColor: validationErrors.temporaryAddress2 ? '#EF4444' : colors.border,
-                        color: colors.text,
+                        borderColor: validationErrors.temporaryBarangay ? '#EF4444' : colors.border,
                       }}
-                      placeholder="City, Province"
-                      value={temporaryAddress2}
-                      onChangeText={setTemporaryAddress2}
-                      placeholderTextColor={colors.textSecondary}
-                    />
-                    {validationErrors.temporaryAddress2 && (
+                      onPress={() => setShowTemporaryBarangayDropdown(true)}>
+                      <Text
+                        style={{
+                          color: temporaryBarangay ? colors.text : colors.textSecondary,
+                        }}>
+                        {temporaryBarangay || 'Select Barangay'}
+                      </Text>
+                      <ChevronDown size={20} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                    {validationErrors.temporaryBarangay && (
+                      <Text className="mb-3 text-xs" style={{ color: '#EF4444' }}>
+                        {validationErrors.temporaryBarangay}
+                      </Text>
+                    )}
+
+                    {/* City Dropdown */}
+                    <TouchableOpacity
+                      className="mb-3 flex-row items-center justify-between rounded-xl px-4 py-4"
+                      style={{
+                        backgroundColor: colors.surfaceVariant,
+                        borderWidth: 1,
+                        borderColor: validationErrors.temporaryCity ? '#EF4444' : colors.border,
+                      }}
+                      onPress={() => setShowTemporaryCityDropdown(true)}>
+                      <Text
+                        style={{
+                          color: temporaryCity ? colors.text : colors.textSecondary,
+                        }}>
+                        {temporaryCity || 'Select City'}
+                      </Text>
+                      <ChevronDown size={20} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                    {validationErrors.temporaryCity && (
+                      <Text className="mb-3 text-xs" style={{ color: '#EF4444' }}>
+                        {validationErrors.temporaryCity}
+                      </Text>
+                    )}
+
+                    {/* Province Dropdown */}
+                    <TouchableOpacity
+                      className="flex-row items-center justify-between rounded-xl px-4 py-4"
+                      style={{
+                        backgroundColor: colors.surfaceVariant,
+                        borderWidth: 1,
+                        borderColor: validationErrors.temporaryProvince ? '#EF4444' : colors.border,
+                      }}
+                      onPress={() => setShowTemporaryProvinceDropdown(true)}>
+                      <Text
+                        style={{
+                          color: temporaryProvince ? colors.text : colors.textSecondary,
+                        }}>
+                        {temporaryProvince || 'Select Province'}
+                      </Text>
+                      <ChevronDown size={20} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                    {validationErrors.temporaryProvince && (
                       <Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
-                        {validationErrors.temporaryAddress2}
+                        {validationErrors.temporaryProvince}
                       </Text>
                     )}
                   </View>
@@ -1151,6 +1323,114 @@ export default function RootLayout() {
           )}
         </View>
       </ScrollView>
+
+      {/* Permanent Address Dropdowns */}
+      <Dropdown
+        isVisible={showPermanentBarangayDropdown}
+        onClose={() => setShowPermanentBarangayDropdown(false)}
+        onSelect={(item: string) => setPermanentBarangay(item)}
+        data={permanentCity ? barangays[permanentCity] || [] : []}
+        keyExtractor={(item, index) => `${item}-${index}`}
+        renderItem={({ item }) => (
+          <View className="px-4 py-3">
+            <Text style={{ color: colors.text }}>{item}</Text>
+          </View>
+        )}
+        title="Select Barangay"
+        searchable
+        searchPlaceholder="Search barangay..."
+      />
+
+      <Dropdown
+        isVisible={showPermanentCityDropdown}
+        onClose={() => setShowPermanentCityDropdown(false)}
+        onSelect={(item: string) => {
+          setPermanentCity(item);
+          setPermanentBarangay(''); // Reset barangay when city changes
+        }}
+        data={permanentProvince ? cities[permanentProvince] || [] : []}
+        keyExtractor={(item, index) => `${item}-${index}`}
+        renderItem={({ item }) => (
+          <View className="px-4 py-3">
+            <Text style={{ color: colors.text }}>{item}</Text>
+          </View>
+        )}
+        title="Select City"
+        searchable
+        searchPlaceholder="Search city..."
+      />
+
+      <Dropdown
+        isVisible={showPermanentProvinceDropdown}
+        onClose={() => setShowPermanentProvinceDropdown(false)}
+        onSelect={(item: string) => {
+          setPermanentProvince(item);
+          setPermanentCity(''); // Reset city when province changes
+          setPermanentBarangay(''); // Reset barangay when province changes
+        }}
+        data={provinces}
+        keyExtractor={(item, index) => `${item}-${index}`}
+        renderItem={({ item }) => (
+          <View className="px-4 py-3">
+            <Text style={{ color: colors.text }}>{item}</Text>
+          </View>
+        )}
+        title="Select Province"
+      />
+
+      {/* Temporary Address Dropdowns */}
+      <Dropdown
+        isVisible={showTemporaryBarangayDropdown}
+        onClose={() => setShowTemporaryBarangayDropdown(false)}
+        onSelect={(item: string) => setTemporaryBarangay(item)}
+        data={temporaryCity ? barangays[temporaryCity] || [] : []}
+        keyExtractor={(item, index) => `${item}-${index}`}
+        renderItem={({ item }) => (
+          <View className="px-4 py-3">
+            <Text style={{ color: colors.text }}>{item}</Text>
+          </View>
+        )}
+        title="Select Barangay"
+        searchable
+        searchPlaceholder="Search barangay..."
+      />
+
+      <Dropdown
+        isVisible={showTemporaryCityDropdown}
+        onClose={() => setShowTemporaryCityDropdown(false)}
+        onSelect={(item: string) => {
+          setTemporaryCity(item);
+          setTemporaryBarangay(''); // Reset barangay when city changes
+        }}
+        data={temporaryProvince ? cities[temporaryProvince] || [] : []}
+        keyExtractor={(item, index) => `${item}-${index}`}
+        renderItem={({ item }) => (
+          <View className="px-4 py-3">
+            <Text style={{ color: colors.text }}>{item}</Text>
+          </View>
+        )}
+        title="Select City"
+        searchable
+        searchPlaceholder="Search city..."
+      />
+
+      <Dropdown
+        isVisible={showTemporaryProvinceDropdown}
+        onClose={() => setShowTemporaryProvinceDropdown(false)}
+        onSelect={(item: string) => {
+          setTemporaryProvince(item);
+          setTemporaryCity(''); // Reset city when province changes
+          setTemporaryBarangay(''); // Reset barangay when province changes
+        }}
+        data={provinces}
+        keyExtractor={(item, index) => `${item}-${index}`}
+        renderItem={({ item }) => (
+          <View className="px-4 py-3">
+            <Text style={{ color: colors.text }}>{item}</Text>
+          </View>
+        )}
+        title="Select Province"
+      />
     </View>
   );
 }
