@@ -40,6 +40,7 @@ import { emergencyCallService } from 'lib/services/emergency-calls';
 import * as Location from 'expo-location';
 import { useTheme } from 'components/ThemeContext';
 import { useUserData } from 'contexts/UserDataContext';
+import { useHotlines } from '@kiyoko-org/dispatch-lib';
 
 let ImmediatePhoneCallModule: any = null;
 try {
@@ -52,13 +53,15 @@ export default function EmergencyScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { colors, isDark } = useTheme();
-  const { 
-    quickContacts, 
+  const {
+    quickContacts,
     emergencyContacts: savedEmergencyContacts,
     addContact,
     deleteContact,
-    addHotline 
+    addHotline,
   } = useUserData();
+
+  const { hotlines: serverHotlines } = useHotlines();
   const [emergencyNumber, setEmergencyNumber] = useState('');
   const [emergencyProtocolActive, setEmergencyProtocolActive] = useState(false);
   const [pressedButtons, setPressedButtons] = useState<Set<string>>(new Set());
@@ -95,7 +98,6 @@ export default function EmergencyScreen() {
     hotline: false,
   });
 
-
   const emergencyContacts = savedEmergencyContacts.map((contact) => ({
     service: contact.name || 'Emergency Contact',
     number: contact.phoneNumber,
@@ -103,6 +105,13 @@ export default function EmergencyScreen() {
     isSaved: true,
   }));
 
+  const hotlineContacts = serverHotlines.map((hotline) => ({
+    service: hotline.name,
+    number: hotline.phone_number,
+    id: hotline.id.toString(),
+    isSaved: false,
+    description: hotline.description,
+  }));
 
   // Get screen dimensions for responsive design
   const { width, height } = Dimensions.get('window');
@@ -177,8 +186,6 @@ export default function EmergencyScreen() {
   useEffect(() => {
     let volumeTimer: ReturnType<typeof setTimeout> | null = null;
     let pressStartTime = 0;
-
-
 
     return () => {
       if (volumeTimer) clearTimeout(volumeTimer);
@@ -502,7 +509,7 @@ export default function EmergencyScreen() {
     if (successfulSaves.length > 0) {
       // Success haptic feedback
       triggerHapticFeedback('heavy');
-      
+
       const categoryNames = {
         quick: 'Quick Contacts',
         emergency: 'Emergency Contacts',
@@ -524,7 +531,7 @@ export default function EmergencyScreen() {
       setShowSaveModal(false);
       setContactName('');
       setSelectedCategories({ quick: false, emergency: false, hotline: false });
-      
+
       // Then show success alert
       Alert.alert(
         '✓ Contact Saved',
@@ -534,15 +541,15 @@ export default function EmergencyScreen() {
             text: 'OK',
             onPress: () => {
               setEmergencyNumber('');
-            }
-          }
+            },
+          },
         ]
       );
     }
 
     if (failedSaves.length > 0) {
       triggerHapticFeedback('warning');
-      
+
       const categoryNames = {
         quick: 'Quick Contacts',
         emergency: 'Emergency Contacts',
@@ -550,7 +557,7 @@ export default function EmergencyScreen() {
       };
 
       const failedNames = failedSaves.map((r) => categoryNames[r.category]).join(', ');
-      
+
       // If all failed, keep modal open
       if (successfulSaves.length === 0) {
         Alert.alert(
@@ -634,9 +641,9 @@ export default function EmergencyScreen() {
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
-      <StatusBar 
-        barStyle={isDark ? 'light-content' : 'dark-content'} 
-        backgroundColor={colors.background} 
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
       />
 
       <HeaderWithSidebar title="Emergency Response" showBackButton={false} />
@@ -650,7 +657,6 @@ export default function EmergencyScreen() {
         }}
         className="mt-6">
         <Container maxWidth={isTablet ? 'lg' : 'md'} padding="sm">
-
           {/* Quick Contacts */}
 
           <Card className={isTablet ? 'mb-8' : 'mb-6'}>
@@ -690,12 +696,18 @@ export default function EmergencyScreen() {
                       <View
                         key={contact.id}
                         className="flex-row items-center justify-between rounded-xl p-3"
-                        style={{ backgroundColor: colors.error + '20', borderColor: colors.error + '40', borderWidth: 1 }}>
+                        style={{
+                          backgroundColor: colors.error + '20',
+                          borderColor: colors.error + '40',
+                          borderWidth: 1,
+                        }}>
                         <TouchableOpacity
                           className="flex-1 flex-row items-center"
                           onPress={() => handleContactCall(contact.phoneNumber)}
                           activeOpacity={0.7}>
-                          <View className="mr-3 h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: colors.error + '30' }}>
+                          <View
+                            className="mr-3 h-10 w-10 items-center justify-center rounded-full"
+                            style={{ backgroundColor: colors.error + '30' }}>
                             <Phone size={20} color={colors.error} />
                           </View>
                           <View className="flex-1">
@@ -759,11 +771,11 @@ export default function EmergencyScreen() {
               <View
                 className={`${isTablet ? 'mt-6' : 'mt-4'} ${isTablet ? 'pt-6' : 'pt-4'}`}
                 style={{ borderTopColor: colors.border, borderTopWidth: 1 }}>
-                {emergencyContacts.length > 0 ? (
+                {hotlineContacts.length > 0 ? (
                   <View className="space-y-4">
-                    {emergencyContacts.map((contact, index) => (
+                    {hotlineContacts.map((contact, index) => (
                       <View
-                        key={contact.id || `default-${index}`}
+                        key={contact.id || `hotline-${index}`}
                         className="flex-row items-center justify-between rounded-xl px-3 py-4"
                         style={{
                           backgroundColor: '#FEE2E2',
@@ -779,24 +791,27 @@ export default function EmergencyScreen() {
                           className="flex-1 flex-row items-center"
                           onPress={() => handleEmergencyContactPress(contact.number)}
                           activeOpacity={0.7}>
-                          <View className="mr-3 h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: colors.error + '30' }}>
+                          <View
+                            className="mr-3 h-10 w-10 items-center justify-center rounded-full"
+                            style={{ backgroundColor: colors.error + '30' }}>
                             <Phone size={20} color={colors.error} />
                           </View>
                           <View className="flex-1">
-                            <Text className="font-medium" style={{ color: colors.textSecondary }}>{contact.service}</Text>
-                            <Text className="text-lg font-bold" style={{ color: colors.error }}>{contact.number}</Text>
+                            <Text className="font-medium" style={{ color: colors.textSecondary }}>
+                              {contact.service}
+                            </Text>
+                            <Text className="text-lg font-bold" style={{ color: colors.error }}>
+                              {contact.number}
+                            </Text>
+                            {contact.description && (
+                              <Text
+                                className="mt-1 text-xs"
+                                style={{ color: colors.textSecondary }}>
+                                {contact.description}
+                              </Text>
+                            )}
                           </View>
                         </TouchableOpacity>
-                        {contact.isSaved && (
-                          <TouchableOpacity
-                            className="ml-3 p-2"
-                            onPress={() =>
-                              handleDeleteContact(contact.id, contact.number, 'emergency')
-                            }
-                            activeOpacity={0.7}>
-                            <Trash2 size={18} color={colors.error} />
-                          </TouchableOpacity>
-                        )}
                       </View>
                     ))}
                   </View>
@@ -804,7 +819,7 @@ export default function EmergencyScreen() {
                   <Text
                     className={`text-center ${isTablet ? 'text-lg' : 'text-base'} ${isTablet ? 'py-8' : 'py-6'}`}
                     style={{ color: colors.textSecondary }}>
-                    No contacts added yet.{'\n'}Save hotline contacts for quick access.
+                    No hotlines available yet.{'\n'}Officer-defined hotlines will appear here.
                   </Text>
                 )}
               </View>
@@ -847,9 +862,7 @@ export default function EmergencyScreen() {
               {emergencySettings.powerButtonEnabled && (
                 <View className="mt-2 flex-row items-center">
                   <Zap size={16} color="white" />
-                  <Text className="ml-1 text-xs text-white opacity-80">
-                    Power 3x
-                  </Text>
+                  <Text className="ml-1 text-xs text-white opacity-80">Power 3x</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -887,8 +900,7 @@ export default function EmergencyScreen() {
                     backgroundColor: colors.surfaceVariant,
                   }}
                   onPressIn={() => handleButtonPressIn('backspace')}
-                  onPressOut={() => handleButtonPressOut('backspace')}
-                  >
+                  onPressOut={() => handleButtonPressOut('backspace')}>
                   <Delete size={isTablet ? 22 : 18} color={colors.text} />
                 </TouchableOpacity>
               )}
@@ -999,9 +1011,13 @@ export default function EmergencyScreen() {
         <View
           className="absolute inset-0 flex-1 items-center justify-center px-4"
           style={{ backgroundColor: colors.overlay, zIndex: 1001 }}>
-          <View className="w-full max-w-md rounded-2xl p-6" style={{ backgroundColor: colors.card }}>
+          <View
+            className="w-full max-w-md rounded-2xl p-6"
+            style={{ backgroundColor: colors.card }}>
             <View className="mb-6 flex-row items-center justify-between">
-              <Text className="text-xl font-bold" style={{ color: colors.text }}>Save Contact</Text>
+              <Text className="text-xl font-bold" style={{ color: colors.text }}>
+                Save Contact
+              </Text>
               <TouchableOpacity
                 onPress={() => {
                   triggerHapticFeedback('light');
@@ -1015,7 +1031,9 @@ export default function EmergencyScreen() {
             </View>
 
             <View className="mb-6">
-              <Text className="mb-2 text-lg font-semibold" style={{ color: colors.text }}>{emergencyNumber}</Text>
+              <Text className="mb-2 text-lg font-semibold" style={{ color: colors.text }}>
+                {emergencyNumber}
+              </Text>
               <Text className="mb-4 text-sm" style={{ color: colors.textSecondary }}>
                 Enter a name for this contact (optional):
               </Text>
@@ -1024,7 +1042,12 @@ export default function EmergencyScreen() {
                 value={contactName}
                 onChangeText={setContactName}
                 className="rounded-xl px-4 py-3 text-base"
-                style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, color: colors.text }}
+                style={{
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  borderWidth: 1,
+                  color: colors.text,
+                }}
                 placeholderTextColor={colors.textSecondary}
                 autoFocus={true}
               />
@@ -1039,20 +1062,28 @@ export default function EmergencyScreen() {
                 onPress={() => toggleCategory('quick')}
                 className="flex-row items-center rounded-xl p-4"
                 style={{
-                  backgroundColor: selectedCategories.quick ? colors.primary + '30' : colors.surfaceVariant,
+                  backgroundColor: selectedCategories.quick
+                    ? colors.primary + '30'
+                    : colors.surfaceVariant,
                   borderColor: selectedCategories.quick ? colors.primary : colors.border,
                   borderWidth: 1,
                 }}
                 activeOpacity={0.7}>
-                <View className="mr-3 h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: colors.primary + '30' }}>
+                <View
+                  className="mr-3 h-10 w-10 items-center justify-center rounded-full"
+                  style={{ backgroundColor: colors.primary + '30' }}>
                   <Phone size={20} color={colors.primary} />
                 </View>
                 <View className="flex-1">
-                  <Text className="font-semibold" style={{ color: colors.text }}>Quick Contacts</Text>
-                  <Text className="text-sm" style={{ color: colors.textSecondary }}>Immediate emergency access</Text>
+                  <Text className="font-semibold" style={{ color: colors.text }}>
+                    Quick Contacts
+                  </Text>
+                  <Text className="text-sm" style={{ color: colors.textSecondary }}>
+                    Immediate emergency access
+                  </Text>
                 </View>
                 <View
-                  className="h-6 w-6 rounded items-center justify-center"
+                  className="h-6 w-6 items-center justify-center rounded"
                   style={{
                     borderWidth: 2,
                     borderColor: selectedCategories.quick ? colors.primary : colors.border,
@@ -1068,20 +1099,28 @@ export default function EmergencyScreen() {
                 onPress={() => toggleCategory('hotline')}
                 className="flex-row items-center rounded-xl p-4"
                 style={{
-                  backgroundColor: selectedCategories.hotline ? colors.success + '30' : colors.surfaceVariant,
+                  backgroundColor: selectedCategories.hotline
+                    ? colors.success + '30'
+                    : colors.surfaceVariant,
                   borderColor: selectedCategories.hotline ? colors.success : colors.border,
                   borderWidth: 1,
                 }}
                 activeOpacity={0.7}>
-                <View className="mr-3 h-10 w-10 items-center justify-center rounded-full" style={{ backgroundColor: colors.success + '30' }}>
+                <View
+                  className="mr-3 h-10 w-10 items-center justify-center rounded-full"
+                  style={{ backgroundColor: colors.success + '30' }}>
                   <Phone size={20} color={colors.success} />
                 </View>
                 <View className="flex-1">
-                  <Text className="font-semibold" style={{ color: colors.text }}>Hotline</Text>
-                  <Text className="text-sm" style={{ color: colors.textSecondary }}>Save to emergency hotline</Text>
+                  <Text className="font-semibold" style={{ color: colors.text }}>
+                    Hotline
+                  </Text>
+                  <Text className="text-sm" style={{ color: colors.textSecondary }}>
+                    Save to emergency hotline
+                  </Text>
                 </View>
                 <View
-                  className="h-6 w-6 rounded items-center justify-center"
+                  className="h-6 w-6 items-center justify-center rounded"
                   style={{
                     borderWidth: 2,
                     borderColor: selectedCategories.hotline ? colors.success : colors.border,
