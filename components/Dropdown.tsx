@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import { Search, X } from 'lucide-react-native';
+import { useTheme } from './ThemeContext';
 
 interface DropdownProps<T = any> {
   isVisible: boolean;
@@ -40,6 +41,7 @@ export default function Dropdown<T = any>({
   searchable = false,
   searchPlaceholder = 'Search...',
 }: DropdownProps<T>) {
+  const { colors } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
 
   // Filter data based on search query
@@ -64,7 +66,7 @@ export default function Dropdown<T = any>({
     <TouchableOpacity
       onPress={() => handleSelect(item)}
       activeOpacity={0.7}
-      className="border-b border-gray-100 last:border-b-0">
+      style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}>
       {renderItem({ item, index })}
     </TouchableOpacity>
   );
@@ -73,21 +75,26 @@ export default function Dropdown<T = any>({
     if (!searchable) return null;
 
     return (
-      <View className="border-b border-gray-200 px-4 py-3">
-        <View className="flex-row items-center rounded-lg bg-gray-50 px-3 py-2">
-          <Search size={16} color="#64748B" />
+      <View
+        className="px-4 py-3"
+        style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}>
+        <View
+          className="flex-row items-center rounded-lg px-3 py-2"
+          style={{ backgroundColor: colors.surfaceVariant }}>
+          <Search size={16} color={colors.textSecondary} />
           <TextInput
             placeholder={searchPlaceholder}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            className="ml-2 flex-1 text-slate-900"
-            placeholderTextColor="#9CA3AF"
+            className="ml-2 flex-1"
+            style={{ color: colors.text }}
+            placeholderTextColor={colors.textSecondary}
             autoCapitalize="none"
             autoCorrect={false}
           />
           {searchQuery.length > 0 && (
             <TouchableOpacity onPress={() => setSearchQuery('')} className="ml-2">
-              <X size={16} color="#64748B" />
+              <X size={16} color={colors.textSecondary} />
             </TouchableOpacity>
           )}
         </View>
@@ -106,12 +113,18 @@ export default function Dropdown<T = any>({
         {/* Centered Container */}
         <View className="absolute inset-0 flex items-center justify-center px-4">
           {/* Dropdown Content */}
-          <View className="w-full max-w-md rounded-lg bg-white shadow-lg">
+          <View
+            className="w-full max-w-md rounded-lg shadow-lg"
+            style={{ backgroundColor: colors.surface }}>
             {/* Header */}
-            <View className="flex-row items-center justify-between border-b border-gray-200 px-4 py-3">
-              <Text className="text-lg font-semibold text-slate-900">{title || placeholder}</Text>
+            <View
+              className="flex-row items-center justify-between px-4 py-3"
+              style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}>
+              <Text className="text-lg font-semibold" style={{ color: colors.text }}>
+                {title || placeholder}
+              </Text>
               <TouchableOpacity onPress={onClose} className="p-1">
-                <X size={20} color="#64748B" />
+                <X size={20} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
@@ -133,8 +146,10 @@ export default function Dropdown<T = any>({
             />
 
             {/* Footer */}
-            <View className="border-t border-gray-200 px-4 py-3">
-              <Text className="text-center text-sm text-slate-500">
+            <View
+              className="px-4 py-3"
+              style={{ borderTopWidth: 1, borderTopColor: colors.border }}>
+              <Text className="text-center text-sm" style={{ color: colors.textSecondary }}>
                 {filteredData.length} item{filteredData.length !== 1 ? 's' : ''} available
               </Text>
             </View>
