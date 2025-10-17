@@ -402,7 +402,7 @@ export default function HotlinesPage() {
                           )}
                         </View>
 
-                        {!isSelectionMode && (
+                        {!isSelectionMode && hotline.source === 'user' && (
                           <TouchableOpacity
                             onPress={() => deleteHotline(hotline.id)}
                             className="p-2">
