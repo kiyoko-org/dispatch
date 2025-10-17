@@ -30,25 +30,40 @@ type Hotline = {
   number: string;
   category: string;
   description?: string;
+  source?: 'server' | 'user';
 };
 
 export default function HotlinesPage() {
   const { colors, isDark } = useTheme();
   const {
+    hotlines: userHotlines,
     hotlineGroups,
+    deleteHotline: deleteUserHotline,
     addHotlineGroup,
     deleteHotlineGroup: deleteHotlineGroupFromContext,
   } = useUserData();
 
   const { hotlines: serverHotlines, deleteHotline: deleteHotlineFromServer } = useHotlines();
 
-  const hotlines: Hotline[] = serverHotlines.map((h) => ({
-    id: h.id.toString(),
+  const serverHotlinesMapped: Hotline[] = serverHotlines.map((h) => ({
+    id: `server-${h.id}`,
     name: h.name,
     number: h.phone_number,
     category: 'Emergency',
     description: h.description || undefined,
+    source: 'server' as const,
   }));
+
+  const userHotlinesMapped: Hotline[] = userHotlines.map((h) => ({
+    id: `user-${h.id}`,
+    name: h.name,
+    number: h.number,
+    category: h.category || 'Emergency',
+    description: h.description,
+    source: 'user' as const,
+  }));
+
+  const hotlines: Hotline[] = [...serverHotlinesMapped, ...userHotlinesMapped];
   const [selectedHotlines, setSelectedHotlines] = useState<Set<string>>(new Set());
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
@@ -126,15 +141,27 @@ export default function HotlinesPage() {
   };
 
   const deleteHotline = (hotlineId: string) => {
+    const isServer = hotlineId.startsWith('server-');
+    const isUser = hotlineId.startsWith('user-');
+
     Alert.alert('Delete Hotline', 'Are you sure you want to delete this hotline?', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
         style: 'destructive',
         onPress: async () => {
-          const { error } = await deleteHotlineFromServer(parseInt(hotlineId));
-          if (error) {
-            Alert.alert('Error', 'Failed to delete hotline');
+          if (isServer) {
+            const serverId = hotlineId.replace('server-', '');
+            const { error } = await deleteHotlineFromServer(parseInt(serverId));
+            if (error) {
+              Alert.alert('Error', 'Failed to delete hotline');
+            }
+          } else if (isUser) {
+            const userId = hotlineId.replace('user-', '');
+            const success = await deleteUserHotline(userId);
+            if (!success) {
+              Alert.alert('Error', 'Failed to delete hotline');
+            }
           }
         },
       },

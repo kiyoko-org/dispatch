@@ -56,9 +56,11 @@ export default function EmergencyScreen() {
   const {
     quickContacts,
     emergencyContacts: savedEmergencyContacts,
+    hotlines: userHotlines,
     addContact,
     deleteContact,
     addHotline,
+    deleteHotline,
   } = useUserData();
 
   const { hotlines: serverHotlines } = useHotlines();
@@ -105,13 +107,25 @@ export default function EmergencyScreen() {
     isSaved: true,
   }));
 
-  const hotlineContacts = serverHotlines.map((hotline) => ({
+  const serverHotlineContacts = serverHotlines.map((hotline) => ({
     service: hotline.name,
     number: hotline.phone_number,
-    id: hotline.id.toString(),
+    id: `server-${hotline.id}`,
     isSaved: false,
     description: hotline.description,
+    source: 'server' as const,
   }));
+
+  const userHotlineContacts = userHotlines.map((hotline) => ({
+    service: hotline.name,
+    number: hotline.number,
+    id: `user-${hotline.id}`,
+    isSaved: true,
+    description: hotline.description,
+    source: 'user' as const,
+  }));
+
+  const hotlineContacts = [...serverHotlineContacts, ...userHotlineContacts];
 
   // Get screen dimensions for responsive design
   const { width, height } = Dimensions.get('window');
@@ -812,6 +826,33 @@ export default function EmergencyScreen() {
                             )}
                           </View>
                         </TouchableOpacity>
+                        {contact.isSaved && contact.source === 'user' && (
+                          <TouchableOpacity
+                            className="ml-3 p-2"
+                            onPress={() => {
+                              const hotlineId = contact.id.replace('user-', '');
+                              Alert.alert(
+                                'Delete Hotline',
+                                `Are you sure you want to remove ${contact.service}?`,
+                                [
+                                  { text: 'Cancel', style: 'cancel' },
+                                  {
+                                    text: 'Delete',
+                                    style: 'destructive',
+                                    onPress: async () => {
+                                      const success = await deleteHotline(hotlineId);
+                                      if (!success) {
+                                        Alert.alert('Error', 'Failed to delete hotline');
+                                      }
+                                    },
+                                  },
+                                ]
+                              );
+                            }}
+                            activeOpacity={0.7}>
+                            <Trash2 size={18} color={colors.error} />
+                          </TouchableOpacity>
+                        )}
                       </View>
                     ))}
                   </View>
