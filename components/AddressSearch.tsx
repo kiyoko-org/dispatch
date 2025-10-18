@@ -46,7 +46,11 @@ export default function AddressSearch({ visible, onClose, onSelect }: AddressSea
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data: SearchResponse = await response.json();
-        setSuggestions(data);
+        // Filter suggestions to only include results within Tuguegarao City
+        const filtered = data.filter((item) =>
+          /tuguegarao/i.test(item.display_name || item.name || '')
+        );
+        setSuggestions(filtered);
         setLoading(false);
       } catch (error: any) {
         if (error.name === 'AbortError') {
@@ -105,17 +109,27 @@ export default function AddressSearch({ visible, onClose, onSelect }: AddressSea
             />
             {loading && <ActivityIndicator style={styles.loader} />}
           </View>
-          {suggestions.length > 0 && (
-            <FlatList
-              data={suggestions}
-              style={styles.suggestionsList}
-              renderItem={({ item }) => (
-                <TouchableOpacity onPress={() => handleSelect(item)} style={styles.suggestionItem}>
-                  <Text style={styles.suggestionText}>{item.display_name}</Text>
-                </TouchableOpacity>
-              )}
-              keyExtractor={(item) => item.place_id.toString()}
-            />
+          {!loading && query.length > 2 && suggestions.length === 0 ? (
+            <View style={{ padding: 12 }}>
+              <Text style={{ textAlign: 'center', color: '#666' }}>
+                No results in Tuguegarao — try a different query
+              </Text>
+            </View>
+          ) : (
+            suggestions.length > 0 && (
+              <FlatList
+                data={suggestions}
+                style={styles.suggestionsList}
+                renderItem={({ item }) => (
+                  <TouchableOpacity
+                    onPress={() => handleSelect(item)}
+                    style={styles.suggestionItem}>
+                    <Text style={styles.suggestionText}>{item.display_name}</Text>
+                  </TouchableOpacity>
+                )}
+                keyExtractor={(item) => item.place_id.toString()}
+              />
+            )
           )}
         </View>
       </View>
