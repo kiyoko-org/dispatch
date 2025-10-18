@@ -8,6 +8,9 @@ import {
   MapPin,
   Phone,
   Bell,
+  PackageSearch,
+  Users,
+  AlertCircle,
 } from 'lucide-react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
@@ -160,6 +163,18 @@ export default function Home() {
 
   const handleViewHotlines = () => {
     router.push('/hotlines');
+  };
+
+  const handleViewLostFound = () => {
+    router.push('/lost-found');
+  };
+
+  const handleViewMissing = () => {
+    router.push('/missing');
+  };
+
+  const handleViewWanted = () => {
+    router.push('/wanted');
   };
 
   return (
@@ -325,72 +340,183 @@ export default function Home() {
             Quick Access
           </Text>
 
-          <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'center' }}>
-            <TouchableOpacity
-              style={{
-                width: '48%',
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: currentColors.cardBorder,
-                backgroundColor: currentColors.cardBg,
-                padding: 16,
-              }}
-              onPress={handleViewMap}>
-              <View style={{ alignItems: 'center' }}>
-                <View
-                  style={{
-                    marginBottom: 12,
-                    height: 40,
-                    width: 40,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}>
-                  <MapPin size={24} color={currentColors.cardIcon} />
+          <View style={{ gap: 12 }}>
+            {/* First Row */}
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: currentColors.cardBorder,
+                  backgroundColor: currentColors.cardBg,
+                  padding: 16,
+                }}
+                onPress={handleViewMap}>
+                <View style={{ alignItems: 'center' }}>
+                  <View
+                    style={{
+                      marginBottom: 12,
+                      height: 40,
+                      width: 40,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                    <MapPin size={24} color={currentColors.cardIcon} />
+                  </View>
+                  <Text
+                    style={{
+                      textAlign: 'center',
+                      fontSize: 14,
+                      fontWeight: '600',
+                      color: currentColors.cardText,
+                    }}>
+                    Map
+                  </Text>
                 </View>
-                <Text
-                  style={{
-                    textAlign: 'center',
-                    fontSize: 14,
-                    fontWeight: '600',
-                    color: currentColors.cardText,
-                  }}>
-                  Map
-                </Text>
-              </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={{
-                width: '48%',
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: currentColors.cardBorder,
-                backgroundColor: currentColors.cardBg,
-                padding: 16,
-              }}
-              onPress={handleViewHotlines}>
-              <View style={{ alignItems: 'center' }}>
-                <View
-                  style={{
-                    marginBottom: 12,
-                    height: 40,
-                    width: 40,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}>
-                  <Phone size={24} color={currentColors.cardIcon} />
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: currentColors.cardBorder,
+                  backgroundColor: currentColors.cardBg,
+                  padding: 16,
+                }}
+                onPress={handleViewHotlines}>
+                <View style={{ alignItems: 'center' }}>
+                  <View
+                    style={{
+                      marginBottom: 12,
+                      height: 40,
+                      width: 40,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                    <Phone size={24} color={currentColors.cardIcon} />
+                  </View>
+                  <Text
+                    style={{
+                      textAlign: 'center',
+                      fontSize: 14,
+                      fontWeight: '600',
+                      color: currentColors.cardText,
+                    }}>
+                    Hotlines
+                  </Text>
                 </View>
-                <Text
-                  style={{
-                    textAlign: 'center',
-                    fontSize: 14,
-                    fontWeight: '600',
-                    color: currentColors.cardText,
-                  }}>
-                  Hotlines
-                </Text>
-              </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
+            </View>
+
+            {/* Second Row */}
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: currentColors.cardBorder,
+                  backgroundColor: currentColors.cardBg,
+                  padding: 16,
+                }}
+                onPress={handleViewLostFound}>
+                <View style={{ alignItems: 'center' }}>
+                  <View
+                    style={{
+                      marginBottom: 12,
+                      height: 40,
+                      width: 40,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                    <PackageSearch size={24} color={currentColors.cardIcon} />
+                  </View>
+                  <Text
+                    style={{
+                      textAlign: 'center',
+                      fontSize: 14,
+                      fontWeight: '600',
+                      color: currentColors.cardText,
+                    }}>
+                    Lost & Found
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: currentColors.cardBorder,
+                  backgroundColor: currentColors.cardBg,
+                  padding: 16,
+                }}
+                onPress={handleViewMissing}>
+                <View style={{ alignItems: 'center' }}>
+                  <View
+                    style={{
+                      marginBottom: 12,
+                      height: 40,
+                      width: 40,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                    <Users size={24} color={currentColors.cardIcon} />
+                  </View>
+                  <Text
+                    style={{
+                      textAlign: 'center',
+                      fontSize: 14,
+                      fontWeight: '600',
+                      color: currentColors.cardText,
+                    }}>
+                    Missing
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            </View>
+
+            {/* Third Row */}
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity
+                style={{
+                  flex: 1,
+                  borderRadius: 8,
+                  borderWidth: 1,
+                  borderColor: currentColors.cardBorder,
+                  backgroundColor: currentColors.cardBg,
+                  padding: 16,
+                }}
+                onPress={handleViewWanted}>
+                <View style={{ alignItems: 'center' }}>
+                  <View
+                    style={{
+                      marginBottom: 12,
+                      height: 40,
+                      width: 40,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}>
+                    <AlertCircle size={24} color={currentColors.cardIcon} />
+                  </View>
+                  <Text
+                    style={{
+                      textAlign: 'center',
+                      fontSize: 14,
+                      fontWeight: '600',
+                      color: currentColors.cardText,
+                    }}>
+                    Wanted
+                  </Text>
+                </View>
+              </TouchableOpacity>
+              
+              {/* Empty space for symmetry */}
+              <View style={{ flex: 1 }} />
+            </View>
           </View>
         </View>
 

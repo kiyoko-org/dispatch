@@ -12,6 +12,9 @@ import {
   Bell,
   Clock,
   AlertCircle,
+  PackageSearch,
+  Users,
+  MessageCircle,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from './ThemeContext';
@@ -65,6 +68,10 @@ export default function HeaderWithSidebar({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isActivityOpen, setIsActivityOpen] = useState(false);
   const [userName, setUserName] = useState<string>('');
+  const [lastSeenReportIds, setLastSeenReportIds] = useState<Set<string>>(new Set());
+
+  // Check if there are unread notifications by comparing current reports with last seen
+  const hasUnreadNotifications = recentReports.some(report => !lastSeenReportIds.has(report.id));
 
   // Fetch user profile to get the name
   useEffect(() => {
@@ -182,6 +189,30 @@ export default function HeaderWithSidebar({
           icon: Phone,
           route: '/(protected)/hotlines',
         },
+        {
+          id: 'lost-found',
+          label: 'Lost & Found',
+          icon: PackageSearch,
+          route: '/(protected)/lost-found',
+        },
+        {
+          id: 'missing',
+          label: 'Missing',
+          icon: Users,
+          route: '/(protected)/missing',
+        },
+        {
+          id: 'wanted',
+          label: 'Wanted',
+          icon: AlertCircle,
+          route: '/(protected)/wanted',
+        },
+        {
+          id: 'chat',
+          label: 'Messages',
+          icon: MessageCircle,
+          route: '/(protected)/chat/inbox',
+        },
       ],
     },
     {
@@ -243,8 +274,10 @@ export default function HeaderWithSidebar({
         useNativeDriver: true,
       }).start(() => setIsActivityOpen(false));
     } else {
-      // Open activity panel
+      // Open activity panel and mark all current reports as seen
       setIsActivityOpen(true);
+      const currentReportIds = new Set(recentReports.map(report => report.id));
+      setLastSeenReportIds(currentReportIds);
       Animated.timing(activityAnim, {
         toValue: 0,
         duration: 300,
@@ -337,7 +370,7 @@ export default function HeaderWithSidebar({
             style={{ backgroundColor: colors.surfaceVariant }}
             activeOpacity={0.7}>
             <Bell size={20} color={colors.text} />
-            {recentReports && recentReports.length > 0 && (
+            {hasUnreadNotifications && (
               <View
                 className="absolute right-1 top-1 h-2 w-2 rounded-full"
                 style={{ backgroundColor: colors.error }}
