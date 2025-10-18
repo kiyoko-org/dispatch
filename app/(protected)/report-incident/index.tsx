@@ -110,28 +110,34 @@ export default function ReportIncidentIndex() {
 
   // Helper function to transform ReportData to dispatch-lib schema
   const transformToDispatchLibSchema = (data: ReportData, attachments: string[]) => {
-
-		console.log("payload", data)
-		console.log("Categories available:", categories);
-		console.log("Looking for category:", data.incident_category);
+    console.log('payload', data);
+    console.log('Categories available:', categories);
+    console.log('Looking for category:', data.incident_category);
 
     // Find the category ID from the categories list
-    const category = categories.find(cat => cat.name === data.incident_category);
-    console.log("Found category:", category);
+    const category = categories.find((cat) => cat.name === data.incident_category);
+    console.log('Found category:', category);
     const categoryId = category?.id || null;
-    console.log("Category ID:", categoryId);
+    console.log('Category ID:', categoryId);
 
     // If no category found, throw an error with helpful information
     if (!category && data.incident_category) {
-      console.error("Category not found:", data.incident_category);
-      console.error("Available categories:", categories.map(c => c.name));
-      throw new Error(`Category "${data.incident_category}" not found. Available categories: ${categories.map(c => c.name).join(', ')}`);
+      console.error('Category not found:', data.incident_category);
+      console.error(
+        'Available categories:',
+        categories.map((c) => c.name)
+      );
+      throw new Error(
+        `Category "${data.incident_category}" not found. Available categories: ${categories.map((c) => c.name).join(', ')}`
+      );
     }
 
     // Find the subcategory ID if it exists
     let subCategoryId = null;
     if (category && category.sub_categories && data.incident_subcategory) {
-      const subCategoryIndex = category.sub_categories.findIndex(sub => sub === data.incident_subcategory);
+      const subCategoryIndex = category.sub_categories.findIndex(
+        (sub) => sub === data.incident_subcategory
+      );
       subCategoryId = subCategoryIndex >= 0 ? subCategoryIndex : null;
     }
 
@@ -161,20 +167,20 @@ export default function ReportIncidentIndex() {
   // Function to handle using current date and time
   const handleUseCurrentDateTime = () => {
     const now = new Date();
-    
+
     // Format date as MM/DD/YYYY
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
     const year = now.getFullYear();
     const dateString = `${month}/${day}/${year}`;
-    
+
     // Format time as HH:MM AM/PM
     let hours = now.getHours();
     const minutes = String(now.getMinutes()).padStart(2, '0');
     const period = hours >= 12 ? 'PM' : 'AM';
     hours = hours % 12 || 12;
     const timeString = `${hours}:${minutes} ${period}`;
-    
+
     updateFormData({
       incident_date: dateString,
       incident_time: timeString,
@@ -219,6 +225,24 @@ export default function ReportIncidentIndex() {
 
         if (address.length > 0) {
           const place = address[0];
+
+          // Check whether the detected place is within Tuguegarao City
+          const cityCheck = (
+            place.city ||
+            place.subregion ||
+            place.region ||
+            place.name ||
+            ''
+          ).toString();
+          const isTuguegarao = /tuguegarao/i.test(cityCheck);
+
+          if (!isTuguegarao) {
+            Alert.alert('Area Not Supported', 'Your area is not supported by Dispatch just yet.', [
+              { text: 'OK' },
+            ]);
+            return;
+          }
+
           const streetAddress =
             [place.streetNumber, place.street].filter(Boolean).join(' ') ||
             place.name ||
@@ -391,16 +415,16 @@ export default function ReportIncidentIndex() {
   };
 
   // Transform categories from database to match component expectations
-  const incidentCategories: { name: string; severity: string }[] = categories.map(category => ({
+  const incidentCategories: { name: string; severity: string }[] = categories.map((category) => ({
     name: category.name,
-    severity: 'Medium' // Default severity since database doesn't have severity field
+    severity: 'Medium', // Default severity since database doesn't have severity field
   }));
 
   const injuryOptions: { name: string; severity: string; icon: string }[] = [];
 
   // Create subcategories mapping from categories data
   const subcategories: Record<string, string[]> = {};
-  categories.forEach(category => {
+  categories.forEach((category) => {
     if (category.sub_categories && category.sub_categories.length > 0) {
       subcategories[category.name] = category.sub_categories;
     }
@@ -428,9 +452,7 @@ export default function ReportIncidentIndex() {
   const handleSubmitReport = async () => {
     // Check if categories are loaded
     if (categoriesLoading) {
-      Alert.alert('Loading', 'Please wait while categories are being loaded...', [
-        { text: 'OK' },
-      ]);
+      Alert.alert('Loading', 'Please wait while categories are being loaded...', [{ text: 'OK' }]);
       return;
     }
 
@@ -468,10 +490,9 @@ export default function ReportIncidentIndex() {
       });
 
       // Race between the API call and timeout
-      const result = (await Promise.race([
-        addReport(reportPayload),
-        timeoutPromise,
-      ])) as Awaited<ReturnType<typeof addReport>>;
+      const result = (await Promise.race([addReport(reportPayload), timeoutPromise])) as Awaited<
+        ReturnType<typeof addReport>
+      >;
 
       if (result.error) {
         throw new Error(result.error.message || 'Failed to submit report');
@@ -525,9 +546,9 @@ export default function ReportIncidentIndex() {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       className="flex-1"
       style={{ backgroundColor: colors.background }}>
-      <StatusBar 
-        barStyle={isDark ? 'light-content' : 'dark-content'} 
-        backgroundColor={colors.background} 
+      <StatusBar
+        barStyle={isDark ? 'light-content' : 'dark-content'}
+        backgroundColor={colors.background}
       />
 
       <HeaderWithSidebar title="Report Incident" showBackButton={false} />
@@ -625,9 +646,15 @@ export default function ReportIncidentIndex() {
               <TouchableOpacity
                 onPress={() => router.replace('/(protected)/home')}
                 className="items-center rounded-lg px-8 py-4"
-                style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }}
+                style={{
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  borderWidth: 1,
+                }}
                 activeOpacity={0.8}>
-                <Text className="text-base font-semibold" style={{ color: colors.text }}>Cancel & Return Home</Text>
+                <Text className="text-base font-semibold" style={{ color: colors.text }}>
+                  Cancel & Return Home
+                </Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
