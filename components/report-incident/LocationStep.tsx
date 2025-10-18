@@ -1,4 +1,12 @@
-import { View, Text, TouchableOpacity, TextInput, ActivityIndicator, Dimensions, Modal } from 'react-native';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  TextInput,
+  ActivityIndicator,
+  Dimensions,
+  Modal,
+} from 'react-native';
 import { MapPin, Map, X, Navigation } from 'lucide-react-native';
 import { Card } from '../ui/Card';
 import { useState, useRef } from 'react';
@@ -34,7 +42,10 @@ export default function LocationStep({
   const [showMapView, setShowMapView] = useState(false);
   const [mapRegion, setMapRegion] = useState<Region | null>(null);
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<{latitude: number, longitude: number} | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const mapRef = useRef<MapView>(null);
   const { colors } = useTheme();
@@ -53,7 +64,7 @@ export default function LocationStep({
       // Default to Tuguegarao City if no coordinates
       const region: Region = {
         latitude: 17.6132,
-        longitude: 121.7270,
+        longitude: 121.727,
         latitudeDelta: 0.15,
         longitudeDelta: 0.15,
       };
@@ -65,30 +76,48 @@ export default function LocationStep({
   const updateLocation = async (latitude: number, longitude: number) => {
     setIsUpdatingLocation(true);
     setLocationError(null);
-    
+
     // Update selected location state immediately for visual feedback
     setSelectedLocation({ latitude, longitude });
-    
+
     try {
       // Create a timeout promise
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Location update timed out')), 10000); // 10 second timeout
       });
-      
+
       // Create the geocoding promise
       const geocodePromise = reverseGeocode(latitude, longitude);
-      
+
       // Race between geocoding and timeout
-      const geocodeResults = await Promise.race([geocodePromise, timeoutPromise]) as any[];
+      const geocodeResults = (await Promise.race([geocodePromise, timeoutPromise])) as any[];
       const address = geocodeResults[0];
-      
+
+      // Ensure the selected location is within Tuguegarao City
+      const city = (
+        address?.city ||
+        address?.subregion ||
+        address?.region ||
+        address?.name ||
+        ''
+      ).toString();
+      const isTuguegarao = /tuguegarao/i.test(city);
+
+      if (!isTuguegarao) {
+        // Show a clear error and do not persist this location
+        setLocationError(
+          'This app currently only supports Tuguegarao City. Please choose a location within Tuguegarao City.'
+        );
+        return;
+      }
+
       // Update form data with new coordinates and address
       onUpdateFormData({
         latitude,
         longitude,
         street_address: address?.name || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
       });
-      
+
       // Update map region to center on new location
       const newRegion: Region = {
         latitude,
@@ -100,14 +129,14 @@ export default function LocationStep({
       mapRef.current?.animateToRegion(newRegion, 1000);
     } catch (error) {
       console.error('Error updating location:', error);
-      
+
       // Set error message based on error type
       if (error instanceof Error && error.message === 'Location update timed out') {
         setLocationError('Location update timed out. Please try again.');
       } else {
         setLocationError('Failed to get address for this location. Coordinates saved.');
       }
-      
+
       // Still update coordinates even if geocoding fails
       onUpdateFormData({
         latitude,
@@ -170,10 +199,14 @@ export default function LocationStep({
   return (
     <Card className="mb-5">
       <View className="mb-4 flex-row items-center">
-        <View className="mr-3 h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: colors.surfaceVariant }}>
+        <View
+          className="mr-3 h-8 w-8 items-center justify-center rounded-lg"
+          style={{ backgroundColor: colors.surfaceVariant }}>
           <MapPin size={20} color={colors.text} />
         </View>
-        <Text className="text-xl font-bold" style={{ color: colors.text }}>Location Information</Text>
+        <Text className="text-xl font-bold" style={{ color: colors.text }}>
+          Location Information
+        </Text>
       </View>
 
       <View className="space-y-4">
@@ -202,7 +235,11 @@ export default function LocationStep({
           onPress={handleUseCurrentLocation}
           disabled={isGettingLocation}
           className="mb-3 flex-row items-center justify-between rounded-lg px-4 py-3"
-          style={{ backgroundColor: colors.surfaceVariant, borderColor: colors.border, borderWidth: 1 }}
+          style={{
+            backgroundColor: colors.surfaceVariant,
+            borderColor: colors.border,
+            borderWidth: 1,
+          }}
           activeOpacity={0.8}>
           <View className="flex-row items-center">
             {isGettingLocation ? (
@@ -216,14 +253,20 @@ export default function LocationStep({
               {isGettingLocation ? 'Getting Location...' : 'Use Current Location'}
             </Text>
           </View>
-          <Text className="text-sm" style={{ color: colors.textSecondary }}>{isGettingLocation ? '...' : '→'}</Text>
+          <Text className="text-sm" style={{ color: colors.textSecondary }}>
+            {isGettingLocation ? '...' : '→'}
+          </Text>
         </TouchableOpacity>
 
         {/* Map View Button */}
         <TouchableOpacity
           onPress={openMapView}
           className="mb-3 flex-row items-center justify-between rounded-lg px-4 py-3"
-          style={{ backgroundColor: colors.surfaceVariant, borderColor: colors.border, borderWidth: 1 }}
+          style={{
+            backgroundColor: colors.surfaceVariant,
+            borderColor: colors.border,
+            borderWidth: 1,
+          }}
           activeOpacity={0.8}>
           <View className="flex-row items-center">
             <Map size={16} color={colors.text} className="mr-2" />
@@ -231,18 +274,27 @@ export default function LocationStep({
               Select on Map
             </Text>
           </View>
-          <Text className="text-sm" style={{ color: colors.textSecondary }}>→</Text>
+          <Text className="text-sm" style={{ color: colors.textSecondary }}>
+            →
+          </Text>
         </TouchableOpacity>
 
         {/* Nearby Landmark */}
         <View>
-          <Text className="mb-2 font-medium" style={{ color: colors.text }}>Nearby Landmark</Text>
+          <Text className="mb-2 font-medium" style={{ color: colors.text }}>
+            Nearby Landmark
+          </Text>
           <TextInput
             placeholder="Notable landmark or building"
             value={formData.nearby_landmark}
             onChangeText={(value) => onUpdateFormData({ nearby_landmark: value })}
             className="mb-3 rounded-lg px-4 py-3"
-            style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, color: colors.text }}
+            style={{
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              borderWidth: 1,
+              color: colors.text,
+            }}
             placeholderTextColor={colors.textSecondary}
           />
         </View>
@@ -272,11 +324,12 @@ export default function LocationStep({
         visible={showMapView}
         animationType="slide"
         presentationStyle="fullScreen"
-        onRequestClose={() => setShowMapView(false)}
-      >
+        onRequestClose={() => setShowMapView(false)}>
         <View className="flex-1" style={{ backgroundColor: colors.background }}>
           {/* Header */}
-          <View className="flex-row items-center justify-between px-4 py-4 pt-12" style={{ backgroundColor: colors.card }}>
+          <View
+            className="flex-row items-center justify-between px-4 py-4 pt-12"
+            style={{ backgroundColor: colors.card }}>
             <View className="flex-row items-center">
               <Navigation size={24} color={colors.text} />
               <Text className="ml-2 text-lg font-bold" style={{ color: colors.text }}>
@@ -286,8 +339,7 @@ export default function LocationStep({
             <TouchableOpacity
               onPress={() => setShowMapView(false)}
               className="rounded-full p-2"
-              style={{ backgroundColor: colors.surfaceVariant }}
-            >
+              style={{ backgroundColor: colors.surfaceVariant }}>
               <X size={24} color={colors.text} />
             </TouchableOpacity>
           </View>
@@ -302,8 +354,7 @@ export default function LocationStep({
               onRegionChangeComplete={setMapRegion}
               onPress={handleMapPress}
               showsUserLocation={true}
-              showsMyLocationButton={true}
-            >
+              showsMyLocationButton={true}>
               {/* Selected Location Marker */}
               {selectedLocation && (
                 <Marker
@@ -312,8 +363,7 @@ export default function LocationStep({
                     longitude: selectedLocation.longitude,
                   }}
                   draggable
-                  onDragEnd={handleMarkerDragEnd}
-                >
+                  onDragEnd={handleMarkerDragEnd}>
                   <View
                     className="items-center justify-center rounded-full"
                     style={{
@@ -325,8 +375,7 @@ export default function LocationStep({
                       shadowOpacity: 0.3,
                       shadowRadius: 4,
                       elevation: 5,
-                    }}
-                  >
+                    }}>
                     <MapPin size={24} color="#FFF" />
                   </View>
                 </Marker>
@@ -338,12 +387,10 @@ export default function LocationStep({
           {isUpdatingLocation && (
             <View
               className="absolute inset-0 items-center justify-center"
-              style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}
-            >
+              style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}>
               <View
                 className="items-center rounded-lg px-6 py-4"
-                style={{ backgroundColor: colors.card }}
-              >
+                style={{ backgroundColor: colors.card }}>
                 <ActivityIndicator size="large" color={colors.primary} />
                 <Text className="mt-2 font-medium" style={{ color: colors.text }}>
                   Updating location...
@@ -356,39 +403,33 @@ export default function LocationStep({
           {locationError && !isUpdatingLocation && (
             <View
               className="absolute inset-0 items-center justify-center"
-              style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}
-            >
+              style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}>
               <View
-                className="items-center rounded-lg px-6 py-4 mx-4"
-                style={{ backgroundColor: colors.card }}
-              >
+                className="mx-4 items-center rounded-lg px-6 py-4"
+                style={{ backgroundColor: colors.card }}>
                 <View className="mb-3 rounded-full p-3" style={{ backgroundColor: '#DC262620' }}>
                   <X size={24} color="#DC2626" />
                 </View>
-                <Text className="text-center font-medium mb-2" style={{ color: colors.text }}>
+                <Text className="mb-2 text-center font-medium" style={{ color: colors.text }}>
                   Location Update Failed
                 </Text>
-                <Text className="text-center text-sm mb-4" style={{ color: colors.textSecondary }}>
+                <Text className="mb-4 text-center text-sm" style={{ color: colors.textSecondary }}>
                   {locationError}
                 </Text>
                 <View className="flex-row space-x-3">
                   <TouchableOpacity
                     onPress={() => setLocationError(null)}
-                    className="px-4 py-2 rounded-lg"
-                    style={{ backgroundColor: colors.surfaceVariant }}
-                  >
+                    className="rounded-lg px-4 py-2"
+                    style={{ backgroundColor: colors.surfaceVariant }}>
                     <Text className="font-medium" style={{ color: colors.text }}>
                       Dismiss
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={retryLocationUpdate}
-                    className="px-4 py-2 rounded-lg"
-                    style={{ backgroundColor: colors.primary }}
-                  >
-                    <Text className="font-medium text-white">
-                      Retry
-                    </Text>
+                    className="rounded-lg px-4 py-2"
+                    style={{ backgroundColor: colors.primary }}>
+                    <Text className="font-medium text-white">Retry</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -398,8 +439,7 @@ export default function LocationStep({
           {/* Instructions */}
           <View
             className="absolute bottom-4 left-4 right-4 rounded-lg p-4"
-            style={{ backgroundColor: colors.card }}
-          >
+            style={{ backgroundColor: colors.card }}>
             <Text className="text-sm font-medium" style={{ color: colors.text }}>
               Tap anywhere on the map or drag the marker to select your precise location
             </Text>
