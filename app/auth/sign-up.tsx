@@ -10,7 +10,7 @@ import {
   TextInput,
   ScrollView,
 } from 'react-native';
-import { Shield, Camera as CameraIcon, Check, ChevronDown } from 'lucide-react-native';
+import { Shield, Camera as CameraIcon, Check, ChevronDown, Eye, EyeOff } from 'lucide-react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -65,6 +65,12 @@ const signUpSchema = z
       .min(1, 'Email is required')
       .email('Please enter a valid email address'),
 
+    phoneNumber: z
+      .string()
+      .trim()
+      .min(10, 'Phone number must be at least 10 digits')
+      .regex(/^[0-9+\-\s()]*$/, 'Please enter a valid phone number'),
+
     password: z.string().min(6, 'Password must be at least 6 characters long'),
   })
   .refine(
@@ -104,7 +110,10 @@ export default function RootLayout() {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [countryCode, setCountryCode] = useState('PH+63');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [suffix, setSuffix] = useState('');
   const [showSuffixDropdown, setShowSuffixDropdown] = useState(false);
@@ -172,6 +181,7 @@ export default function RootLayout() {
           middle_name: middleName,
           no_middle_name: noMiddleName,
           last_name: lastName,
+          phone_number: phoneNumber,
           user_type: userType,
           role: 'user',
           permanent_address_1: `${permanentStreet}, ${permanentBarangay}`,
@@ -222,6 +232,7 @@ export default function RootLayout() {
         temporaryCity,
         temporaryProvince,
         email,
+        phoneNumber,
         password,
       });
       setValidationErrors({});
@@ -257,6 +268,7 @@ export default function RootLayout() {
         temporaryCity,
         temporaryProvince,
         email,
+        phoneNumber,
         password,
       });
       return true;
@@ -867,24 +879,74 @@ export default function RootLayout() {
                   )}
                 </View>
 
+                <View className="mb-4">
+                  <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
+                    Phone Number *
+                  </Text>
+                  <View className="flex-row gap-3">
+                    <TouchableOpacity
+                      className="rounded-xl px-4 py-4"
+                      style={{
+                        backgroundColor: colors.surfaceVariant,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                      }}>
+                      <Text className="text-base" style={{ color: colors.text }}>
+                        {countryCode}
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TextInput
+                      className="flex-1 rounded-xl px-4 py-4 text-base"
+                      style={{
+                        backgroundColor: colors.surfaceVariant,
+                        borderWidth: 1,
+                        borderColor: validationErrors.phoneNumber ? '#EF4444' : colors.border,
+                        color: colors.text,
+                      }}
+                      placeholder="Please enter your phone number"
+                      value={phoneNumber}
+                      onChangeText={setPhoneNumber}
+                      placeholderTextColor={colors.textSecondary}
+                      keyboardType="phone-pad"
+                    />
+                  </View>
+                  {validationErrors.phoneNumber && (
+                    <Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
+                      {validationErrors.phoneNumber}
+                    </Text>
+                  )}
+                </View>
+
                 <View className="mb-6">
                   <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
                     Password *
                   </Text>
-                  <TextInput
-                    className="rounded-xl px-4 py-4 text-base"
-                    style={{
-                      backgroundColor: colors.surfaceVariant,
-                      borderWidth: 1,
-                      borderColor: validationErrors.password ? '#EF4444' : colors.border,
-                      color: colors.text,
-                    }}
-                    placeholder="Create a password"
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry={true}
-                    placeholderTextColor={colors.textSecondary}
-                  />
+                  <View className="relative">
+                    <TextInput
+                      className="rounded-xl px-4 py-4 pr-12 text-base"
+                      style={{
+                        backgroundColor: colors.surfaceVariant,
+                        borderWidth: 1,
+                        borderColor: validationErrors.password ? '#EF4444' : colors.border,
+                        color: colors.text,
+                      }}
+                      placeholder="Create a password"
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry={!showPassword}
+                      placeholderTextColor={colors.textSecondary}
+                    />
+                    <TouchableOpacity
+                      className="absolute right-4 top-1/2 -translate-y-1/2 transform"
+                      onPress={() => setShowPassword(!showPassword)}>
+                      {showPassword ? (
+                        <Eye size={20} color={colors.textSecondary} />
+                      ) : (
+                        <EyeOff size={20} color={colors.textSecondary} />
+                      )}
+                    </TouchableOpacity>
+                  </View>
                   {validationErrors.password ? (
                     <Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
                       {validationErrors.password}

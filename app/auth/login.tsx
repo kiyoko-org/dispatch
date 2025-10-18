@@ -6,8 +6,10 @@ import {
   AppState,
   Alert,
   StatusBar,
+  Modal,
+  ScrollView,
 } from 'react-native';
-import { EyeOff, MessageSquare } from 'lucide-react-native';
+import { Eye, EyeOff, MessageSquare, X } from 'lucide-react-native';
 import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { supabase } from 'lib/supabase';
@@ -31,6 +33,11 @@ export default function Login() {
   const [countryCode] = useState('PH+63');
   const [loading, setLoading] = useState(false);
   const [loginMethod, setLoginMethod] = useState<'password' | 'phone'>('password');
+  const [showHelpModal, setShowHelpModal] = useState(false);
+  const [helpName, setHelpName] = useState('');
+  const [helpEmail, setHelpEmail] = useState('');
+  const [helpSubject, setHelpSubject] = useState('');
+  const [helpMessage, setHelpMessage] = useState('');
 
   async function signInWithEmail() {
     setLoading(true);
@@ -57,6 +64,22 @@ export default function Login() {
     Alert.alert(`Signed in successfully! Welcome back!`);
     router.dismissAll();
     router.replace('/(protected)/home');
+  }
+
+  function handleSendHelp() {
+    if (!helpName || !helpEmail || !helpSubject || !helpMessage) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+
+    // TODO: Implement submission logic
+    Alert.alert('Success', 'Your message has been received. We will get back to you soon!');
+    setShowHelpModal(false);
+    // Reset form
+    setHelpName('');
+    setHelpEmail('');
+    setHelpSubject('');
+    setHelpMessage('');
   }
 
   return (
@@ -137,7 +160,11 @@ export default function Login() {
               <TouchableOpacity
                 className="absolute right-4 top-1/2 -translate-y-1/2 transform"
                 onPress={() => setShowPassword(!showPassword)}>
-                <EyeOff size={20} color={colors.textSecondary} />
+                {showPassword ? (
+                  <Eye size={20} color={colors.textSecondary} />
+                ) : (
+                  <EyeOff size={20} color={colors.textSecondary} />
+                )}
               </TouchableOpacity>
             </View>
 
@@ -215,6 +242,142 @@ export default function Login() {
           </Text>
         </Text>
       </View>
+
+      <View className="mt-6 items-center pb-8">
+        <TouchableOpacity onPress={() => setShowHelpModal(true)}>
+          <Text className="text-center text-sm underline" style={{ color: colors.primary }}>
+            Need help? Contact support
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Help Modal */}
+      <Modal
+        visible={showHelpModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowHelpModal(false)}>
+        <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View
+            className="rounded-t-3xl px-6 pb-8 pt-6"
+            style={{ backgroundColor: colors.background, maxHeight: '90%' }}>
+            <View className="mb-6 flex-row items-center justify-between">
+              <Text className="text-xl font-bold" style={{ color: colors.text }}>
+                Contact Support
+              </Text>
+              <TouchableOpacity onPress={() => setShowHelpModal(false)}>
+                <X size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              <View className="mb-4">
+                <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
+                  Your Name
+                </Text>
+                <RNTextInput
+                  className="rounded-xl px-4 py-3 text-base"
+                  style={{
+                    backgroundColor: colors.surfaceVariant,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    color: colors.text,
+                  }}
+                  placeholder="Enter your name"
+                  value={helpName}
+                  onChangeText={setHelpName}
+                  placeholderTextColor={colors.textSecondary}
+                />
+              </View>
+
+              <View className="mb-4">
+                <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
+                  Your Email
+                </Text>
+                <RNTextInput
+                  className="rounded-xl px-4 py-3 text-base"
+                  style={{
+                    backgroundColor: colors.surfaceVariant,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    color: colors.text,
+                  }}
+                  placeholder="Enter your email"
+                  value={helpEmail}
+                  onChangeText={setHelpEmail}
+                  placeholderTextColor={colors.textSecondary}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </View>
+
+              <View className="mb-4">
+                <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
+                  What do you need help with?
+                </Text>
+                <RNTextInput
+                  className="rounded-xl px-4 py-3 text-base"
+                  style={{
+                    backgroundColor: colors.surfaceVariant,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    color: colors.text,
+                  }}
+                  placeholder="e.g., Login issue, Password reset, etc."
+                  value={helpSubject}
+                  onChangeText={setHelpSubject}
+                  placeholderTextColor={colors.textSecondary}
+                />
+              </View>
+
+              <View className="mb-6">
+                <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
+                  Describe your issue
+                </Text>
+                <RNTextInput
+                  className="rounded-xl px-4 py-3 text-base"
+                  style={{
+                    backgroundColor: colors.surfaceVariant,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                    color: colors.text,
+                    minHeight: 120,
+                    textAlignVertical: 'top',
+                  }}
+                  placeholder="Please describe your issue in detail..."
+                  value={helpMessage}
+                  onChangeText={setHelpMessage}
+                  placeholderTextColor={colors.textSecondary}
+                  multiline
+                  numberOfLines={5}
+                />
+              </View>
+
+              <TouchableOpacity
+                className="rounded-xl py-4"
+                style={{ backgroundColor: colors.primary }}
+                onPress={handleSendHelp}>
+                <Text className="text-center text-base font-semibold text-white">
+                  Send Message
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                className="mt-3 rounded-xl py-4"
+                style={{
+                  backgroundColor: colors.surfaceVariant,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+                onPress={() => setShowHelpModal(false)}>
+                <Text className="text-center text-base font-semibold" style={{ color: colors.text }}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
