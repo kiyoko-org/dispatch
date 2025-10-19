@@ -98,7 +98,7 @@ export default function BasicInfoStep({
         {formData.incident_category && (
           <View>
             <Text className="mb-2 font-medium" style={{ color: colors.text }}>
-              Subcategory <Text className="text-red-600">*</Text>
+              Subcategory
             </Text>
             <TouchableOpacity
               onPress={() => onOpenDropdown('subcategory')}
@@ -189,7 +189,7 @@ export default function BasicInfoStep({
         isVisible={showCategoryDropdown}
         onClose={() => onCloseDropdown('category')}
         onSelect={(item) =>
-          onUpdateFormData({ incident_category: item.name, incident_subcategory: '' })
+          onUpdateFormData({ incident_category: item.name, incident_subcategory: 'Other' })
         }
         data={incidentCategories}
         keyExtractor={(item) => item.name}

@@ -135,10 +135,14 @@ export default function ReportIncidentIndex() {
     // Find the subcategory ID if it exists
     let subCategoryId = null;
     if (category && category.sub_categories && data.incident_subcategory) {
-      const subCategoryIndex = category.sub_categories.findIndex(
-        (sub) => sub === data.incident_subcategory
-      );
-      subCategoryId = subCategoryIndex >= 0 ? subCategoryIndex : null;
+      if (data.incident_subcategory === 'Other') {
+        subCategoryId = null;
+      } else {
+        const subCategoryIndex = category.sub_categories.findIndex(
+          (sub) => sub === data.incident_subcategory
+        );
+        subCategoryId = subCategoryIndex >= 0 ? subCategoryIndex : null;
+      }
     }
 
     return {
@@ -426,7 +430,9 @@ export default function ReportIncidentIndex() {
   const subcategories: Record<string, string[]> = {};
   categories.forEach((category) => {
     if (category.sub_categories && category.sub_categories.length > 0) {
-      subcategories[category.name] = category.sub_categories;
+      subcategories[category.name] = [...category.sub_categories, 'Other'];
+    } else {
+      subcategories[category.name] = ['Other'];
     }
   });
 
