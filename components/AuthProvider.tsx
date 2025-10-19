@@ -4,12 +4,14 @@ import { supabase } from 'lib/supabase';
 import * as Linking from 'expo-linking';
 import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import { useRouter } from 'expo-router';
+import { LogoutOverlay } from './LogoutOverlay';
 
 type AuthState = {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
   isLoggingOut: boolean;
+  isProcessingDeepLink: boolean;
 };
 
 type AuthContextType = AuthState & {
@@ -24,6 +26,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     session: null,
     isLoading: true,
     isLoggingOut: false,
+    isProcessingDeepLink: false,
   });
 
   const router = useRouter();
@@ -53,6 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             session,
             isLoading: false,
             isLoggingOut: false,
+            isProcessingDeepLink: false,
           });
         }
       } catch (error) {
@@ -63,6 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             session: null,
             isLoading: false,
             isLoggingOut: false,
+            isProcessingDeepLink: false,
           });
         }
       }
@@ -81,6 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           session,
           isLoading: false,
           isLoggingOut: false,
+          isProcessingDeepLink: false,
         });
       }
     });
@@ -128,6 +134,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (access_token && refresh_token) {
         console.log('Setting session from deep link tokens');
 
+        setAuthState((prev) => ({ ...prev, isProcessingDeepLink: true }));
+
         const { data, error } = await supabase.auth.setSession({
           access_token,
           refresh_token,
@@ -135,37 +143,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (error) {
           console.error('Failed to set session:', error.message);
+          setAuthState((prev) => ({ ...prev, isProcessingDeepLink: false }));
           return;
         }
 
         console.log('Successfully set session from deep link');
+        setAuthState((prev) => ({ ...prev, isProcessingDeepLink: false }));
       }
     } catch (error) {
       console.error('Error handling deep link:', error);
+      setAuthState((prev) => ({ ...prev, isProcessingDeepLink: false }));
     }
   };
 
   const signOut = async () => {
     try {
       // Set loading state
-      setAuthState(prev => ({ ...prev, isLoggingOut: true }));
-      
+      setAuthState((prev) => ({ ...prev, isLoggingOut: true }));
+
       // Create a timeout promise
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Logout timeout')), 10000); // 10 second timeout
       });
-      
+
       // Race between logout and timeout
-      await Promise.race([
-        supabase.auth.signOut(),
-        timeoutPromise
-      ]);
-      
+      await Promise.race([supabase.auth.signOut(), timeoutPromise]);
+
       router.replace('/auth/login');
     } catch (error) {
       console.error('Error signing out:', error);
       // Reset loading state on error
-      setAuthState(prev => ({ ...prev, isLoggingOut: false }));
+      setAuthState((prev) => ({ ...prev, isLoggingOut: false }));
     }
   };
 
@@ -179,6 +187,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signOut,
       }}>
       {children}
+      <LogoutOverlay visible={authState.isProcessingDeepLink} message="Signing in..." />
     </AuthContext.Provider>
   );
 }
