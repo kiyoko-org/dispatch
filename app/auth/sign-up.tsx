@@ -49,7 +49,7 @@ const signUpSchema = z
 
     userType: z.enum(['resident', 'student', 'work']),
 
-    permanentStreet: z.string().trim().min(1, 'Street address is required'),
+    permanentStreet: z.string().trim(),
     permanentBarangay: z.string().trim().min(1, 'Barangay is required'),
     permanentCity: z.string().trim().min(1, 'City is required'),
     permanentProvince: z.string().trim().min(1, 'Province is required'),
@@ -205,7 +205,6 @@ export default function RootLayout() {
     }
   }
 
-  const suffixOptions: string[] = [];
 
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
@@ -649,10 +648,10 @@ export default function RootLayout() {
                     style={{
                       backgroundColor: colors.surfaceVariant,
                       borderWidth: 1,
-                      borderColor: validationErrors.permanentStreet ? '#EF4444' : colors.border,
+                      borderColor: colors.border,
                       color: colors.text,
                     }}
-                    placeholder="Street"
+                    placeholder="Street (optional)"
                     value={permanentStreet}
                     onChangeText={setPermanentStreet}
                     placeholderTextColor={colors.textSecondary}
@@ -754,7 +753,7 @@ export default function RootLayout() {
                         borderColor: validationErrors.temporaryStreet ? '#EF4444' : colors.border,
                         color: colors.text,
                       }}
-                      placeholder="Street"
+                      placeholder="Street (optional)"
                       value={temporaryStreet}
                       onChangeText={setTemporaryStreet}
                       placeholderTextColor={colors.textSecondary}
