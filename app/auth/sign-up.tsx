@@ -205,6 +205,7 @@ export default function RootLayout() {
     }
   }
 
+  const suffixOptions: string[] = ['Jr.', 'Sr.', 'I', 'II', 'III', 'IV', 'V'];
 
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
