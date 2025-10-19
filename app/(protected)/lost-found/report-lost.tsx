@@ -118,7 +118,7 @@ export default function ReportLostPage() {
       Alert.alert('Success', 'Lost item reported successfully', [
         {
           text: 'OK',
-          onPress: () => router.replace('/(protected)/lost-found'),
+          onPress: () => router.back(),
         },
       ]);
     } finally {
@@ -466,30 +466,6 @@ export default function ReportLostPage() {
                 </View>
                 <Text style={{ fontSize: 12, color: colors.textSecondary }}>→</Text>
               </TouchableOpacity>
-            </View>
-
-            {/* Nearby Landmark */}
-            <View style={{ marginTop: 10 }}>
-              <Text style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 6 }}>
-                Nearby Landmark (Optional)
-              </Text>
-              <TextInput
-                placeholder="Notable landmark or building"
-                value={locationData.nearby_landmark}
-                onChangeText={(value) =>
-                  setLocationData({ ...locationData, nearby_landmark: value })
-                }
-                placeholderTextColor="#94A3B8"
-                style={{
-                  backgroundColor: colors.surface,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  borderRadius: 6,
-                  padding: 10,
-                  fontSize: 14,
-                  color: colors.text,
-                }}
-              />
             </View>
           </View>
 

@@ -20,8 +20,8 @@ import {
   ChevronDown,
   Calendar,
 } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
-import { useState, useMemo } from 'react';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useState, useMemo, useCallback } from 'react';
 import { useTheme } from '../../../components/ThemeContext';
 import HeaderWithSidebar from '../../../components/HeaderWithSidebar';
 import DatePicker from '../../../components/DatePicker';
@@ -62,6 +62,25 @@ export default function LostAndFoundPage() {
   const [distanceUnit, setDistanceUnit] = useState<DistanceUnit>('km');
   const [showBeforeDatePicker, setShowBeforeDatePicker] = useState(false);
   const [showAfterDatePicker, setShowAfterDatePicker] = useState(false);
+
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        setStatus('all');
+        setSelectedCategory('all');
+        setSortBy('newest');
+        setSearchQuery('');
+        setFilterDateBefore('');
+        setFilterDateAfter('');
+        setDistanceValue('');
+        setShowCategoryDropdown(false);
+        setShowSortDropdown(false);
+        setShowFiltersModal(false);
+        setShowBeforeDatePicker(false);
+        setShowAfterDatePicker(false);
+      };
+    }, [])
+  );
 
   const categories = [
     'all',

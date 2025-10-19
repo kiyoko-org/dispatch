@@ -467,30 +467,6 @@ export default function ReportFoundPage() {
                 <Text style={{ fontSize: 12, color: colors.textSecondary }}>→</Text>
               </TouchableOpacity>
             </View>
-
-            {/* Nearby Landmark */}
-            <View style={{ marginTop: 10 }}>
-              <Text style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 6 }}>
-                Nearby Landmark (Optional)
-              </Text>
-              <TextInput
-                placeholder="Notable landmark or building"
-                value={locationData.nearby_landmark}
-                onChangeText={(value) =>
-                  setLocationData({ ...locationData, nearby_landmark: value })
-                }
-                placeholderTextColor="#94A3B8"
-                style={{
-                  backgroundColor: colors.surface,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  borderRadius: 6,
-                  padding: 10,
-                  fontSize: 14,
-                  color: colors.text,
-                }}
-              />
-            </View>
           </View>
 
           {/* Address Search Modal */}
