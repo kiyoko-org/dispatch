@@ -5,17 +5,18 @@ import {
   TouchableOpacity,
   StatusBar,
   TextInput,
-  Platform,
   ActivityIndicator,
   Alert,
 } from 'react-native';
-import { ChevronLeft, Camera, MapPin, Calendar, ChevronDown } from 'lucide-react-native';
+import { ChevronLeft, Camera, ChevronDown, Calendar } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTheme } from '../../../components/ThemeContext';
 import DatePicker from '../../../components/DatePicker';
 import Dropdown from '../../../components/Dropdown';
+import LocationStep from '../../../components/report-incident/LocationStep';
 import { useLostAndFound } from '@kiyoko-org/dispatch-lib';
+import * as Location from 'expo-location';
 
 export default function ReportFoundPage() {
   const router = useRouter();
@@ -25,12 +26,17 @@ export default function ReportFoundPage() {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
-  const [latitude, setLatitude] = useState('');
-  const [longitude, setLongitude] = useState('');
   const [date, setDate] = useState('');
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
+  const [locationData, setLocationData] = useState({
+    street_address: '',
+    nearby_landmark: '',
+    latitude: undefined as number | undefined,
+    longitude: undefined as number | undefined,
+  });
 
   const categories = [
     'Electronics',
@@ -53,8 +59,8 @@ export default function ReportFoundPage() {
       Alert.alert('Error', 'Please select a category');
       return;
     }
-    if (!latitude.trim() || !longitude.trim()) {
-      Alert.alert('Error', 'Please provide latitude and longitude');
+    if (!locationData.latitude || !locationData.longitude) {
+      Alert.alert('Error', 'Please select a location');
       return;
     }
     if (!date) {
@@ -68,8 +74,8 @@ export default function ReportFoundPage() {
         item_title: title,
         category: category.toLowerCase(),
         description: description || null,
-        lat: parseFloat(latitude),
-        lon: parseFloat(longitude),
+        lat: locationData.latitude,
+        lon: locationData.longitude,
         date_lost: date,
         is_lost: false,
       });
@@ -90,28 +96,27 @@ export default function ReportFoundPage() {
     }
   };
 
-  const handleMapSelect = () => {
-    Alert.prompt('Enter Coordinates', 'Format: latitude, longitude\nExample: 14.5549, 121.0242', [
-      {
-        text: 'Cancel',
-        onPress: () => {},
-        style: 'cancel',
-      },
-      {
-        text: 'OK',
-        onPress: (text) => {
-          if (text) {
-            const [lat, lon] = text.split(',').map((v) => v.trim());
-            if (lat && lon) {
-              setLatitude(lat);
-              setLongitude(lon);
-            } else {
-              Alert.alert('Error', 'Invalid format');
-            }
-          }
-        },
-      },
-    ]);
+  const handleUseCurrentLocation = async () => {
+    setIsGettingLocation(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Location permission is required');
+        return;
+      }
+
+      const location = await Location.getCurrentPositionAsync({});
+      setLocationData({
+        ...locationData,
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+      });
+    } catch (error) {
+      Alert.alert('Error', 'Failed to get current location');
+      console.error('Location error:', error);
+    } finally {
+      setIsGettingLocation(false);
+    }
   };
 
   return (
@@ -231,76 +236,15 @@ export default function ReportFoundPage() {
             />
           </View>
 
-          {/* Location Latitude */}
+          {/* Location Step */}
           <View style={{ marginBottom: 18 }}>
-            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: 7 }}>
-              Latitude *
-            </Text>
-            <TextInput
-              value={latitude}
-              onChangeText={setLatitude}
-              placeholder="e.g., 14.5549"
-              placeholderTextColor="#94A3B8"
-              keyboardType="decimal-pad"
-              style={{
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.border,
-                borderRadius: 6,
-                padding: 12,
-                fontSize: 15,
-                color: colors.text,
-              }}
+            <LocationStep
+              formData={locationData}
+              onUpdateFormData={(updates) => setLocationData({ ...locationData, ...updates })}
+              validationErrors={validationErrors}
+              onUseCurrentLocation={handleUseCurrentLocation}
+              isGettingLocation={isGettingLocation}
             />
-          </View>
-
-          {/* Location Longitude */}
-          <View style={{ marginBottom: 18 }}>
-            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: 7 }}>
-              Longitude *
-            </Text>
-            <TextInput
-              value={longitude}
-              onChangeText={setLongitude}
-              placeholder="e.g., 121.0242"
-              placeholderTextColor="#94A3B8"
-              keyboardType="decimal-pad"
-              style={{
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.border,
-                borderRadius: 6,
-                padding: 12,
-                fontSize: 15,
-                color: colors.text,
-              }}
-            />
-          </View>
-
-          {/* Location Button */}
-          <View style={{ marginBottom: 18 }}>
-            <TouchableOpacity
-              onPress={handleMapSelect}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.border,
-                borderRadius: 6,
-                padding: 12,
-              }}>
-              <MapPin size={18} color="#64748B" />
-              <Text
-                style={{
-                  flex: 1,
-                  marginLeft: 10,
-                  fontSize: 15,
-                  color: '#94A3B8',
-                }}>
-                Or enter coordinates manually
-              </Text>
-            </TouchableOpacity>
           </View>
 
           {/* Date */}

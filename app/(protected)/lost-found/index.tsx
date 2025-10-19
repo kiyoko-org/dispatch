@@ -12,10 +12,8 @@ import {
 } from 'react-native';
 import {
   PackageSearch,
-  Plus,
   MapPin,
   Clock,
-  User,
   Search,
   X,
   Filter,
@@ -54,7 +52,6 @@ export default function LostAndFoundPage() {
   const [selectedCategory, setSelectedCategory] = useState<ItemCategory>('all');
   const [sortBy, setSortBy] = useState<SortBy>('newest');
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeMenu, setActiveMenu] = useState<'category' | 'dateDistance' | 'sort' | null>(null);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [showFiltersModal, setShowFiltersModal] = useState(false);
