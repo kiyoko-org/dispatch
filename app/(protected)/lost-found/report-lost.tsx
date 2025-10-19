@@ -12,6 +12,7 @@ import { ChevronLeft, Camera, ChevronDown, Calendar } from 'lucide-react-native'
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTheme } from '../../../components/ThemeContext';
+import { useAuth } from '../../../hooks/useAuth';
 import DatePicker from '../../../components/DatePicker';
 import Dropdown from '../../../components/Dropdown';
 import LocationStep from '../../../components/report-incident/LocationStep';
@@ -22,6 +23,7 @@ export default function ReportLostPage() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const { addLostAndFound } = useLostAndFound();
+  const { user } = useAuth();
 
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
@@ -37,6 +39,7 @@ export default function ReportLostPage() {
     latitude: undefined as number | undefined,
     longitude: undefined as number | undefined,
   });
+  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
   const categories = [
     'Electronics',
@@ -51,6 +54,10 @@ export default function ReportLostPage() {
   ];
 
   const handleSubmit = async () => {
+    if (!user) {
+      Alert.alert('Error', 'You must be logged in to submit a report');
+      return;
+    }
     if (!title.trim()) {
       Alert.alert('Error', 'Please enter an item title');
       return;
@@ -78,6 +85,7 @@ export default function ReportLostPage() {
         lon: locationData.longitude,
         date_lost: date,
         is_lost: true,
+        user_id: user.id,
       });
 
       if (error) {
