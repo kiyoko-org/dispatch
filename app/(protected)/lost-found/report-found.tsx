@@ -1,24 +1,37 @@
-import { View, Text, ScrollView, TouchableOpacity, StatusBar, TextInput, Platform } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StatusBar,
+  TextInput,
+  Platform,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
 import { ChevronLeft, Camera, MapPin, Calendar, ChevronDown } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTheme } from '../../../components/ThemeContext';
 import DatePicker from '../../../components/DatePicker';
 import Dropdown from '../../../components/Dropdown';
+import { useLostAndFound } from '@kiyoko-org/dispatch-lib';
 
 export default function ReportFoundPage() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  
+  const { addLostAndFound } = useLostAndFound();
+
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
-  const [location, setLocation] = useState('');
+  const [latitude, setLatitude] = useState('');
+  const [longitude, setLongitude] = useState('');
   const [date, setDate] = useState('');
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Categories for found items
   const categories = [
     'Electronics',
     'Documents',
@@ -28,18 +41,77 @@ export default function ReportFoundPage() {
     'Jewelry',
     'Clothing',
     'Sports Equipment',
-    'Other'
+    'Other',
   ];
 
-  const handleSubmit = () => {
-    // TODO: Validate and submit to database
-    console.log('Submit found item report');
-    router.back();
+  const handleSubmit = async () => {
+    if (!title.trim()) {
+      Alert.alert('Error', 'Please enter an item title');
+      return;
+    }
+    if (!category) {
+      Alert.alert('Error', 'Please select a category');
+      return;
+    }
+    if (!latitude.trim() || !longitude.trim()) {
+      Alert.alert('Error', 'Please provide latitude and longitude');
+      return;
+    }
+    if (!date) {
+      Alert.alert('Error', 'Please select a date');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const { error } = await addLostAndFound({
+        item_title: title,
+        category: category.toLowerCase(),
+        description: description || null,
+        lat: parseFloat(latitude),
+        lon: parseFloat(longitude),
+        date_lost: date,
+        is_lost: false,
+      });
+
+      if (error) {
+        Alert.alert('Error', 'Failed to submit found item report');
+        return;
+      }
+
+      Alert.alert('Success', 'Found item reported successfully', [
+        {
+          text: 'OK',
+          onPress: () => router.back(),
+        },
+      ]);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleMapSelect = () => {
-    // TODO: Open map picker
-    console.log('Open map picker');
+    Alert.prompt('Enter Coordinates', 'Format: latitude, longitude\nExample: 14.5549, 121.0242', [
+      {
+        text: 'Cancel',
+        onPress: () => {},
+        style: 'cancel',
+      },
+      {
+        text: 'OK',
+        onPress: (text) => {
+          if (text) {
+            const [lat, lon] = text.split(',').map((v) => v.trim());
+            if (lat && lon) {
+              setLatitude(lat);
+              setLongitude(lon);
+            } else {
+              Alert.alert('Error', 'Invalid format');
+            }
+          }
+        },
+      },
+    ]);
   };
 
   return (
@@ -159,11 +231,54 @@ export default function ReportFoundPage() {
             />
           </View>
 
-          {/* Location */}
+          {/* Location Latitude */}
           <View style={{ marginBottom: 18 }}>
             <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: 7 }}>
-              Location Found *
+              Latitude *
             </Text>
+            <TextInput
+              value={latitude}
+              onChangeText={setLatitude}
+              placeholder="e.g., 14.5549"
+              placeholderTextColor="#94A3B8"
+              keyboardType="decimal-pad"
+              style={{
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderRadius: 6,
+                padding: 12,
+                fontSize: 15,
+                color: colors.text,
+              }}
+            />
+          </View>
+
+          {/* Location Longitude */}
+          <View style={{ marginBottom: 18 }}>
+            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: 7 }}>
+              Longitude *
+            </Text>
+            <TextInput
+              value={longitude}
+              onChangeText={setLongitude}
+              placeholder="e.g., 121.0242"
+              placeholderTextColor="#94A3B8"
+              keyboardType="decimal-pad"
+              style={{
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderRadius: 6,
+                padding: 12,
+                fontSize: 15,
+                color: colors.text,
+              }}
+            />
+          </View>
+
+          {/* Location Button */}
+          <View style={{ marginBottom: 18 }}>
             <TouchableOpacity
               onPress={handleMapSelect}
               style={{
@@ -181,9 +296,9 @@ export default function ReportFoundPage() {
                   flex: 1,
                   marginLeft: 10,
                   fontSize: 15,
-                  color: location ? colors.text : '#94A3B8',
+                  color: '#94A3B8',
                 }}>
-                {location || 'Select location on map'}
+                Or enter coordinates manually
               </Text>
             </TouchableOpacity>
           </View>
@@ -249,16 +364,22 @@ export default function ReportFoundPage() {
           {/* Submit Button */}
           <TouchableOpacity
             onPress={handleSubmit}
+            disabled={isSubmitting}
             style={{
-              backgroundColor: '#059669',
+              backgroundColor: isSubmitting ? '#059669' : '#059669',
               borderRadius: 8,
               padding: 15,
               alignItems: 'center',
+              opacity: isSubmitting ? 0.6 : 1,
             }}
             activeOpacity={0.8}>
-            <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '600' }}>
-              Submit Found Item Report
-            </Text>
+            {isSubmitting ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '600' }}>
+                Submit Found Item Report
+              </Text>
+            )}
           </TouchableOpacity>
         </View>
       </ScrollView>

@@ -1,47 +1,35 @@
-import { View, Text, ScrollView, TouchableOpacity, StatusBar, Linking, Image } from 'react-native';
-import { ChevronLeft, MapPin, Clock, User, Phone, MessageCircle, Share2, AlertCircle, Navigation, Camera } from 'lucide-react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StatusBar,
+  Image,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
+import { ChevronLeft, MapPin, Clock, MessageCircle, Share2, Camera } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { useTheme } from '../../../components/ThemeContext';
+import { useLostAndFound } from '@kiyoko-org/dispatch-lib';
+import type { Database } from '@kiyoko-org/dispatch-lib/database.types';
 
-type LostFoundItem = {
-  id: string;
-  title: string;
-  category: string;
-  description: string;
-  location: string;
-  date: string;
-  status: 'lost' | 'found';
-  distance: string;
-  reporter: string;
-  contactPhone?: string;
-  contactEmail?: string;
-  additionalInfo?: string;
-  imageUrl?: string;
-};
+type LostFoundItem = Database['public']['Tables']['lost_and_found']['Row'];
 
 export default function LostFoundDetailPage() {
   const router = useRouter();
   const { id } = useLocalSearchParams();
   const { colors } = useTheme();
+  const { lostAndFound, loading } = useLostAndFound();
+  const [item, setItem] = useState<LostFoundItem | null>(null);
 
-  // Mock data - will be replaced with actual database query
-  const mockItem: LostFoundItem = {
-    id: '1',
-    title: 'Car Keys',
-    category: 'keys',
-    description: 'Toyota car keys with blue keychain',
-    location: 'Ayala Center, Makati',
-    date: '2025-10-18T09:00:00',
-    status: 'lost',
-    distance: '1.8',
-    reporter: 'Mike Johnson',
-    contactPhone: '+63 917 123 4567',
-    contactEmail: 'mike.johnson@email.com',
-    additionalInfo: 'Last seen near the parking area of Glorietta 4. The keychain has a small Toyota logo and a blue lanyard. Very important as these are my only set of car keys. Willing to offer a reward for their return.',
-    imageUrl: undefined, // Will be replaced with actual image URL from database
-  };
-
-  const item = mockItem; // In production, fetch by id
+  useEffect(() => {
+    if (!loading && id) {
+      const foundItem = lostAndFound.find((i) => i.id === Number(id));
+      setItem(foundItem || null);
+    }
+  }, [loading, id, lostAndFound]);
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -55,26 +43,62 @@ export default function LostFoundDetailPage() {
     return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   };
 
-  const handleCall = () => {
-    if (item.contactPhone) {
-      Linking.openURL(`tel:${item.contactPhone}`);
-    }
-  };
-
   const handleSendMessage = () => {
-    // Navigate to chat page with reporter info
-    router.push(`/chat/${item.id}?name=${encodeURIComponent(item.reporter)}`);
+    router.push(`/chat/${item?.id}?name=${encodeURIComponent(item?.item_title || '')}`);
   };
 
   const handleShare = () => {
-    // TODO: Implement share functionality
-    console.log('Share item');
+    Alert.alert('Share Feature', 'Share feature coming soon');
   };
 
   const handleViewOnMap = () => {
-    // TODO: Open map view with location
-    console.log('View on map');
+    Alert.alert('Map View', `Location: ${item?.lat}, ${item?.lon}`);
   };
+
+  if (loading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: colors.background,
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+        <ActivityIndicator size="large" color={colors.text} />
+      </View>
+    );
+  }
+
+  if (!item) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
+        <View
+          style={{
+            padding: 18,
+            backgroundColor: colors.surface,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border,
+            flexDirection: 'row',
+            alignItems: 'center',
+          }}>
+          <TouchableOpacity onPress={() => router.back()} style={{ marginRight: 14 }}>
+            <ChevronLeft size={24} color={colors.text} />
+          </TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 19, fontWeight: '600', color: colors.text }}>
+              Item Not Found
+            </Text>
+          </View>
+        </View>
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ fontSize: 16, color: colors.textSecondary }}>
+            This item could not be found
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -94,9 +118,7 @@ export default function LostFoundDetailPage() {
           <ChevronLeft size={24} color={colors.text} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 19, fontWeight: '600', color: colors.text }}>
-            Item Details
-          </Text>
+          <Text style={{ fontSize: 19, fontWeight: '600', color: colors.text }}>Item Details</Text>
         </View>
         <TouchableOpacity onPress={handleShare} style={{ padding: 8 }}>
           <Share2 size={20} color="#64748B" />
@@ -105,7 +127,7 @@ export default function LostFoundDetailPage() {
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Hero Section with Gradient Background */}
-        <View style={{ backgroundColor: item.status === 'lost' ? '#FEE2E2' : '#D1FAE5' }}>
+        <View style={{ backgroundColor: item.is_lost ? '#FEE2E2' : '#D1FAE5' }}>
           <View style={{ padding: 24, paddingTop: 20 }}>
             {/* Status Badge */}
             <View
@@ -115,30 +137,45 @@ export default function LostFoundDetailPage() {
                 paddingHorizontal: 16,
                 borderRadius: 20,
                 alignSelf: 'flex-start',
-                backgroundColor: item.status === 'lost' ? '#7F1D1D' : '#064E3B',
+                backgroundColor: item.is_lost ? '#7F1D1D' : '#064E3B',
                 marginBottom: 16,
               }}>
               <Text style={{ fontSize: 12, fontWeight: '700', color: '#FFFFFF', letterSpacing: 1 }}>
-                {item.status === 'lost' ? 'LOST ITEM' : 'FOUND ITEM'}
+                {item.is_lost ? 'LOST ITEM' : 'FOUND ITEM'}
               </Text>
             </View>
 
             {/* Title */}
-            <Text style={{ fontSize: 28, fontWeight: '800', color: colors.text, marginBottom: 12, letterSpacing: -0.5 }}>
-              {item.title}
+            <Text
+              style={{
+                fontSize: 28,
+                fontWeight: '800',
+                color: colors.text,
+                marginBottom: 12,
+                letterSpacing: -0.5,
+              }}>
+              {item.item_title}
             </Text>
 
             {/* Meta Info */}
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              <View style={{ paddingVertical: 6, paddingHorizontal: 12, backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0' }}>
-                <Text style={{ fontSize: 12, fontWeight: '600', color: '#475569', textTransform: 'capitalize' }}>
+              <View
+                style={{
+                  paddingVertical: 6,
+                  paddingHorizontal: 12,
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: 16,
+                  borderWidth: 1,
+                  borderColor: '#E2E8F0',
+                }}>
+                <Text
+                  style={{
+                    fontSize: 12,
+                    fontWeight: '600',
+                    color: '#475569',
+                    textTransform: 'capitalize',
+                  }}>
                   {item.category}
-                </Text>
-              </View>
-              <View style={{ paddingVertical: 6, paddingHorizontal: 12, backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                <Navigation size={12} color="#475569" />
-                <Text style={{ fontSize: 12, fontWeight: '600', color: '#475569' }}>
-                  {item.distance} km away
                 </Text>
               </View>
             </View>
@@ -148,16 +185,35 @@ export default function LostFoundDetailPage() {
         {/* Main Content */}
         <View style={{ backgroundColor: colors.background }}>
           {/* Image Section */}
-          {item.imageUrl ? (
-            <View style={{ margin: 20, marginBottom: 16, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: colors.border }}>
+          {item.photo ? (
+            <View
+              style={{
+                margin: 20,
+                marginBottom: 16,
+                borderRadius: 12,
+                overflow: 'hidden',
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}>
               <Image
-                source={{ uri: item.imageUrl }}
+                source={{ uri: item.photo }}
                 style={{ width: '100%', height: 280 }}
                 resizeMode="cover"
               />
             </View>
           ) : (
-            <View style={{ margin: 20, marginBottom: 16, backgroundColor: colors.surface, borderRadius: 12, height: 200, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border }}>
+            <View
+              style={{
+                margin: 20,
+                marginBottom: 16,
+                backgroundColor: colors.surface,
+                borderRadius: 12,
+                height: 200,
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}>
               <Camera size={48} color="#CBD5E1" strokeWidth={1.5} />
               <Text style={{ marginTop: 12, fontSize: 14, color: '#94A3B8' }}>
                 No image available
@@ -166,17 +222,63 @@ export default function LostFoundDetailPage() {
           )}
 
           {/* Location Card */}
-          <View style={{ margin: 20, marginBottom: 16, backgroundColor: colors.surface, borderRadius: 12, padding: 18, borderWidth: 1, borderColor: colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }}>
+          <View
+            style={{
+              margin: 20,
+              marginBottom: 16,
+              backgroundColor: colors.surface,
+              borderRadius: 12,
+              padding: 18,
+              borderWidth: 1,
+              borderColor: colors.border,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.05,
+              shadowRadius: 8,
+              elevation: 2,
+            }}>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 14 }}>
-              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
+              <View
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: '#F1F5F9',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
                 <MapPin size={20} color="#475569" />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 6, letterSpacing: 0.5 }}>
+                <Text
+                  style={{
+                    fontSize: 12,
+                    fontWeight: '700',
+                    color: '#64748B',
+                    marginBottom: 6,
+                    letterSpacing: 0.5,
+                  }}>
                   LOCATION
                 </Text>
-                <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 12, lineHeight: 22 }}>
-                  {item.location}
+                <Text
+                  style={{
+                    fontSize: 16,
+                    fontWeight: '600',
+                    color: colors.text,
+                    marginBottom: 12,
+                    lineHeight: 22,
+                  }}>
+                  Latitude: {item.lat.toFixed(4)}
+                </Text>
+                <Text
+                  style={{
+                    fontSize: 16,
+                    fontWeight: '600',
+                    color: colors.text,
+                    marginBottom: 12,
+                    lineHeight: 22,
+                  }}>
+                  Longitude: {item.lon.toFixed(4)}
                 </Text>
                 <TouchableOpacity
                   onPress={handleViewOnMap}
@@ -189,7 +291,7 @@ export default function LostFoundDetailPage() {
                   }}
                   activeOpacity={0.8}>
                   <Text style={{ fontSize: 13, fontWeight: '600', color: '#FFFFFF' }}>
-                    View on Map
+                    View Coordinates
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -197,87 +299,101 @@ export default function LostFoundDetailPage() {
           </View>
 
           {/* Date Card */}
-          <View style={{ marginHorizontal: 20, marginBottom: 16, backgroundColor: colors.surface, borderRadius: 12, padding: 18, borderWidth: 1, borderColor: colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }}>
+          <View
+            style={{
+              marginHorizontal: 20,
+              marginBottom: 16,
+              backgroundColor: colors.surface,
+              borderRadius: 12,
+              padding: 18,
+              borderWidth: 1,
+              borderColor: colors.border,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.05,
+              shadowRadius: 8,
+              elevation: 2,
+            }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-              <View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
+              <View
+                style={{
+                  width: 40,
+                  height: 40,
+                  borderRadius: 20,
+                  backgroundColor: '#F1F5F9',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
                 <Clock size={20} color="#475569" />
               </View>
               <View>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 4, letterSpacing: 0.5 }}>
-                  DATE {item.status === 'lost' ? 'LOST' : 'FOUND'}
+                <Text
+                  style={{
+                    fontSize: 12,
+                    fontWeight: '700',
+                    color: '#64748B',
+                    marginBottom: 4,
+                    letterSpacing: 0.5,
+                  }}>
+                  DATE {item.is_lost ? 'LOST' : 'FOUND'}
                 </Text>
                 <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
-                  {formatDate(item.date)}
+                  {formatDate(item.date_lost)}
                 </Text>
               </View>
             </View>
           </View>
 
           {/* Description Section */}
-          <View style={{ marginHorizontal: 20, marginBottom: 16, backgroundColor: colors.surface, borderRadius: 12, padding: 20, borderWidth: 1, borderColor: colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }}>
-            <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 12, letterSpacing: 0.5 }}>
-              DESCRIPTION
-            </Text>
-            <Text style={{ fontSize: 15, color: colors.text, lineHeight: 24 }}>
-              {item.description}
-            </Text>
-          </View>
-
-          {/* Additional Info Section */}
-          {item.additionalInfo && (
-            <View style={{ marginHorizontal: 20, marginBottom: 16, backgroundColor: colors.surface, borderRadius: 12, padding: 20, borderWidth: 1, borderColor: colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }}>
-              <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 12, letterSpacing: 0.5 }}>
-                ADDITIONAL INFORMATION
+          {item.description && (
+            <View
+              style={{
+                marginHorizontal: 20,
+                marginBottom: 16,
+                backgroundColor: colors.surface,
+                borderRadius: 12,
+                padding: 20,
+                borderWidth: 1,
+                borderColor: colors.border,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.05,
+                shadowRadius: 8,
+                elevation: 2,
+              }}>
+              <Text
+                style={{
+                  fontSize: 12,
+                  fontWeight: '700',
+                  color: '#64748B',
+                  marginBottom: 12,
+                  letterSpacing: 0.5,
+                }}>
+                DESCRIPTION
               </Text>
               <Text style={{ fontSize: 15, color: colors.text, lineHeight: 24 }}>
-                {item.additionalInfo}
+                {item.description}
               </Text>
             </View>
           )}
 
-          {/* Reporter & Contact Section */}
-          <View style={{ marginHorizontal: 20, marginBottom: 16, backgroundColor: colors.surface, borderRadius: 12, padding: 20, borderWidth: 1, borderColor: colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-              <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' }}>
-                <User size={22} color="#475569" />
-              </View>
-              <View>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 4, letterSpacing: 0.5 }}>
-                  REPORTED BY
-                </Text>
-                <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text }}>
-                  {item.reporter}
-                </Text>
-              </View>
-            </View>
-
-            {/* Contact Buttons */}
+          {/* Contact Section */}
+          <View
+            style={{
+              marginHorizontal: 20,
+              marginBottom: 32,
+              backgroundColor: colors.surface,
+              borderRadius: 12,
+              padding: 20,
+              borderWidth: 1,
+              borderColor: colors.border,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.05,
+              shadowRadius: 8,
+              elevation: 2,
+            }}>
             <View style={{ gap: 12 }}>
-              {item.contactPhone && (
-                <TouchableOpacity
-                  onPress={handleCall}
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 10,
-                    backgroundColor: '#065F46',
-                    paddingVertical: 16,
-                    borderRadius: 10,
-                    shadowColor: '#065F46',
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.2,
-                    shadowRadius: 8,
-                    elevation: 4,
-                  }}
-                  activeOpacity={0.8}>
-                  <Phone size={20} color="#FFFFFF" />
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: '#FFFFFF' }}>
-                    Call {item.reporter.split(' ')[0]}
-                  </Text>
-                </TouchableOpacity>
-              )}
-
               <TouchableOpacity
                 onPress={handleSendMessage}
                 style={{

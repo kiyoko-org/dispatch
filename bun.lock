@@ -5,7 +5,7 @@
       "name": "dispatch",
       "dependencies": {
         "@expo/metro-runtime": "~5.0.4",
-        "@kiyoko-org/dispatch-lib": "github:kiyoko-org/dispatch-lib#5ff662f123c72cdb6084981d016ff03bf9ab67cb",
+        "@kiyoko-org/dispatch-lib": "github:kiyoko-org/dispatch-lib#main",
         "@react-native-async-storage/async-storage": "^2.2.0",
         "@react-native-community/netinfo": "^11.4.1",
         "@supabase/supabase-js": "^2.54.0",
@@ -365,7 +365,7 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.29", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-uw6guiW/gcAGPDhLmd77/6lW8QLeiV5RUTsAX46Db6oLhGaVj4lhnPwb184s1bkc8kdVg/+h988dro8GRDpmYQ=="],
 
-    "@kiyoko-org/dispatch-lib": ["dispatch-lib@github:kiyoko-org/dispatch-lib#5ff662f", { "dependencies": { "@supabase/supabase-js": "^2.75.0", "zod": "^4.1.12" }, "peerDependencies": { "react": "^19.0.0", "typescript": "^5" } }, "kiyoko-org-dispatch-lib-5ff662f"],
+    "@kiyoko-org/dispatch-lib": ["dispatch-lib@github:kiyoko-org/dispatch-lib#18584e7", { "dependencies": { "@supabase/supabase-js": "^2.75.0", "zod": "^4.1.12" }, "peerDependencies": { "react": "^19.0.0", "typescript": "^5" } }, "kiyoko-org-dispatch-lib-18584e7"],
 
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@0.2.12", "", { "dependencies": { "@emnapi/core": "^1.4.3", "@emnapi/runtime": "^1.4.3", "@tybys/wasm-util": "^0.10.0" } }, "sha512-ZVWUcfwY4E/yPitQJl481FjFo3K22D6qF0DuFH6Y/nbnE11GY5uguDxZMGXPQ8WQ0128MXQD7TnfHyK4oWoIJQ=="],
 

@@ -1,33 +1,55 @@
-import { View, Text, ScrollView, TouchableOpacity, StatusBar, TextInput, Modal, KeyboardAvoidingView, Platform } from 'react-native';
-import { PackageSearch, Plus, MapPin, Clock, User, Search, X, Filter, ChevronDown, Calendar } from 'lucide-react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StatusBar,
+  TextInput,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
+  ActivityIndicator,
+} from 'react-native';
+import {
+  PackageSearch,
+  Plus,
+  MapPin,
+  Clock,
+  User,
+  Search,
+  X,
+  Filter,
+  ChevronDown,
+  Calendar,
+} from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useState, useMemo } from 'react';
 import { useTheme } from '../../../components/ThemeContext';
 import HeaderWithSidebar from '../../../components/HeaderWithSidebar';
 import DatePicker from '../../../components/DatePicker';
 import Dropdown from '../../../components/Dropdown';
+import { useLostAndFound } from '@kiyoko-org/dispatch-lib';
 
 type ItemStatus = 'all' | 'lost' | 'found';
-type ItemCategory = 'all' | 'electronics' | 'documents' | 'accessories' | 'bags' | 'keys' | 'other';
+type ItemCategory =
+  | 'all'
+  | 'electronics'
+  | 'documents'
+  | 'accessories'
+  | 'bags'
+  | 'keys'
+  | 'jewelry'
+  | 'clothing'
+  | 'sports'
+  | 'other';
 type SortBy = 'newest' | 'oldest' | 'location';
 type DistanceUnit = 'km' | 'm';
-
-type LostFoundItem = {
-  id: string;
-  title: string;
-  category: string;
-  description: string;
-  location: string;
-  date: string;
-  status: 'lost' | 'found';
-  distance: string;
-  reporter: string;
-};
 
 export default function LostAndFoundPage() {
   const router = useRouter();
   const { colors } = useTheme();
-  
+  const { lostAndFound, loading, error } = useLostAndFound();
+
   const [status, setStatus] = useState<ItemStatus>('all');
   const [selectedCategory, setSelectedCategory] = useState<ItemCategory>('all');
   const [sortBy, setSortBy] = useState<SortBy>('newest');
@@ -36,8 +58,7 @@ export default function LostAndFoundPage() {
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [showSortDropdown, setShowSortDropdown] = useState(false);
   const [showFiltersModal, setShowFiltersModal] = useState(false);
-  
-  // Date & Distance filter states
+
   const [filterDateBefore, setFilterDateBefore] = useState('');
   const [filterDateAfter, setFilterDateAfter] = useState('');
   const [distanceValue, setDistanceValue] = useState('');
@@ -45,7 +66,6 @@ export default function LostAndFoundPage() {
   const [showBeforeDatePicker, setShowBeforeDatePicker] = useState(false);
   const [showAfterDatePicker, setShowAfterDatePicker] = useState(false);
 
-  // Categories with sample data
   const categories = [
     'all',
     'electronics',
@@ -53,52 +73,39 @@ export default function LostAndFoundPage() {
     'accessories',
     'bags',
     'keys',
-    'other'
+    'jewelry',
+    'clothing',
+    'sports',
+    'other',
   ];
 
-  // Sort options
   const sortOptions = [
     { value: 'newest', label: 'Newest first' },
     { value: 'oldest', label: 'Oldest first' },
-    { value: 'location', label: 'Location' }
+    { value: 'location', label: 'Location' },
   ];
 
-  // Mock data - will be replaced with actual database queries
-  const mockItems: LostFoundItem[] = [
-    {
-      id: '1',
-      title: 'Car Keys',
-      category: 'keys',
-      description: 'Toyota car keys with blue keychain',
-      location: 'Ayala Center, Makati',
-      date: '2025-10-18T09:00:00',
-      status: 'lost',
-      distance: '1.8',
-      reporter: 'Mike Johnson',
-    },
-  ];
-
-  // Filter items based on status, category, search, and date range
   const filteredItems = useMemo(() => {
-    return mockItems.filter(item => {
-      const matchesStatus = status === 'all' || item.status === status;
-      const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
-      const matchesSearch = searchQuery === '' || 
-        item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.location.toLowerCase().includes(searchQuery.toLowerCase());
-      
-      // Date range filtering logic
+    return lostAndFound.filter((item) => {
+      const matchesStatus = status === 'all' || (status === 'lost' ? item.is_lost : !item.is_lost);
+      const matchesCategory =
+        selectedCategory === 'all' || item.category.toLowerCase() === selectedCategory;
+      const matchesSearch =
+        searchQuery === '' ||
+        item.item_title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.description?.toLowerCase().includes(searchQuery.toLowerCase());
+
       let matchesDate = true;
       if (filterDateBefore || filterDateAfter) {
-        const itemDate = new Date(item.date);
-        
+        const itemDate = new Date(item.date_lost);
+
         if (filterDateBefore) {
           const [month, day, year] = filterDateBefore.split('/').map(Number);
           const beforeDate = new Date(year, month - 1, day);
           beforeDate.setHours(23, 59, 59, 999);
           matchesDate = matchesDate && itemDate <= beforeDate;
         }
-        
+
         if (filterDateAfter) {
           const [month, day, year] = filterDateAfter.split('/').map(Number);
           const afterDate = new Date(year, month - 1, day);
@@ -106,20 +113,21 @@ export default function LostAndFoundPage() {
           matchesDate = matchesDate && itemDate >= afterDate;
         }
       }
-      
+
       return matchesStatus && matchesCategory && matchesSearch && matchesDate;
     });
-  }, [status, selectedCategory, searchQuery, filterDateBefore, filterDateAfter]);
+  }, [lostAndFound, status, selectedCategory, searchQuery, filterDateBefore, filterDateAfter]);
 
-  // Sort items
   const sortedItems = useMemo(() => {
     const items = [...filteredItems];
     if (sortBy === 'newest') {
-      return items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      return items.sort(
+        (a, b) => new Date(b.date_lost).getTime() - new Date(a.date_lost).getTime()
+      );
     } else if (sortBy === 'oldest') {
-      return items.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    } else if (sortBy === 'location') {
-      return items.sort((a, b) => a.location.localeCompare(b.location));
+      return items.sort(
+        (a, b) => new Date(a.date_lost).getTime() - new Date(b.date_lost).getTime()
+      );
     }
     return items;
   }, [filteredItems, sortBy]);
@@ -138,7 +146,7 @@ export default function LostAndFoundPage() {
     return date.toLocaleDateString();
   };
 
-  const handleItemPress = (itemId: string) => {
+  const handleItemPress = (itemId: number) => {
     router.push(`/lost-found/${itemId}`);
   };
 
@@ -150,8 +158,20 @@ export default function LostAndFoundPage() {
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Header Section */}
-        <View style={{ padding: 20, backgroundColor: colors.surface, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+        <View
+          style={{
+            padding: 20,
+            backgroundColor: colors.surface,
+            borderBottomWidth: 1,
+            borderBottomColor: colors.border,
+          }}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              marginBottom: 16,
+            }}>
             <TouchableOpacity
               onPress={() => router.push('/lost-found/report-lost')}
               style={{
@@ -163,7 +183,8 @@ export default function LostAndFoundPage() {
                 flex: 1,
               }}
               activeOpacity={0.8}>
-              <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600', textAlign: 'center' }}>
+              <Text
+                style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600', textAlign: 'center' }}>
                 Report Lost
               </Text>
             </TouchableOpacity>
@@ -177,7 +198,8 @@ export default function LostAndFoundPage() {
                 flex: 1,
               }}
               activeOpacity={0.8}>
-              <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600', textAlign: 'center' }}>
+              <Text
+                style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600', textAlign: 'center' }}>
                 Report Found
               </Text>
             </TouchableOpacity>
@@ -185,7 +207,15 @@ export default function LostAndFoundPage() {
 
           {/* Search Bar */}
           <View style={{ position: 'relative', marginBottom: 14 }}>
-            <View style={{ position: 'absolute', left: 12, top: 0, bottom: 0, justifyContent: 'center', zIndex: 1 }}>
+            <View
+              style={{
+                position: 'absolute',
+                left: 12,
+                top: 0,
+                bottom: 0,
+                justifyContent: 'center',
+                zIndex: 1,
+              }}>
               <Search size={18} color={colors.textSecondary} />
             </View>
             <TextInput
@@ -208,7 +238,13 @@ export default function LostAndFoundPage() {
             {searchQuery ? (
               <TouchableOpacity
                 onPress={() => setSearchQuery('')}
-                style={{ position: 'absolute', right: 12, top: 0, bottom: 0, justifyContent: 'center' }}>
+                style={{
+                  position: 'absolute',
+                  right: 12,
+                  top: 0,
+                  bottom: 0,
+                  justifyContent: 'center',
+                }}>
                 <X size={18} color={colors.textSecondary} />
               </TouchableOpacity>
             ) : null}
@@ -224,15 +260,23 @@ export default function LostAndFoundPage() {
                   paddingHorizontal: 14,
                   paddingVertical: 7,
                   borderRadius: 16,
-                  backgroundColor: status === s ? (s === 'lost' ? '#7F1D1D' : s === 'found' ? '#064E3B' : '#475569') : '#F1F5F9',
+                  backgroundColor:
+                    status === s
+                      ? s === 'lost'
+                        ? '#7F1D1D'
+                        : s === 'found'
+                          ? '#064E3B'
+                          : '#475569'
+                      : '#F1F5F9',
                 }}
                 activeOpacity={0.7}>
-                <Text style={{
-                  fontSize: 13,
-                  fontWeight: '600',
-                  color: status === s ? '#FFFFFF' : '#64748B',
-                  textTransform: 'capitalize',
-                }}>
+                <Text
+                  style={{
+                    fontSize: 13,
+                    fontWeight: '600',
+                    color: status === s ? '#FFFFFF' : '#64748B',
+                    textTransform: 'capitalize',
+                  }}>
                   {s}
                 </Text>
               </TouchableOpacity>
@@ -257,7 +301,9 @@ export default function LostAndFoundPage() {
               }}
               activeOpacity={0.7}>
               <Text style={{ fontSize: 13, fontWeight: '500', color: colors.text }}>
-                {selectedCategory === 'all' ? 'Category' : selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)}
+                {selectedCategory === 'all'
+                  ? 'Category'
+                  : selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)}
               </Text>
               <ChevronDown size={16} color={colors.textSecondary} />
             </TouchableOpacity>
@@ -278,11 +324,11 @@ export default function LostAndFoundPage() {
               }}
               activeOpacity={0.7}>
               <Filter size={14} color={colors.textSecondary} />
-              <Text style={{ fontSize: 13, fontWeight: '500', color: colors.text }}>
-                Filters
-              </Text>
+              <Text style={{ fontSize: 13, fontWeight: '500', color: colors.text }}>Filters</Text>
               {hasActiveFilters && (
-                <View style={{ backgroundColor: '#7F1D1D', borderRadius: 10, width: 6, height: 6 }} />
+                <View
+                  style={{ backgroundColor: '#7F1D1D', borderRadius: 10, width: 6, height: 6 }}
+                />
               )}
               <ChevronDown size={16} color={colors.textSecondary} />
             </TouchableOpacity>
@@ -302,9 +348,7 @@ export default function LostAndFoundPage() {
                 gap: 6,
               }}
               activeOpacity={0.7}>
-              <Text style={{ fontSize: 13, fontWeight: '500', color: colors.text }}>
-                Sort
-              </Text>
+              <Text style={{ fontSize: 13, fontWeight: '500', color: colors.text }}>Sort</Text>
               <ChevronDown size={16} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
@@ -342,21 +386,27 @@ export default function LostAndFoundPage() {
           keyExtractor={(item, index) => index.toString()}
           renderItem={({ item }) => (
             <View style={{ padding: 12 }}>
-              <Text style={{ fontSize: 15, color: colors.text }}>
-                {item.label}
-              </Text>
+              <Text style={{ fontSize: 15, color: colors.text }}>{item.label}</Text>
             </View>
           )}
           title="Sort by"
         />
 
         {/* Filters Modal */}
-        <Modal visible={showFiltersModal} transparent={true} animationType="fade" onRequestClose={() => setShowFiltersModal(false)}>
+        <Modal
+          visible={showFiltersModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowFiltersModal(false)}>
           <KeyboardAvoidingView
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             className="flex-1">
             {/* Backdrop */}
-            <TouchableOpacity className="flex-1 bg-black/50" activeOpacity={1} onPress={() => setShowFiltersModal(false)} />
+            <TouchableOpacity
+              className="flex-1 bg-black/50"
+              activeOpacity={1}
+              onPress={() => setShowFiltersModal(false)}
+            />
 
             {/* Modal Content */}
             <View className="absolute inset-0 flex items-center justify-center px-4">
@@ -378,13 +428,21 @@ export default function LostAndFoundPage() {
                 <ScrollView className="px-4 py-3" showsVerticalScrollIndicator={false}>
                   {/* Date Range Section */}
                   <View style={{ marginBottom: 16 }}>
-                    <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748B', marginBottom: 8 }}>
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: '600',
+                        color: '#64748B',
+                        marginBottom: 8,
+                      }}>
                       DATE RANGE
                     </Text>
-                    
+
                     {/* Before Date */}
                     <View style={{ marginBottom: 10 }}>
-                      <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 6 }}>Before</Text>
+                      <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 6 }}>
+                        Before
+                      </Text>
                       <TouchableOpacity
                         onPress={() => setShowBeforeDatePicker(true)}
                         style={{
@@ -397,7 +455,13 @@ export default function LostAndFoundPage() {
                           padding: 10,
                         }}>
                         <Calendar size={16} color="#64748B" />
-                        <Text style={{ flex: 1, marginLeft: 8, fontSize: 13, color: filterDateBefore ? colors.text : '#94A3B8' }}>
+                        <Text
+                          style={{
+                            flex: 1,
+                            marginLeft: 8,
+                            fontSize: 13,
+                            color: filterDateBefore ? colors.text : '#94A3B8',
+                          }}>
                           {filterDateBefore || 'Select date'}
                         </Text>
                         {filterDateBefore && (
@@ -407,7 +471,7 @@ export default function LostAndFoundPage() {
                         )}
                       </TouchableOpacity>
                     </View>
-                    
+
                     {/* After Date */}
                     <View>
                       <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 6 }}>After</Text>
@@ -423,7 +487,13 @@ export default function LostAndFoundPage() {
                           padding: 10,
                         }}>
                         <Calendar size={16} color="#64748B" />
-                        <Text style={{ flex: 1, marginLeft: 8, fontSize: 13, color: filterDateAfter ? colors.text : '#94A3B8' }}>
+                        <Text
+                          style={{
+                            flex: 1,
+                            marginLeft: 8,
+                            fontSize: 13,
+                            color: filterDateAfter ? colors.text : '#94A3B8',
+                          }}>
                           {filterDateAfter || 'Select date'}
                         </Text>
                         {filterDateAfter && (
@@ -434,10 +504,16 @@ export default function LostAndFoundPage() {
                       </TouchableOpacity>
                     </View>
                   </View>
-                  
+
                   {/* Distance Section */}
                   <View>
-                    <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748B', marginBottom: 8 }}>
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        fontWeight: '600',
+                        color: '#64748B',
+                        marginBottom: 8,
+                      }}>
                       DISTANCE FROM YOU
                     </Text>
                     <View style={{ flexDirection: 'row', gap: 8 }}>
@@ -468,7 +544,12 @@ export default function LostAndFoundPage() {
                           borderWidth: 1,
                           borderColor: distanceUnit === 'km' ? '#475569' : colors.border,
                         }}>
-                        <Text style={{ fontSize: 13, fontWeight: '600', color: distanceUnit === 'km' ? '#FFFFFF' : '#64748B' }}>
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            fontWeight: '600',
+                            color: distanceUnit === 'km' ? '#FFFFFF' : '#64748B',
+                          }}>
                           km
                         </Text>
                       </TouchableOpacity>
@@ -482,7 +563,12 @@ export default function LostAndFoundPage() {
                           borderWidth: 1,
                           borderColor: distanceUnit === 'm' ? '#475569' : colors.border,
                         }}>
-                        <Text style={{ fontSize: 13, fontWeight: '600', color: distanceUnit === 'm' ? '#FFFFFF' : '#64748B' }}>
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            fontWeight: '600',
+                            color: distanceUnit === 'm' ? '#FFFFFF' : '#64748B',
+                          }}>
                           m
                         </Text>
                       </TouchableOpacity>
@@ -492,7 +578,7 @@ export default function LostAndFoundPage() {
 
                 {/* Footer */}
                 <View
-                  className="px-4 py-3 flex-row gap-2"
+                  className="flex-row gap-2 px-4 py-3"
                   style={{ borderTopWidth: 1, borderTopColor: colors.border }}>
                   {hasActiveFilters && (
                     <TouchableOpacity
@@ -555,7 +641,36 @@ export default function LostAndFoundPage() {
 
         {/* Items List */}
         <View style={{ padding: 20, paddingTop: 8 }}>
-          {sortedItems.length > 0 ? (
+          {loading ? (
+            <View style={{ alignItems: 'center', paddingVertical: 48 }}>
+              <ActivityIndicator size="large" color={colors.text} />
+              <Text
+                style={{
+                  marginTop: 14,
+                  fontSize: 15,
+                  fontWeight: '600',
+                  color: colors.textSecondary,
+                }}>
+                Loading items...
+              </Text>
+            </View>
+          ) : error ? (
+            <View style={{ alignItems: 'center', paddingVertical: 48 }}>
+              <Text style={{ marginTop: 14, fontSize: 15, fontWeight: '600', color: '#DC2626' }}>
+                Error loading items
+              </Text>
+              <Text
+                style={{
+                  marginTop: 6,
+                  fontSize: 13,
+                  color: colors.textSecondary,
+                  textAlign: 'center',
+                  opacity: 0.7,
+                }}>
+                {error.message}
+              </Text>
+            </View>
+          ) : sortedItems.length > 0 ? (
             sortedItems.map((item) => (
               <TouchableOpacity
                 key={item.id}
@@ -565,68 +680,72 @@ export default function LostAndFoundPage() {
                   borderRadius: 12,
                   marginBottom: 16,
                   borderWidth: 2,
-                  borderColor: item.status === 'lost' ? '#991B1B' : '#065F46',
+                  borderColor: item.is_lost ? '#991B1B' : '#065F46',
                   overflow: 'hidden',
                 }}
                 activeOpacity={0.7}>
-                {/* Header Section with colored background */}
-                <View style={{
-                  backgroundColor: item.status === 'lost' ? '#991B1B' : '#065F46',
-                  padding: 14,
-                }}>
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: '#FFFFFF', marginBottom: 4 }}>
-                    {item.title}
+                <View
+                  style={{
+                    backgroundColor: item.is_lost ? '#991B1B' : '#065F46',
+                    padding: 14,
+                  }}>
+                  <Text
+                    style={{ fontSize: 16, fontWeight: '700', color: '#FFFFFF', marginBottom: 4 }}>
+                    {item.item_title}
                   </Text>
-                  <Text style={{ fontSize: 13, color: '#FFFFFF', opacity: 0.95, textTransform: 'capitalize' }}>
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      color: '#FFFFFF',
+                      opacity: 0.95,
+                      textTransform: 'capitalize',
+                    }}>
                     {item.category}
                   </Text>
                 </View>
 
-                {/* Description Section */}
                 <View style={{ padding: 14, backgroundColor: colors.surface }}>
-                  <Text style={{ fontSize: 14, color: colors.textSecondary, lineHeight: 20, marginBottom: 12 }} numberOfLines={2}>
-                    {item.description}
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      color: colors.textSecondary,
+                      lineHeight: 20,
+                      marginBottom: 12,
+                    }}
+                    numberOfLines={2}>
+                    {item.description || 'No description'}
                   </Text>
 
-                  {/* Location Info */}
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                     <MapPin size={16} color={colors.textSecondary} />
                     <Text style={{ fontSize: 13, color: colors.text, marginLeft: 8, flex: 1 }}>
-                      {item.location}
+                      ({item.lat.toFixed(4)}, {item.lon.toFixed(4)})
                     </Text>
                   </View>
 
-                  {/* Time Info */}
                   <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
                     <Clock size={16} color={colors.textSecondary} />
                     <Text style={{ fontSize: 13, color: colors.text, marginLeft: 8 }}>
-                      {formatDate(item.date)}
-                    </Text>
-                  </View>
-
-                  {/* Reporter Info */}
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <User size={16} color={colors.textSecondary} />
-                    <Text style={{ fontSize: 13, color: colors.text, marginLeft: 8 }}>
-                      Reported by {item.reporter}
+                      {formatDate(item.date_lost)}
                     </Text>
                   </View>
                 </View>
 
-                {/* Footer Section with status badge */}
-                <View style={{
-                  backgroundColor: item.status === 'lost' ? '#FEE2E2' : '#D1FAE5',
-                  padding: 12,
-                  alignItems: 'center',
-                }}>
-                  <Text style={{ 
-                    fontSize: 13, 
-                    fontWeight: '600', 
-                    color: item.status === 'lost' ? '#991B1B' : '#065F46',
-                    textTransform: 'uppercase',
-                    letterSpacing: 0.5,
+                <View
+                  style={{
+                    backgroundColor: item.is_lost ? '#FEE2E2' : '#D1FAE5',
+                    padding: 12,
+                    alignItems: 'center',
                   }}>
-                    {item.status === 'lost' ? '🔍 LOST ITEM' : '✨ FOUND ITEM'}
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: '600',
+                      color: item.is_lost ? '#991B1B' : '#065F46',
+                      textTransform: 'uppercase',
+                      letterSpacing: 0.5,
+                    }}>
+                    {item.is_lost ? '🔍 LOST ITEM' : '✨ FOUND ITEM'}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -634,10 +753,23 @@ export default function LostAndFoundPage() {
           ) : (
             <View style={{ alignItems: 'center', paddingVertical: 48 }}>
               <PackageSearch size={56} color={colors.textSecondary} strokeWidth={1.5} />
-              <Text style={{ marginTop: 14, fontSize: 15, fontWeight: '600', color: colors.textSecondary }}>
+              <Text
+                style={{
+                  marginTop: 14,
+                  fontSize: 15,
+                  fontWeight: '600',
+                  color: colors.textSecondary,
+                }}>
                 No items found
               </Text>
-              <Text style={{ marginTop: 6, fontSize: 13, color: colors.textSecondary, textAlign: 'center', opacity: 0.7 }}>
+              <Text
+                style={{
+                  marginTop: 6,
+                  fontSize: 13,
+                  color: colors.textSecondary,
+                  textAlign: 'center',
+                  opacity: 0.7,
+                }}>
                 Try adjusting your search or filters
               </Text>
             </View>
