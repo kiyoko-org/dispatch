@@ -340,11 +340,11 @@ export default function HeaderWithSidebar({
             borderBottomColor: colors.border,
           },
         ]}>
-        <View className="w-full flex-row items-center px-6">
+        <View className="w-full flex-row items-center pr-4" style={{ paddingLeft: 10 }}>
           {/* User Profile / Sidebar Button - Moved to Left */}
           <TouchableOpacity
             onPress={toggleSidebar}
-            className="mr-4 h-10 w-10 items-center justify-center rounded-full"
+            className="mr-3 h-10 w-10 items-center justify-center rounded-full"
             style={{ backgroundColor: colors.primary }}
             activeOpacity={0.7}>
             <User size={20} color={colors.surface} />

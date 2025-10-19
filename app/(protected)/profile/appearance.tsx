@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { View, Text, ScrollView, StatusBar, TouchableOpacity, Alert, TextInput, Modal } from 'react-native';
-import { Sun, Moon, Monitor, Palette, Check, RotateCcw, Plus } from 'lucide-react-native';
+import { Palette, Check, RotateCcw, Plus } from 'lucide-react-native';
 import HeaderWithSidebar from 'components/HeaderWithSidebar';
 import { useTheme, ColorTheme, ThemeColors } from 'components/ThemeContext';
 
@@ -24,7 +24,7 @@ const hexToRgb = (hex: string): { r: number; g: number; b: number } | null => {
 };
 
 export default function AppearancePage() {
-  const { colors, isDark, themeMode, setThemeMode, selectedColorTheme, setSelectedColorTheme, setCustomColors, customColors } = useTheme();
+  const { colors, isDark, selectedColorTheme, setSelectedColorTheme, setCustomColors, customColors } = useTheme();
   const [showCustomColorModal, setShowCustomColorModal] = useState(false);
   const [customPrimaryColor, setCustomPrimaryColor] = useState(customColors?.light.primary || '#3B82F6');
   
@@ -67,7 +67,6 @@ export default function AppearancePage() {
           text: 'Reset',
           style: 'destructive',
           onPress: () => {
-            setThemeMode('system');
             setSelectedColorTheme('blue');
             Alert.alert('Success', 'Theme settings have been reset to default');
           },
@@ -75,12 +74,6 @@ export default function AppearancePage() {
       ]
     );
   };
-
-  const themeModes = [
-    { id: 'light', label: 'Light', icon: Sun, description: 'Always use light mode' },
-    { id: 'dark', label: 'Dark', icon: Moon, description: 'Always use dark mode' },
-    { id: 'system', label: 'System', icon: Monitor, description: 'Match system settings' },
-  ];
 
   const colorThemes: { id: ColorTheme; label: string; color: string }[] = [
     { id: 'blue', label: 'Blue', color: '#2563EB' },
@@ -156,55 +149,6 @@ export default function AppearancePage() {
       <HeaderWithSidebar title="Appearance" showBackButton={false} />
       
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {/* Theme Mode Section */}
-        <View className="px-6 py-4">
-          <Text
-            className="text-sm font-semibold uppercase tracking-wide mb-4"
-            style={{ color: colors.textSecondary }}
-          >
-            Theme Mode
-          </Text>
-
-          <View
-            className="rounded-2xl overflow-hidden"
-            style={{
-              backgroundColor: colors.surface,
-              borderWidth: 1,
-              borderColor: colors.border,
-            }}
-          >
-            {themeModes.map((mode, index) => (
-              <View key={mode.id}>
-                <TouchableOpacity
-                  onPress={() => setThemeMode(mode.id as 'light' | 'dark' | 'system')}
-                  className="px-4 py-4 flex-row items-center"
-                >
-                  <View
-                    className="w-10 h-10 rounded-full items-center justify-center mr-3"
-                    style={{ backgroundColor: colors.surfaceVariant }}
-                  >
-                    <mode.icon size={20} color={colors.text} />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-base font-medium" style={{ color: colors.text }}>
-                      {mode.label}
-                    </Text>
-                    <Text className="text-sm mt-1" style={{ color: colors.textSecondary }}>
-                      {mode.description}
-                    </Text>
-                  </View>
-                  {themeMode === mode.id && (
-                    <Check size={20} color={colors.primary} />
-                  )}
-                </TouchableOpacity>
-                {index < themeModes.length - 1 && (
-                  <View className="h-px ml-16" style={{ backgroundColor: colors.border }} />
-                )}
-              </View>
-            ))}
-          </View>
-        </View>
-
         {/* Color Theme Section */}
         <View className="px-6 py-4">
           <Text

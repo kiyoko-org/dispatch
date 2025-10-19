@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTheme } from '../../../components/ThemeContext';
 import DatePicker from '../../../components/DatePicker';
+import Dropdown from '../../../components/Dropdown';
 
 export default function ReportPetPage() {
   const router = useRouter();
@@ -13,7 +14,8 @@ export default function ReportPetPage() {
   const [species, setSpecies] = useState('');
   const [breed, setBreed] = useState('');
   const [age, setAge] = useState('');
-  const [gender, setGender] = useState('');
+  const [ageUnit, setAgeUnit] = useState('years');
+  const [sex, setSex] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
@@ -23,12 +25,12 @@ export default function ReportPetPage() {
   const [microchip, setMicrochip] = useState('');
   const [contactInfo, setContactInfo] = useState('');
   const [reward, setReward] = useState('');
-  const [showCategoryMenu, setShowCategoryMenu] = useState(false);
-  const [showGenderMenu, setShowGenderMenu] = useState(false);
+  const [showSexMenu, setShowSexMenu] = useState(false);
+  const [showAgeUnitMenu, setShowAgeUnitMenu] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  const categories = ['Dog', 'Cat', 'Bird', 'Other'];
-  const genders = ['Male', 'Female'];
+  const sexOptions = ['Male', 'Female'];
+  const ageUnits = ['months', 'years'];
 
   const handleSubmit = () => {
     // TODO: Validate and submit to database
@@ -92,50 +94,26 @@ export default function ReportPetPage() {
             />
           </View>
 
-          {/* Category */}
+          {/* Pet Type */}
           <View style={{ marginBottom: 18 }}>
             <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: 7 }}>
               Pet Type *
             </Text>
-            <TouchableOpacity
-              onPress={() => setShowCategoryMenu(!showCategoryMenu)}
+            <TextInput
+              value={category}
+              onChangeText={setCategory}
+              placeholder="e.g., Dog, Cat, Bird, etc."
+              placeholderTextColor="#94A3B8"
               style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
                 backgroundColor: colors.surface,
                 borderWidth: 1,
                 borderColor: '#F97316',
                 borderRadius: 6,
                 padding: 12,
-              }}>
-              <Text style={{ fontSize: 15, color: category ? colors.text : '#94A3B8' }}>
-                {category || 'Select pet type'}
-              </Text>
-              <ChevronDown size={18} color="#64748B" />
-            </TouchableOpacity>
-
-            {showCategoryMenu && (
-              <View style={{ marginTop: 8, backgroundColor: colors.surface, borderRadius: 6, padding: 4, borderWidth: 1, borderColor: '#F97316', elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }}>
-                {categories.map((cat) => (
-                  <TouchableOpacity
-                    key={cat}
-                    onPress={() => {
-                      setCategory(cat);
-                      setShowCategoryMenu(false);
-                    }}
-                    style={{
-                      padding: 10,
-                      borderRadius: 4,
-                      backgroundColor: category === cat ? '#FFEDD5' : 'transparent',
-                    }}>
-                    <Text style={{ fontSize: 14, fontWeight: category === cat ? '600' : '400', color: category === cat ? '#C2410C' : colors.text }}>
-                      {cat}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
+                fontSize: 15,
+                color: colors.text,
+              }}
+            />
           </View>
 
           {/* Species/Breed */}
@@ -165,30 +143,66 @@ export default function ReportPetPage() {
             <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: 7 }}>
               Age
             </Text>
-            <TextInput
-              value={age}
-              onChangeText={setAge}
-              placeholder="e.g., 3 years old"
-              placeholderTextColor="#94A3B8"
-              style={{
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: '#F97316',
-                borderRadius: 6,
-                padding: 12,
-                fontSize: 15,
-                color: colors.text,
-              }}
-            />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TextInput
+                value={age}
+                onChangeText={setAge}
+                placeholder="Enter age"
+                placeholderTextColor="#94A3B8"
+                keyboardType="numeric"
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.surface,
+                  borderWidth: 1,
+                  borderColor: '#F97316',
+                  borderRadius: 6,
+                  padding: 12,
+                  fontSize: 15,
+                  color: colors.text,
+                }}
+              />
+              <TouchableOpacity
+                onPress={() => setShowAgeUnitMenu(true)}
+                style={{
+                  width: 120,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  backgroundColor: colors.surface,
+                  borderWidth: 1,
+                  borderColor: '#F97316',
+                  borderRadius: 6,
+                  padding: 12,
+                }}>
+                <Text style={{ fontSize: 15, color: colors.text }}>
+                  {ageUnit}
+                </Text>
+                <ChevronDown size={18} color="#64748B" />
+              </TouchableOpacity>
+            </View>
           </View>
 
-          {/* Gender */}
+          <Dropdown
+            isVisible={showAgeUnitMenu}
+            onClose={() => setShowAgeUnitMenu(false)}
+            onSelect={(item) => setAgeUnit(item)}
+            data={ageUnits}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({ item }) => (
+              <View style={{ padding: 12 }}>
+                <Text style={{ fontSize: 15, color: colors.text }}>{item}</Text>
+              </View>
+            )}
+            title="Select Age Unit"
+          />
+
+          {/* Sex */}
           <View style={{ marginBottom: 18 }}>
             <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: 7 }}>
-              Gender *
+              Sex *
             </Text>
             <TouchableOpacity
-              onPress={() => setShowGenderMenu(!showGenderMenu)}
+              onPress={() => setShowSexMenu(true)}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -199,34 +213,26 @@ export default function ReportPetPage() {
                 borderRadius: 6,
                 padding: 12,
               }}>
-              <Text style={{ fontSize: 15, color: gender ? colors.text : '#94A3B8' }}>
-                {gender || 'Select gender'}
+              <Text style={{ fontSize: 15, color: sex ? colors.text : '#94A3B8' }}>
+                {sex || 'Select sex'}
               </Text>
               <ChevronDown size={18} color="#64748B" />
             </TouchableOpacity>
+          </View>
 
-            {showGenderMenu && (
-              <View style={{ marginTop: 8, backgroundColor: colors.surface, borderRadius: 6, padding: 4, borderWidth: 1, borderColor: '#F97316', elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }}>
-                {genders.map((g) => (
-                  <TouchableOpacity
-                    key={g}
-                    onPress={() => {
-                      setGender(g);
-                      setShowGenderMenu(false);
-                    }}
-                    style={{
-                      padding: 10,
-                      borderRadius: 4,
-                      backgroundColor: gender === g ? '#FFEDD5' : 'transparent',
-                    }}>
-                    <Text style={{ fontSize: 14, fontWeight: gender === g ? '600' : '400', color: gender === g ? '#C2410C' : colors.text }}>
-                      {g}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+          <Dropdown
+            isVisible={showSexMenu}
+            onClose={() => setShowSexMenu(false)}
+            onSelect={(item) => setSex(item)}
+            data={sexOptions}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({ item }) => (
+              <View style={{ padding: 12 }}>
+                <Text style={{ fontSize: 15, color: colors.text }}>{item}</Text>
               </View>
             )}
-          </View>
+            title="Select Sex"
+          />
 
           {/* Description */}
           <View style={{ marginBottom: 18 }}>

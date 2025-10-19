@@ -5,6 +5,9 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  Modal,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState, useMemo } from 'react';
@@ -12,9 +15,11 @@ import { User, MapPin, Clock, Search, X, ChevronDown, Calendar } from 'lucide-re
 import HeaderWithSidebar from '../../../components/HeaderWithSidebar';
 import { useTheme } from '../../../components/ThemeContext';
 import DatePicker from '../../../components/DatePicker';
+import Dropdown from '../../../components/Dropdown';
 
 type PersonCategory = 'all';
 type SortBy = 'newest' | 'oldest' | 'location' | 'age';
+type DistanceUnit = 'km' | 'm';
 
 // Define missing person interface
 type MissingPerson = {
@@ -42,11 +47,15 @@ export default function MissingPersonsPage() {
   const [sortBy, setSortBy] = useState<SortBy>('newest');
   const [searchQuery, setSearchQuery] = useState('');
   const [activeMenu, setActiveMenu] = useState<'category' | 'dateDistance' | 'sort' | null>(null);
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const [showFiltersModal, setShowFiltersModal] = useState(false);
   
   // Date & Distance filter states
   const [filterDateBefore, setFilterDateBefore] = useState('');
   const [filterDateAfter, setFilterDateAfter] = useState('');
   const [distanceValue, setDistanceValue] = useState('');
+  const [distanceUnit, setDistanceUnit] = useState<DistanceUnit>('km');
   const [showBeforeDatePicker, setShowBeforeDatePicker] = useState(false);
   const [showAfterDatePicker, setShowAfterDatePicker] = useState(false);
 
@@ -87,6 +96,14 @@ export default function MissingPersonsPage() {
   ];
 
   const categories: PersonCategory[] = ['all'];
+
+  // Sort options
+  const sortOptions = [
+    { value: 'newest', label: 'Newest first' },
+    { value: 'oldest', label: 'Oldest first' },
+    { value: 'location', label: 'Location' },
+    { value: 'age', label: 'Age' }
+  ];
 
   // Filter persons based on category, search, and date range
   const filteredPersons = useMemo(() => {
@@ -211,15 +228,15 @@ export default function MissingPersonsPage() {
           {/* Search Bar */}
           <View style={{ position: 'relative', marginTop: 14 }}>
             <View style={{ position: 'absolute', left: 12, top: 0, bottom: 0, justifyContent: 'center', zIndex: 1 }}>
-              <Search size={18} color="#64748B" />
+              <Search size={18} color={colors.textSecondary} />
             </View>
             <TextInput
               value={searchQuery}
               onChangeText={setSearchQuery}
               placeholder="Search by name or location..."
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={colors.textSecondary}
               style={{
-                backgroundColor: '#FFFFFF',
+                backgroundColor: colors.surface,
                 borderWidth: 1,
                 borderColor: '#3B82F6',
                 borderRadius: 6,
@@ -234,7 +251,7 @@ export default function MissingPersonsPage() {
               <TouchableOpacity
                 onPress={() => setSearchQuery('')}
                 style={{ position: 'absolute', right: 12, top: 0, bottom: 0, justifyContent: 'center' }}>
-                <X size={18} color="#64748B" />
+                <X size={18} color={colors.textSecondary} />
               </TouchableOpacity>
             ) : null}
           </View>
@@ -243,15 +260,13 @@ export default function MissingPersonsPage() {
           <View style={{ flexDirection: 'row', gap: 8, marginTop: 14 }}>
             {/* Category Filter Button */}
             <TouchableOpacity
-              onPress={() => {
-                setActiveMenu(activeMenu === 'category' ? null : 'category');
-              }}
+              onPress={() => setShowCategoryDropdown(true)}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                backgroundColor: '#FFFFFF',
+                backgroundColor: colors.surface,
                 borderWidth: 1,
-                borderColor: selectedCategory !== 'all' ? '#3B82F6' : '#93C5FD',
+                borderColor: selectedCategory !== 'all' ? '#3B82F6' : colors.border,
                 borderRadius: 6,
                 paddingHorizontal: 12,
                 paddingVertical: 8,
@@ -261,20 +276,18 @@ export default function MissingPersonsPage() {
               <Text style={{ fontSize: 13, fontWeight: '500', color: colors.text }}>
                 Category
               </Text>
-              <ChevronDown size={16} color="#64748B" />
+              <ChevronDown size={16} color={colors.textSecondary} />
             </TouchableOpacity>
 
             {/* Date & Distance Filter Button */}
             <TouchableOpacity
-              onPress={() => {
-                setActiveMenu(activeMenu === 'dateDistance' ? null : 'dateDistance');
-              }}
+              onPress={() => setShowFiltersModal(true)}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                backgroundColor: '#FFFFFF',
+                backgroundColor: colors.surface,
                 borderWidth: 1,
-                borderColor: hasActiveFilters ? '#3B82F6' : '#93C5FD',
+                borderColor: hasActiveFilters ? '#3B82F6' : colors.border,
                 borderRadius: 6,
                 paddingHorizontal: 12,
                 paddingVertical: 8,
@@ -287,20 +300,18 @@ export default function MissingPersonsPage() {
               {hasActiveFilters && (
                 <View style={{ backgroundColor: '#1E40AF', borderRadius: 10, width: 6, height: 6 }} />
               )}
-              <ChevronDown size={16} color="#64748B" />
+              <ChevronDown size={16} color={colors.textSecondary} />
             </TouchableOpacity>
 
             {/* Sort Button */}
             <TouchableOpacity
-              onPress={() => {
-                setActiveMenu(activeMenu === 'sort' ? null : 'sort');
-              }}
+              onPress={() => setShowSortDropdown(true)}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
-                backgroundColor: '#FFFFFF',
+                backgroundColor: colors.surface,
                 borderWidth: 1,
-                borderColor: '#93C5FD',
+                borderColor: colors.border,
                 borderRadius: 6,
                 paddingHorizontal: 12,
                 paddingVertical: 8,
@@ -310,180 +321,236 @@ export default function MissingPersonsPage() {
               <Text style={{ fontSize: 13, fontWeight: '500', color: colors.text }}>
                 Sort
               </Text>
-              <ChevronDown size={16} color="#64748B" />
+              <ChevronDown size={16} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
         </View>
 
+        <Dropdown
+          isVisible={showCategoryDropdown}
+          onClose={() => setShowCategoryDropdown(false)}
+          onSelect={(item) => {
+            setSelectedCategory(item as PersonCategory);
+            setShowCategoryDropdown(false);
+          }}
+          data={categories}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({ item }) => (
+            <View style={{ padding: 12 }}>
+              <Text style={{ fontSize: 15, color: colors.text, textTransform: 'capitalize' }}>
+                {item}
+              </Text>
+            </View>
+          )}
+          title="Filter by Category"
+        />
+
+        <Dropdown
+          isVisible={showSortDropdown}
+          onClose={() => setShowSortDropdown(false)}
+          onSelect={(item) => {
+            setSortBy(item.value as SortBy);
+            setShowSortDropdown(false);
+          }}
+          data={sortOptions}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({ item }) => (
+            <View style={{ padding: 12 }}>
+              <Text style={{ fontSize: 15, color: colors.text }}>
+                {item.label}
+              </Text>
+            </View>
+          )}
+          title="Sort by"
+        />
+
+        {/* Filters Modal (Date & Distance) */}
+        <Modal
+          visible={showFiltersModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowFiltersModal(false)}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1 }}>
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+              activeOpacity={1}
+              onPress={() => setShowFiltersModal(false)}>
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={(e) => e.stopPropagation()}
+                style={{
+                  backgroundColor: colors.surface,
+                  borderRadius: 12,
+                  padding: 20,
+                  width: '85%',
+                  maxHeight: '80%',
+                }}>
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>
+                      Advanced Filters
+                    </Text>
+                    <TouchableOpacity onPress={() => setShowFiltersModal(false)}>
+                      <X size={24} color="#64748B" />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Date Range Section */}
+                  <View style={{ marginBottom: 16 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748B', marginBottom: 8 }}>
+                      DATE RANGE
+                    </Text>
+                    
+                    {/* Before Date */}
+                    <View style={{ marginBottom: 10 }}>
+                      <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 6 }}>Before</Text>
+                      <TouchableOpacity
+                        onPress={() => setShowBeforeDatePicker(true)}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          backgroundColor: colors.background,
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                          borderRadius: 6,
+                          padding: 10,
+                        }}>
+                        <Calendar size={16} color="#64748B" />
+                        <Text style={{ flex: 1, marginLeft: 8, fontSize: 13, color: filterDateBefore ? colors.text : '#94A3B8' }}>
+                          {filterDateBefore || 'Select date'}
+                        </Text>
+                        {filterDateBefore && (
+                          <TouchableOpacity onPress={() => setFilterDateBefore('')}>
+                            <X size={16} color="#64748B" />
+                          </TouchableOpacity>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* After Date */}
+                    <View>
+                      <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 6 }}>After</Text>
+                      <TouchableOpacity
+                        onPress={() => setShowAfterDatePicker(true)}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          backgroundColor: colors.background,
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                          borderRadius: 6,
+                          padding: 10,
+                        }}>
+                        <Calendar size={16} color="#64748B" />
+                        <Text style={{ flex: 1, marginLeft: 8, fontSize: 13, color: filterDateAfter ? colors.text : '#94A3B8' }}>
+                          {filterDateAfter || 'Select date'}
+                        </Text>
+                        {filterDateAfter && (
+                          <TouchableOpacity onPress={() => setFilterDateAfter('')}>
+                            <X size={16} color="#64748B" />
+                          </TouchableOpacity>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {/* Distance Section */}
+                  <View>
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748B', marginBottom: 8 }}>
+                      DISTANCE FROM YOU
+                    </Text>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      <TextInput
+                        value={distanceValue}
+                        onChangeText={setDistanceValue}
+                        placeholder="Enter distance"
+                        placeholderTextColor="#94A3B8"
+                        keyboardType="numeric"
+                        style={{
+                          flex: 1,
+                          backgroundColor: colors.background,
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                          borderRadius: 6,
+                          padding: 10,
+                          fontSize: 13,
+                          color: colors.text,
+                        }}
+                      />
+                      <TouchableOpacity
+                        onPress={() => setDistanceUnit('km')}
+                        style={{
+                          paddingHorizontal: 16,
+                          paddingVertical: 10,
+                          borderRadius: 6,
+                          backgroundColor: distanceUnit === 'km' ? '#3B82F6' : colors.background,
+                          borderWidth: 1,
+                          borderColor: distanceUnit === 'km' ? '#3B82F6' : colors.border,
+                        }}>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: distanceUnit === 'km' ? '#FFFFFF' : '#64748B' }}>
+                          km
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => setDistanceUnit('m')}
+                        style={{
+                          paddingHorizontal: 16,
+                          paddingVertical: 10,
+                          borderRadius: 6,
+                          backgroundColor: distanceUnit === 'm' ? '#3B82F6' : colors.background,
+                          borderWidth: 1,
+                          borderColor: distanceUnit === 'm' ? '#3B82F6' : colors.border,
+                        }}>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: distanceUnit === 'm' ? '#FFFFFF' : '#64748B' }}>
+                          m
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {/* Clear All Filters */}
+                  {hasActiveFilters && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setFilterDateBefore('');
+                        setFilterDateAfter('');
+                        setDistanceValue('');
+                        setShowFiltersModal(false);
+                      }}
+                      style={{
+                        marginTop: 16,
+                        paddingVertical: 10,
+                        backgroundColor: '#DBEAFE',
+                        borderRadius: 6,
+                        alignItems: 'center',
+                      }}>
+                      <Text style={{ fontSize: 14, fontWeight: '600', color: '#1E40AF' }}>
+                        Clear All Filters
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </ScrollView>
+              </TouchableOpacity>
+            </TouchableOpacity>
+          </KeyboardAvoidingView>
+        </Modal>
+
         {/* Dropdown Menus */}
         {activeMenu && (
           <View style={{ backgroundColor: colors.surface, marginHorizontal: 20, marginTop: 12, borderRadius: 8, padding: 12, borderWidth: 1, borderColor: '#3B82F6', elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }}>
-            {/* Category Menu */}
-            {activeMenu === 'category' && (
-              <View>
-                <Text style={{ fontSize: 13, fontWeight: '600', color: '#64748B', marginBottom: 10 }}>
-                  Filter by Category
-                </Text>
-                {categories.map((cat) => (
-                  <TouchableOpacity
-                    key={cat}
-                    onPress={() => {
-                      setSelectedCategory(cat);
-                      setActiveMenu(null);
-                    }}
-                    style={{
-                      padding: 10,
-                      borderRadius: 4,
-                      backgroundColor: selectedCategory === cat ? '#DBEAFE' : 'transparent',
-                      marginBottom: 4,
-                    }}>
-                    <Text style={{ fontSize: 14, fontWeight: selectedCategory === cat ? '600' : '400', color: selectedCategory === cat ? '#1E40AF' : colors.text, textTransform: 'capitalize' }}>
-                      {cat}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-
-            {/* Date & Distance Menu */}
+            {/* Date & Distance filters now shown in modal */}
             {activeMenu === 'dateDistance' && (
-              <View>
-                <Text style={{ fontSize: 13, fontWeight: '600', color: '#64748B', marginBottom: 12 }}>
-                  Advanced Filters
+              <View style={{ padding: 8 }}>
+                <Text style={{ fontSize: 13, color: '#64748B', textAlign: 'center' }}>
+                  Filters are now available in the modal overlay
                 </Text>
-                
-                {/* Date Range Section */}
-                <View style={{ marginBottom: 16 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748B', marginBottom: 8 }}>
-                    DATE RANGE
-                  </Text>
-                  
-                  {/* Before Date */}
-                  <View style={{ marginBottom: 10 }}>
-                    <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 6 }}>Before</Text>
-                    <TouchableOpacity
-                      onPress={() => setShowBeforeDatePicker(true)}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        backgroundColor: '#FFFFFF',
-                        borderWidth: 1,
-                        borderColor: filterDateBefore ? '#3B82F6' : '#CBD5E1',
-                        borderRadius: 4,
-                        paddingHorizontal: 10,
-                        paddingVertical: 8,
-                        gap: 8,
-                      }}>
-                      <Calendar size={16} color="#64748B" />
-                      <Text style={{ flex: 1, fontSize: 13, color: filterDateBefore ? colors.text : '#94A3B8' }}>
-                        {filterDateBefore || 'Select date'}
-                      </Text>
-                      {filterDateBefore && (
-                        <TouchableOpacity onPress={() => setFilterDateBefore('')}>
-                          <X size={14} color="#64748B" />
-                        </TouchableOpacity>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* After Date */}
-                  <View>
-                    <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 6 }}>After</Text>
-                    <TouchableOpacity
-                      onPress={() => setShowAfterDatePicker(true)}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        backgroundColor: '#FFFFFF',
-                        borderWidth: 1,
-                        borderColor: filterDateAfter ? '#3B82F6' : '#CBD5E1',
-                        borderRadius: 4,
-                        paddingHorizontal: 10,
-                        paddingVertical: 8,
-                        gap: 8,
-                      }}>
-                      <Calendar size={16} color="#64748B" />
-                      <Text style={{ flex: 1, fontSize: 13, color: filterDateAfter ? colors.text : '#94A3B8' }}>
-                        {filterDateAfter || 'Select date'}
-                      </Text>
-                      {filterDateAfter && (
-                        <TouchableOpacity onPress={() => setFilterDateAfter('')}>
-                          <X size={14} color="#64748B" />
-                        </TouchableOpacity>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                {/* Distance Section */}
-                <View>
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748B', marginBottom: 8 }}>
-                    DISTANCE (KM)
-                  </Text>
-                  <TextInput
-                    value={distanceValue}
-                    onChangeText={setDistanceValue}
-                    placeholder="e.g. 5"
-                    placeholderTextColor="#94A3B8"
-                    keyboardType="numeric"
-                    style={{
-                      backgroundColor: '#FFFFFF',
-                      borderWidth: 1,
-                      borderColor: distanceValue ? '#3B82F6' : '#CBD5E1',
-                      borderRadius: 4,
-                      paddingHorizontal: 10,
-                      paddingVertical: 8,
-                      fontSize: 13,
-                      color: colors.text,
-                    }}
-                  />
-                </View>
-
-                {/* Clear All Filters */}
-                {hasActiveFilters && (
-                  <TouchableOpacity
-                    onPress={() => {
-                      setFilterDateBefore('');
-                      setFilterDateAfter('');
-                      setDistanceValue('');
-                    }}
-                    style={{
-                      marginTop: 12,
-                      paddingVertical: 8,
-                      alignItems: 'center',
-                    }}>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#EF4444' }}>
-                      Clear All Filters
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-
-            {/* Sort Menu */}
-            {activeMenu === 'sort' && (
-              <View>
-                <Text style={{ fontSize: 13, fontWeight: '600', color: '#64748B', marginBottom: 10 }}>
-                  Sort by
-                </Text>
-                {(['newest', 'oldest', 'location', 'age'] as SortBy[]).map((sort) => (
-                  <TouchableOpacity
-                    key={sort}
-                    onPress={() => {
-                      setSortBy(sort);
-                      setActiveMenu(null);
-                    }}
-                    style={{
-                      padding: 10,
-                      borderRadius: 4,
-                      backgroundColor: sortBy === sort ? '#DBEAFE' : 'transparent',
-                      marginBottom: 4,
-                    }}>
-                    <Text style={{ fontSize: 14, fontWeight: sortBy === sort ? '600' : '400', color: sortBy === sort ? '#1E40AF' : colors.text, textTransform: 'capitalize' }}>
-                      {sort === 'newest' ? 'Newest first' : sort === 'oldest' ? 'Oldest first' : sort === 'age' ? 'Age' : sort}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
               </View>
             )}
           </View>
@@ -505,7 +572,7 @@ export default function MissingPersonsPage() {
 
         {/* Results Count */}
         <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 }}>
-          <Text style={{ fontSize: 13, color: '#64748B', fontWeight: '500' }}>
+          <Text style={{ fontSize: 13, color: colors.textSecondary, fontWeight: '500' }}>
             {sortedPersons.length} missing {sortedPersons.length === 1 ? 'person' : 'persons'}
           </Text>
         </View>
@@ -518,64 +585,102 @@ export default function MissingPersonsPage() {
                 key={person.id}
                 onPress={() => router.push(`/missing/person`)}
                 style={{
-                  backgroundColor: '#DBEAFE',
-                  borderRadius: 8,
-                  padding: 14,
-                  marginBottom: 12,
+                  backgroundColor: colors.surface,
+                  borderRadius: 12,
+                  marginBottom: 16,
                   borderWidth: 2,
                   borderColor: '#3B82F6',
+                  overflow: 'hidden',
                 }}
                 activeOpacity={0.7}>
-                <View style={{ marginBottom: 8 }}>
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text }}>
+                {/* Header Section with colored background */}
+                <View style={{
+                  backgroundColor: '#3B82F6',
+                  padding: 14,
+                }}>
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: '#FFFFFF' }}>
                     {person.name}
                   </Text>
-                  <Text style={{ fontSize: 13, color: '#1E40AF', fontWeight: '600', marginTop: 2 }}>
+                  <Text style={{ fontSize: 13, color: '#FFFFFF', opacity: 0.95, marginTop: 2 }}>
                     {person.age} years old • {person.sex}
                   </Text>
                 </View>
 
-                <Text style={{ fontSize: 13, color: '#64748B', marginBottom: 10, lineHeight: 18 }} numberOfLines={2}>
-                  {person.description}
-                </Text>
-
-                <View style={{ backgroundColor: '#FFFFFF', padding: 8, borderRadius: 6, marginBottom: 10 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#1E40AF' }}>
-                    Last Seen: {person.lastSeen}
+                {/* Description Section */}
+                <View style={{ padding: 14, backgroundColor: colors.surface }}>
+                  <Text style={{ fontSize: 14, color: colors.textSecondary, lineHeight: 20, marginBottom: 12 }} numberOfLines={2}>
+                    {person.description}
                   </Text>
-                </View>
 
-                <View style={{ flexDirection: 'row', gap: 14, marginBottom: 10 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <MapPin size={14} color="#3B82F6" />
-                    <Text style={{ fontSize: 12, color: '#64748B' }}>
+                  {/* Last Seen Info */}
+                  <View style={{ backgroundColor: '#EFF6FF', padding: 10, borderRadius: 6, marginBottom: 12, borderWidth: 1, borderColor: '#BFDBFE' }}>
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: '#1E40AF' }}>
+                      Last Seen: {person.lastSeen}
+                    </Text>
+                  </View>
+
+                  {/* Location Info */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                    <MapPin size={16} color={colors.textSecondary} />
+                    <Text style={{ fontSize: 13, color: colors.text, marginLeft: 8, flex: 1 }}>
                       {person.location}
                     </Text>
                   </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Clock size={14} color="#3B82F6" />
-                    <Text style={{ fontSize: 12, color: '#64748B' }}>
+
+                  {/* Time Info */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                    <Clock size={16} color={colors.textSecondary} />
+                    <Text style={{ fontSize: 13, color: colors.text, marginLeft: 8 }}>
                       {formatDate(person.date)}
                     </Text>
                   </View>
+
+                  {/* Reward Info */}
+                  {person.reward && (
+                    <View style={{ 
+                      flexDirection: 'row', 
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: '#D1FAE5',
+                      borderWidth: 1,
+                      borderColor: '#10B981',
+                      borderRadius: 6,
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                    }}>
+                      <Text style={{ fontSize: 16, marginRight: 6 }}>💰</Text>
+                      <Text style={{ fontSize: 13, color: '#065F46', fontWeight: '600' }}>
+                        Reward: {person.reward}
+                      </Text>
+                    </View>
+                  )}
                 </View>
 
-                {person.reward && (
-                  <View style={{ backgroundColor: '#DCFCE7', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#22C55E' }}>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#16A34A', textAlign: 'center' }}>
-                      💰 Reward: {person.reward}
-                    </Text>
-                  </View>
-                )}
+                {/* Footer Section with status badge */}
+                <View style={{
+                  backgroundColor: '#DBEAFE',
+                  padding: 12,
+                  alignItems: 'center',
+                }}>
+                  <Text style={{ 
+                    fontSize: 13, 
+                    fontWeight: '600', 
+                    color: '#1E40AF',
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                  }}>
+                    🔍 MISSING PERSON
+                  </Text>
+                </View>
               </TouchableOpacity>
             ))
           ) : (
             <View style={{ alignItems: 'center', paddingVertical: 48 }}>
-              <User size={56} color="#93C5FD" strokeWidth={1.5} />
-              <Text style={{ marginTop: 14, fontSize: 15, fontWeight: '600', color: '#64748B' }}>
+              <User size={56} color={colors.textSecondary} strokeWidth={1.5} />
+              <Text style={{ marginTop: 14, fontSize: 15, fontWeight: '600', color: colors.textSecondary }}>
                 No missing persons found
               </Text>
-              <Text style={{ marginTop: 6, fontSize: 13, color: '#94A3B8', textAlign: 'center' }}>
+              <Text style={{ marginTop: 6, fontSize: 13, color: colors.textSecondary, textAlign: 'center', opacity: 0.7 }}>
                 Try adjusting your search or filters
               </Text>
             </View>

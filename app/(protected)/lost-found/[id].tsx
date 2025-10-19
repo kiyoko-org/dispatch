@@ -299,23 +299,6 @@ export default function LostFoundDetailPage() {
               </TouchableOpacity>
             </View>
           </View>
-
-          {/* Safety Notice */}
-          <View style={{ marginHorizontal: 20, marginBottom: 32, backgroundColor: '#FFFBEB', borderRadius: 12, padding: 18, borderWidth: 1.5, borderColor: '#FDE68A' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
-              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#FEF3C7', alignItems: 'center', justifyContent: 'center', marginTop: 2 }}>
-                <AlertCircle size={20} color="#92400E" />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14, fontWeight: '700', color: '#92400E', marginBottom: 8 }}>
-                  Safety Reminder
-                </Text>
-                <Text style={{ fontSize: 13, color: '#78350F', lineHeight: 20 }}>
-                  When meeting to return or collect items, choose a public place and consider bringing someone with you. Verify the item details before the meeting.
-                </Text>
-              </View>
-            </View>
-          </View>
         </View>
       </ScrollView>
     </View>

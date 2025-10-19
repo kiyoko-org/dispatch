@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useTheme } from '../../../components/ThemeContext';
 import DatePicker from '../../../components/DatePicker';
+import Dropdown from '../../../components/Dropdown';
 
 export default function ReportFoundPage() {
   const router = useRouter();
@@ -17,8 +18,18 @@ export default function ReportFoundPage() {
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
 
-  // Categories will be fetched from backend later
-  const categories: string[] = [];
+  // Categories for found items
+  const categories = [
+    'Electronics',
+    'Documents',
+    'Accessories',
+    'Bags & Wallets',
+    'Keys',
+    'Jewelry',
+    'Clothing',
+    'Sports Equipment',
+    'Other'
+  ];
 
   const handleSubmit = () => {
     // TODO: Validate and submit to database
@@ -88,7 +99,7 @@ export default function ReportFoundPage() {
               Category *
             </Text>
             <TouchableOpacity
-              onPress={() => setShowCategoryMenu(!showCategoryMenu)}
+              onPress={() => setShowCategoryMenu(true)}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -104,38 +115,23 @@ export default function ReportFoundPage() {
               </Text>
               <ChevronDown size={18} color="#64748B" />
             </TouchableOpacity>
+          </View>
 
-            {/* Category Dropdown Menu */}
-            {showCategoryMenu && (
-              <View style={{ marginTop: 8, backgroundColor: colors.surface, borderRadius: 6, padding: 4, borderWidth: 1, borderColor: colors.border, elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 4 }}>
-                {categories.length > 0 ? (
-                  categories.map((cat) => (
-                    <TouchableOpacity
-                      key={cat}
-                      onPress={() => {
-                        setCategory(cat);
-                        setShowCategoryMenu(false);
-                      }}
-                      style={{
-                        padding: 10,
-                        borderRadius: 4,
-                        backgroundColor: category === cat ? '#F1F5F9' : 'transparent',
-                      }}>
-                      <Text style={{ fontSize: 14, fontWeight: category === cat ? '600' : '400', color: category === cat ? '#475569' : colors.text }}>
-                        {cat}
-                      </Text>
-                    </TouchableOpacity>
-                  ))
-                ) : (
-                  <View style={{ padding: 12 }}>
-                    <Text style={{ fontSize: 13, color: '#64748B', textAlign: 'center' }}>
-                      No categories available
-                    </Text>
-                  </View>
-                )}
+          <Dropdown
+            isVisible={showCategoryMenu}
+            onClose={() => setShowCategoryMenu(false)}
+            onSelect={(item) => setCategory(item)}
+            data={categories}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({ item }) => (
+              <View style={{ padding: 12 }}>
+                <Text style={{ fontSize: 15, color: colors.text }}>{item}</Text>
               </View>
             )}
-          </View>
+            title="Select Category"
+            searchable={true}
+            searchPlaceholder="Search categories..."
+          />
 
           {/* Description */}
           <View style={{ marginBottom: 18 }}>

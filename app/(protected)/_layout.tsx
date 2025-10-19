@@ -18,7 +18,6 @@ export default function ProtectedLayout() {
       <ChatProvider>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="home" />
-          <Stack.Screen name="messaging" />
         </Stack>
       </ChatProvider>
     </EmergencyContactsProvider>

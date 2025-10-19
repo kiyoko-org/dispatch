@@ -8,8 +8,7 @@ import {
   Linking,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
-import { ChevronLeft, Share2 } from 'lucide-react-native';
+import { ChevronLeft, Share2, Camera, MapPin, Clock, Phone, MessageSquare, Shield } from 'lucide-react-native';
 import { useTheme } from '../../../components/ThemeContext';
 
 // Orange color palette for pets
@@ -108,414 +107,226 @@ export default function PetDetailPage() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={{ flex: 1 }}>
-        {/* Pet Photo */}
-        <View style={{ backgroundColor: PET_COLORS.primaryLight, padding: 24 }}>
-          {pet.photoUrl ? (
-            <Image
-              source={{ uri: pet.photoUrl }}
-              style={{
-                width: '100%',
-                aspectRatio: 1,
-                borderRadius: 12,
-                backgroundColor: PET_COLORS.primary,
-              }}
-            />
-          ) : (
-            <View
-              style={{
-                width: '100%',
-                aspectRatio: 1,
-                borderRadius: 12,
-                backgroundColor: colors.surface,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Feather name="image" size={120} color={PET_COLORS.primary} />
-            </View>
-          )}
-        </View>
-
-        <View style={{ padding: 16, gap: 16 }}>
-          {/* Name and Type */}
-          <View>
-            <Text
-              style={{
-                fontSize: 28,
-                fontWeight: '700',
-                color: colors.text,
-                marginBottom: 8,
-              }}
-            >
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        {/* Hero Section with Gradient Background */}
+        <View style={{ backgroundColor: PET_COLORS.primaryLight }}>
+          <View style={{ padding: 24, paddingTop: 20 }}>
+            {/* Name & Type */}
+            <Text style={{ fontSize: 28, fontWeight: '800', color: colors.text, marginBottom: 12, letterSpacing: -0.5 }}>
               {pet.name}
             </Text>
-            <View
-              style={{
-                alignSelf: 'flex-start',
-                backgroundColor: PET_COLORS.primaryLight,
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                borderRadius: 6,
-              }}
-            >
-              <Text
-                style={{
-                  color: PET_COLORS.primaryDark,
-                  fontSize: 14,
-                  fontWeight: '600',
-                }}
-              >
-                {pet.type}
-              </Text>
+
+            {/* Quick Info */}
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20 }}>
+                <Text style={{ fontSize: 12, fontWeight: '600', color: '#374151' }}>
+                  {pet.type} • {pet.sex}
+                </Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFFFFF', paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20 }}>
+                <Clock size={14} color={PET_COLORS.primary} />
+                <Text style={{ fontSize: 12, fontWeight: '600', color: '#374151', marginLeft: 6 }}>
+                  {new Date(pet.lastSeen).toLocaleDateString()}
+                </Text>
+              </View>
             </View>
           </View>
+        </View>
 
-          {/* Reward Banner */}
-          {pet.reward && (
-            <View
-              style={{
-                backgroundColor: PET_COLORS.primary,
-                padding: 16,
-                borderRadius: 12,
-                alignItems: 'center',
-              }}
-            >
-              <Text
-                style={{
-                  color: '#FFFFFF',
-                  fontSize: 16,
-                  fontWeight: '600',
-                  marginBottom: 4,
-                }}
-              >
-                REWARD OFFERED
-              </Text>
-              <Text
-                style={{
-                  color: '#FFFFFF',
-                  fontSize: 32,
-                  fontWeight: '700',
-                }}
-              >
-                ₱{pet.reward.toLocaleString()}
+        {/* Main Content */}
+        <View style={{ backgroundColor: colors.background }}>
+          {/* Image Section */}
+          {pet.photoUrl ? (
+            <View style={{ margin: 20, marginBottom: 16, borderRadius: 12, overflow: 'hidden', borderWidth: 1, borderColor: colors.border }}>
+              <Image
+                source={{ uri: pet.photoUrl }}
+                style={{ width: '100%', height: 280 }}
+                resizeMode="cover"
+              />
+            </View>
+          ) : (
+            <View style={{ margin: 20, marginBottom: 16, backgroundColor: colors.surface, borderRadius: 12, height: 200, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border }}>
+              <Camera size={48} color="#CBD5E1" strokeWidth={1.5} />
+              <Text style={{ fontSize: 14, color: '#94A3B8', marginTop: 12, fontWeight: '500' }}>
+                No photo available
               </Text>
             </View>
           )}
 
-          {/* Basic Information */}
-          <View
-            style={{
-              backgroundColor: colors.surface,
-              padding: 16,
-              borderRadius: 12,
-              gap: 12,
-              borderWidth: 1,
-              borderColor: colors.border,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 18,
-                fontWeight: '600',
-                color: colors.text,
-                marginBottom: 4,
-              }}
-            >
-              Basic Information
+          {/* Pet Information */}
+          <View style={{ marginHorizontal: 20, marginBottom: 16, backgroundColor: colors.surface, borderRadius: 12, padding: 20, borderWidth: 1, borderColor: colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }}>
+            <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 12, letterSpacing: 0.5 }}>
+              PET INFORMATION
             </Text>
-
+            <View style={{ marginBottom: 8 }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
+                Type: <Text style={{ fontWeight: '400', color: '#64748B' }}>{pet.type}</Text>
+              </Text>
+            </View>
             {pet.breed && (
-              <View style={{ flexDirection: 'row', gap: 8 }}>
-                <Feather name="bookmark" size={20} color={PET_COLORS.primary} />
-                <View style={{ flex: 1 }}>
-                  <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
-                    Breed
-                  </Text>
-                  <Text
-                    style={{ color: colors.text, fontSize: 16, marginTop: 2 }}
-                  >
-                    {pet.breed}
-                  </Text>
-                </View>
+              <View style={{ marginBottom: 8 }}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
+                  Breed: <Text style={{ fontWeight: '400', color: '#64748B' }}>{pet.breed}</Text>
+                </Text>
               </View>
             )}
-
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <Feather name="info" size={20} color={PET_COLORS.primary} />
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
-                  Age & Sex
-                </Text>
-                <Text
-                  style={{ color: colors.text, fontSize: 16, marginTop: 2 }}
-                >
-                  {pet.age} years old • {pet.sex}
-                </Text>
-              </View>
+            <View style={{ marginBottom: 8 }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
+                Age & Sex: <Text style={{ fontWeight: '400', color: '#64748B' }}>{pet.age} years old • {pet.sex}</Text>
+              </Text>
             </View>
-
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <Feather name="eye" size={20} color={PET_COLORS.primary} />
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
-                  Description
-                </Text>
-                <Text
-                  style={{ color: colors.text, fontSize: 16, marginTop: 2 }}
-                >
-                  {pet.description}
-                </Text>
-              </View>
+            <View style={{ marginBottom: 8 }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
+                Description: <Text style={{ fontWeight: '400', color: '#64748B' }}>{pet.description}</Text>
+              </Text>
             </View>
-
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <Feather name="tag" size={20} color={PET_COLORS.primary} />
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
-                  Distinctive Marks
-                </Text>
-                <Text
-                  style={{ color: colors.text, fontSize: 16, marginTop: 2 }}
-                >
-                  {pet.distinctiveMarks}
-                </Text>
-              </View>
+            <View style={{ marginBottom: 8 }}>
+              <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }}>
+                Distinctive Marks: <Text style={{ fontWeight: '400', color: '#64748B' }}>{pet.distinctiveMarks}</Text>
+              </Text>
             </View>
           </View>
 
           {/* Microchip Information */}
           {pet.microchipped && (
-            <View
-              style={{
-                backgroundColor: colors.surface,
-                padding: 16,
-                borderRadius: 12,
-                gap: 12,
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Feather name="check-circle" size={20} color={PET_COLORS.primary} />
-                <Text
-                  style={{
-                    fontSize: 18,
-                    fontWeight: '600',
-                    color: colors.text,
-                  }}
-                >
-                  Microchipped
-                </Text>
-              </View>
+            <View style={{ marginHorizontal: 20, marginBottom: 16, backgroundColor: '#ECFDF5', borderRadius: 12, padding: 20, borderWidth: 1, borderColor: '#10B981', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#065F46', marginBottom: 12, letterSpacing: 0.5 }}>
+                MICROCHIPPED
+              </Text>
               {pet.microchipId && (
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  <Feather name="hash" size={20} color={PET_COLORS.primary} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
-                      Microchip ID
-                    </Text>
-                    <Text
-                      style={{
-                        color: colors.text,
-                        fontSize: 16,
-                        marginTop: 2,
-                        fontFamily: 'monospace',
-                      }}
-                    >
-                      {pet.microchipId}
-                    </Text>
-                  </View>
+                <View>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: '#065F46' }}>
+                    Microchip ID: <Text style={{ fontWeight: '400', fontFamily: 'monospace' }}>{pet.microchipId}</Text>
+                  </Text>
                 </View>
               )}
             </View>
           )}
 
-          {/* Last Seen Information */}
-          <View
-            style={{
-              backgroundColor: colors.surface,
-              padding: 16,
-              borderRadius: 12,
-              gap: 12,
-              borderWidth: 1,
-              borderColor: colors.border,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 18,
-                fontWeight: '600',
-                color: colors.text,
-                marginBottom: 4,
-              }}
-            >
-              Last Seen
-            </Text>
-
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <Feather name="map-pin" size={20} color={PET_COLORS.primary} />
+          {/* Location Card */}
+          <View style={{ margin: 20, marginBottom: 16, backgroundColor: colors.surface, borderRadius: 12, padding: 18, borderWidth: 1, borderColor: colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 14 }}>
+              <View style={{ backgroundColor: PET_COLORS.primaryLight, padding: 12, borderRadius: 10 }}>
+                <MapPin size={22} color={PET_COLORS.primary} />
+              </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
-                  Location
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 6, letterSpacing: 0.5 }}>
+                  LAST SEEN LOCATION
                 </Text>
-                <Text
-                  style={{ color: colors.text, fontSize: 16, marginTop: 2 }}
-                >
+                <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text, marginBottom: 10 }}>
                   {pet.location}
-                </Text>
-              </View>
-            </View>
-
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <Feather name="clock" size={20} color={PET_COLORS.primary} />
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
-                  Date & Time
-                </Text>
-                <Text
-                  style={{ color: colors.text, fontSize: 16, marginTop: 2 }}
-                >
-                  {new Date(pet.lastSeen).toLocaleString()}
-                </Text>
-              </View>
-            </View>
-
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <Feather name="calendar" size={20} color={PET_COLORS.primary} />
-              <View style={{ flex: 1 }}>
-                <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
-                  Reported On
-                </Text>
-                <Text
-                  style={{ color: colors.text, fontSize: 16, marginTop: 2 }}
-                >
-                  {new Date(pet.dateReported).toLocaleString()}
                 </Text>
               </View>
             </View>
           </View>
 
-          {/* Additional Information */}
+          {/* Date Card */}
+          <View style={{ marginHorizontal: 20, marginBottom: 16, backgroundColor: colors.surface, borderRadius: 12, padding: 18, borderWidth: 1, borderColor: colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+              <View style={{ backgroundColor: PET_COLORS.primaryLight, padding: 12, borderRadius: 10 }}>
+                <Clock size={22} color={PET_COLORS.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 4, letterSpacing: 0.5 }}>
+                  LAST SEEN
+                </Text>
+                <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>
+                  {new Date(pet.lastSeen).toLocaleString()}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Additional Info Section */}
           {pet.additionalInfo && (
-            <View
-              style={{
-                backgroundColor: colors.surface,
-                padding: 16,
-                borderRadius: 12,
-                gap: 8,
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-            >
-              <Text
-                style={{
-                  fontSize: 18,
-                  fontWeight: '600',
-                  color: colors.text,
-                }}
-              >
-                Additional Information
+            <View style={{ marginHorizontal: 20, marginBottom: 16, backgroundColor: colors.surface, borderRadius: 12, padding: 20, borderWidth: 1, borderColor: colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 12, letterSpacing: 0.5 }}>
+                ADDITIONAL INFORMATION
               </Text>
-              <Text
-                style={{
-                  color: colors.text,
-                  fontSize: 16,
-                  lineHeight: 24,
-                }}
-              >
+              <Text style={{ fontSize: 15, color: colors.text, lineHeight: 24, textAlign: 'justify' }}>
                 {pet.additionalInfo}
               </Text>
             </View>
           )}
 
-          {/* Reporter & Contact Section */}
-          <View
-            style={{
-              backgroundColor: colors.surface,
-              padding: 20,
-              borderRadius: 12,
-              borderWidth: 1,
-              borderColor: colors.border,
-            }}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14, marginBottom: 20 }}>
-              <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: PET_COLORS.primaryLight, alignItems: 'center', justifyContent: 'center' }}>
-                <Feather name="user" size={22} color={PET_COLORS.primary} />
-              </View>
-              <View>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginBottom: 4, letterSpacing: 0.5 }}>
-                  REPORTED BY
-                </Text>
-                <Text style={{ fontSize: 17, fontWeight: '700', color: colors.text }}>
-                  {pet.contactName}
-                </Text>
-              </View>
+          {/* Reward Section */}
+          {pet.reward && (
+            <View style={{ marginHorizontal: 20, marginBottom: 16, backgroundColor: '#ECFDF5', borderRadius: 12, padding: 20, borderWidth: 2, borderColor: '#10B981', shadowColor: '#10B981', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 3 }}>
+              <Text style={{ fontSize: 12, fontWeight: '700', color: '#065F46', marginBottom: 8, letterSpacing: 0.5, textAlign: 'center' }}>
+                REWARD OFFERED
+              </Text>
+              <Text style={{ fontSize: 24, fontWeight: '800', color: '#065F46', textAlign: 'center', letterSpacing: 0.3 }}>
+                💰 ₱{pet.reward.toLocaleString()}
+              </Text>
+              <Text style={{ fontSize: 12, color: '#047857', textAlign: 'center', marginTop: 8 }}>
+                For information leading to safe return
+              </Text>
             </View>
+          )}
 
-            {/* Contact Buttons */}
-            <View style={{ gap: 12 }}>
-              <TouchableOpacity
-                onPress={handleCall}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 10,
-                  backgroundColor: PET_COLORS.primary,
-                  paddingVertical: 16,
-                  borderRadius: 10,
-                  shadowColor: PET_COLORS.primary,
-                  shadowOffset: { width: 0, height: 4 },
-                  shadowOpacity: 0.2,
-                  shadowRadius: 8,
-                  elevation: 4,
-                }}
-                activeOpacity={0.8}>
-                <Feather name="phone" size={20} color="#FFFFFF" />
-                <Text style={{ fontSize: 16, fontWeight: '700', color: '#FFFFFF' }}>
-                  Call Owner
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={handleSendMessage}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 10,
-                  backgroundColor: colors.surface,
-                  borderWidth: 2,
-                  borderColor: PET_COLORS.primary,
-                  paddingVertical: 16,
-                  borderRadius: 10,
-                }}
-                activeOpacity={0.8}>
-                <Feather name="message-circle" size={20} color={PET_COLORS.primary} />
-                <Text style={{ fontSize: 16, fontWeight: '700', color: PET_COLORS.primary }}>
-                  Send Message
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Safety Notice */}
-          <View style={{ marginHorizontal: 20, marginBottom: 32, backgroundColor: '#FFEDD5', borderRadius: 12, padding: 18, borderWidth: 1.5, borderColor: '#FDBA74' }}>
-            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 12 }}>
-              <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#FED7AA', alignItems: 'center', justifyContent: 'center', marginTop: 2 }}>
-                <Feather name="alert-circle" size={20} color={PET_COLORS.primaryDark} />
+          {/* Contact Section */}
+          <View style={{ marginHorizontal: 20, marginBottom: 16, backgroundColor: colors.surface, borderRadius: 12, padding: 20, borderWidth: 1, borderColor: colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+              <View style={{ backgroundColor: PET_COLORS.primaryLight, padding: 10, borderRadius: 10, marginRight: 12 }}>
+                <Shield size={22} color={PET_COLORS.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14, fontWeight: '700', color: PET_COLORS.primaryDark, marginBottom: 8 }}>
-                  Safety Reminder
+                <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text }}>
+                  Contact Owner
                 </Text>
-                <Text style={{ fontSize: 13, color: PET_COLORS.primaryDark, lineHeight: 20 }}>
-                  If you have seen this pet, please contact the owner immediately. Approach gently as the pet may be scared or injured. Meet in public places when returning the pet.
+                <Text style={{ fontSize: 13, color: '#64748B', marginTop: 2 }}>
+                  Reported by {pet.contactName}
                 </Text>
               </View>
             </View>
+
+            {/* Contact Actions */}
+            <View style={{ gap: 10 }}>
+              {/* Row with Call and Chat buttons */}
+              <View style={{ flexDirection: 'row', gap: 10 }}>
+                <TouchableOpacity
+                  onPress={handleCall}
+                  style={{
+                    flex: 1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: PET_COLORS.primary,
+                    paddingVertical: 14,
+                    paddingHorizontal: 12,
+                    borderRadius: 10,
+                    gap: 8,
+                  }}
+                  activeOpacity={0.8}>
+                  <Phone size={18} color="#FFFFFF" />
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#FFFFFF' }}>
+                    Call
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={handleSendMessage}
+                  style={{
+                    flex: 1,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: PET_COLORS.primary,
+                    paddingVertical: 14,
+                    paddingHorizontal: 12,
+                    borderRadius: 10,
+                    gap: 8,
+                  }}
+                  activeOpacity={0.8}>
+                  <MessageSquare size={18} color="#FFFFFF" />
+                  <Text style={{ fontSize: 14, fontWeight: '700', color: '#FFFFFF' }}>
+                    Message
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
+
         </View>
       </ScrollView>
     </View>

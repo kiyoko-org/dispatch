@@ -1,13 +1,15 @@
-import { View, Text, ScrollView, TouchableOpacity, StatusBar, TextInput } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StatusBar, TextInput, Modal, KeyboardAvoidingView, Platform } from 'react-native';
 import { Dog, MapPin, Clock, Search, X, ChevronDown, Calendar } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useState, useMemo } from 'react';
 import { useTheme } from '../../../components/ThemeContext';
 import HeaderWithSidebar from '../../../components/HeaderWithSidebar';
 import DatePicker from '../../../components/DatePicker';
+import Dropdown from '../../../components/Dropdown';
 
 type PetCategory = 'all';
 type SortBy = 'newest' | 'oldest' | 'location' | 'age';
+type DistanceUnit = 'km' | 'm';
 
 type MissingPet = {
   id: string;
@@ -34,10 +36,15 @@ export default function MissingPetsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeMenu, setActiveMenu] = useState<'category' | 'dateDistance' | 'sort' | null>(null);
   
+  // Modal states
+  const [showFiltersModal, setShowFiltersModal] = useState(false);
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
+  
   // Date & Distance filter states
   const [filterDateBefore, setFilterDateBefore] = useState('');
   const [filterDateAfter, setFilterDateAfter] = useState('');
   const [distanceValue, setDistanceValue] = useState('');
+  const [distanceUnit, setDistanceUnit] = useState<DistanceUnit>('km');
   const [showBeforeDatePicker, setShowBeforeDatePicker] = useState(false);
   const [showAfterDatePicker, setShowAfterDatePicker] = useState(false);
 
@@ -76,6 +83,14 @@ export default function MissingPetsPage() {
   ];
 
   const categories: PetCategory[] = ['all'];
+
+  // Sort options
+  const sortOptions = [
+    { value: 'newest', label: 'Newest first' },
+    { value: 'oldest', label: 'Oldest first' },
+    { value: 'location', label: 'Location' },
+    { value: 'age', label: 'Age' }
+  ];
 
   // Filter pets based on category, search, and date range
   const filteredPets = useMemo(() => {
@@ -255,9 +270,7 @@ export default function MissingPetsPage() {
 
             {/* Date & Distance Filter Button */}
             <TouchableOpacity
-              onPress={() => {
-                setActiveMenu(activeMenu === 'dateDistance' ? null : 'dateDistance');
-              }}
+              onPress={() => setShowFiltersModal(true)}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -281,9 +294,7 @@ export default function MissingPetsPage() {
 
             {/* Sort Button */}
             <TouchableOpacity
-              onPress={() => {
-                setActiveMenu(activeMenu === 'sort' ? null : 'sort');
-              }}
+              onPress={() => setShowSortDropdown(true)}
               style={{
                 flexDirection: 'row',
                 alignItems: 'center',
@@ -303,6 +314,206 @@ export default function MissingPetsPage() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Filters Modal (Date & Distance) */}
+        <Modal
+          visible={showFiltersModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowFiltersModal(false)}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1 }}>
+            <TouchableOpacity
+              style={{
+                flex: 1,
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+              activeOpacity={1}
+              onPress={() => setShowFiltersModal(false)}>
+              <TouchableOpacity
+                activeOpacity={1}
+                onPress={(e) => e.stopPropagation()}
+                style={{
+                  backgroundColor: colors.surface,
+                  borderRadius: 12,
+                  padding: 20,
+                  width: '85%',
+                  maxHeight: '80%',
+                }}>
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>
+                      Advanced Filters
+                    </Text>
+                    <TouchableOpacity onPress={() => setShowFiltersModal(false)}>
+                      <X size={24} color="#64748B" />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Date Range Section */}
+                  <View style={{ marginBottom: 16 }}>
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748B', marginBottom: 8 }}>
+                      DATE RANGE
+                    </Text>
+                    
+                    {/* Before Date */}
+                    <View style={{ marginBottom: 10 }}>
+                      <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 6 }}>Before</Text>
+                      <TouchableOpacity
+                        onPress={() => setShowBeforeDatePicker(true)}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          backgroundColor: colors.background,
+                          borderWidth: 1,
+                          borderColor: filterDateBefore ? '#F97316' : colors.border,
+                          borderRadius: 6,
+                          padding: 10,
+                          gap: 8,
+                        }}>
+                        <Calendar size={16} color="#64748B" />
+                        <Text style={{ flex: 1, fontSize: 13, color: filterDateBefore ? colors.text : '#94A3B8' }}>
+                          {filterDateBefore || 'Select date'}
+                        </Text>
+                        {filterDateBefore && (
+                          <TouchableOpacity onPress={() => setFilterDateBefore('')}>
+                            <X size={16} color="#64748B" />
+                          </TouchableOpacity>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* After Date */}
+                    <View>
+                      <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 6 }}>After</Text>
+                      <TouchableOpacity
+                        onPress={() => setShowAfterDatePicker(true)}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          backgroundColor: colors.background,
+                          borderWidth: 1,
+                          borderColor: filterDateAfter ? '#F97316' : colors.border,
+                          borderRadius: 6,
+                          padding: 10,
+                          gap: 8,
+                        }}>
+                        <Calendar size={16} color="#64748B" />
+                        <Text style={{ flex: 1, fontSize: 13, color: filterDateAfter ? colors.text : '#94A3B8' }}>
+                          {filterDateAfter || 'Select date'}
+                        </Text>
+                        {filterDateAfter && (
+                          <TouchableOpacity onPress={() => setFilterDateAfter('')}>
+                            <X size={16} color="#64748B" />
+                          </TouchableOpacity>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {/* Distance Section */}
+                  <View>
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748B', marginBottom: 8 }}>
+                      DISTANCE FROM YOU
+                    </Text>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      <TextInput
+                        value={distanceValue}
+                        onChangeText={setDistanceValue}
+                        placeholder="Enter distance"
+                        placeholderTextColor="#94A3B8"
+                        keyboardType="numeric"
+                        style={{
+                          flex: 1,
+                          backgroundColor: colors.background,
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                          borderRadius: 6,
+                          padding: 10,
+                          fontSize: 13,
+                          color: colors.text,
+                        }}
+                      />
+                      <TouchableOpacity
+                        onPress={() => setDistanceUnit('km')}
+                        style={{
+                          paddingHorizontal: 16,
+                          paddingVertical: 10,
+                          borderRadius: 6,
+                          backgroundColor: distanceUnit === 'km' ? '#F97316' : colors.background,
+                          borderWidth: 1,
+                          borderColor: distanceUnit === 'km' ? '#F97316' : colors.border,
+                        }}>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: distanceUnit === 'km' ? '#FFFFFF' : '#64748B' }}>
+                          km
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={() => setDistanceUnit('m')}
+                        style={{
+                          paddingHorizontal: 16,
+                          paddingVertical: 10,
+                          borderRadius: 6,
+                          backgroundColor: distanceUnit === 'm' ? '#F97316' : colors.background,
+                          borderWidth: 1,
+                          borderColor: distanceUnit === 'm' ? '#F97316' : colors.border,
+                        }}>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: distanceUnit === 'm' ? '#FFFFFF' : '#64748B' }}>
+                          m
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  {/* Clear All Filters */}
+                  {hasActiveFilters && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setFilterDateBefore('');
+                        setFilterDateAfter('');
+                        setDistanceValue('');
+                        setShowFiltersModal(false);
+                      }}
+                      style={{
+                        marginTop: 16,
+                        paddingVertical: 10,
+                        backgroundColor: '#FFEDD5',
+                        borderRadius: 6,
+                        alignItems: 'center',
+                      }}>
+                      <Text style={{ fontSize: 14, fontWeight: '600', color: '#C2410C' }}>
+                        Clear All Filters
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </ScrollView>
+              </TouchableOpacity>
+            </TouchableOpacity>
+          </KeyboardAvoidingView>
+        </Modal>
+
+        {/* Sort Dropdown */}
+        <Dropdown
+          isVisible={showSortDropdown}
+          onClose={() => setShowSortDropdown(false)}
+          onSelect={(item) => {
+            setSortBy(item.value as SortBy);
+            setShowSortDropdown(false);
+          }}
+          data={sortOptions}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({ item }) => (
+            <View style={{ padding: 12 }}>
+              <Text style={{ fontSize: 15, color: colors.text }}>
+                {item.label}
+              </Text>
+            </View>
+          )}
+          title="Sort by"
+        />
 
         {/* Dropdown Menus */}
         {activeMenu && (
@@ -336,147 +547,19 @@ export default function MissingPetsPage() {
 
             {/* Date & Distance Menu */}
             {activeMenu === 'dateDistance' && (
-              <View>
-                <Text style={{ fontSize: 13, fontWeight: '600', color: '#64748B', marginBottom: 12 }}>
-                  Advanced Filters
+              <View style={{ padding: 8 }}>
+                <Text style={{ fontSize: 13, color: '#64748B', textAlign: 'center' }}>
+                  Filters are now available in the modal overlay
                 </Text>
-                
-                {/* Date Range Section */}
-                <View style={{ marginBottom: 16 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748B', marginBottom: 8 }}>
-                    DATE RANGE
-                  </Text>
-                  
-                  {/* Before Date */}
-                  <View style={{ marginBottom: 10 }}>
-                    <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 6 }}>Before</Text>
-                    <TouchableOpacity
-                      onPress={() => setShowBeforeDatePicker(true)}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        backgroundColor: colors.background,
-                        borderWidth: 1,
-                        borderColor: colors.border,
-                        borderRadius: 6,
-                        padding: 10,
-                      }}>
-                      <Calendar size={16} color="#64748B" />
-                      <Text style={{ flex: 1, marginLeft: 8, fontSize: 13, color: filterDateBefore ? colors.text : '#94A3B8' }}>
-                        {filterDateBefore || 'Select date'}
-                      </Text>
-                      {filterDateBefore && (
-                        <TouchableOpacity onPress={() => setFilterDateBefore('')}>
-                          <X size={16} color="#64748B" />
-                        </TouchableOpacity>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                  
-                  {/* After Date */}
-                  <View>
-                    <Text style={{ fontSize: 12, color: '#64748B', marginBottom: 6 }}>After</Text>
-                    <TouchableOpacity
-                      onPress={() => setShowAfterDatePicker(true)}
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        backgroundColor: colors.background,
-                        borderWidth: 1,
-                        borderColor: colors.border,
-                        borderRadius: 6,
-                        padding: 10,
-                      }}>
-                      <Calendar size={16} color="#64748B" />
-                      <Text style={{ flex: 1, marginLeft: 8, fontSize: 13, color: filterDateAfter ? colors.text : '#94A3B8' }}>
-                        {filterDateAfter || 'Select date'}
-                      </Text>
-                      {filterDateAfter && (
-                        <TouchableOpacity onPress={() => setFilterDateAfter('')}>
-                          <X size={16} color="#64748B" />
-                        </TouchableOpacity>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                </View>
-                
-                {/* Distance Section */}
-                <View>
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#64748B', marginBottom: 8 }}>
-                    DISTANCE FROM YOU
-                  </Text>
-                  <View style={{ flexDirection: 'row', gap: 8 }}>
-                    <TextInput
-                      value={distanceValue}
-                      onChangeText={setDistanceValue}
-                      placeholder="Enter distance"
-                      placeholderTextColor="#94A3B8"
-                      keyboardType="numeric"
-                      style={{
-                        flex: 1,
-                        backgroundColor: colors.background,
-                        borderWidth: 1,
-                        borderColor: colors.border,
-                        borderRadius: 6,
-                        padding: 10,
-                        fontSize: 13,
-                        color: colors.text,
-                      }}
-                    />
-                    <Text style={{ paddingHorizontal: 16, paddingVertical: 10, fontSize: 13, fontWeight: '600', color: '#64748B' }}>
-                      km
-                    </Text>
-                  </View>
-                </View>
-                
-                {/* Clear All Filters */}
-                {hasActiveFilters && (
-                  <TouchableOpacity
-                    onPress={() => {
-                      setFilterDateBefore('');
-                      setFilterDateAfter('');
-                      setDistanceValue('');
-                      setActiveMenu(null);
-                    }}
-                    style={{
-                      marginTop: 14,
-                      padding: 10,
-                      borderRadius: 6,
-                      backgroundColor: '#FFEDD5',
-                      alignItems: 'center',
-                    }}>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: '#C2410C' }}>
-                      Clear All Filters
-                    </Text>
-                  </TouchableOpacity>
-                )}
               </View>
             )}
 
             {/* Sort Menu */}
             {activeMenu === 'sort' && (
-              <View>
-                <Text style={{ fontSize: 13, fontWeight: '600', color: '#64748B', marginBottom: 10 }}>
-                  Sort by
+              <View style={{ padding: 8 }}>
+                <Text style={{ fontSize: 13, color: '#64748B', textAlign: 'center' }}>
+                  Sort options are now available in the modal overlay
                 </Text>
-                {(['newest', 'oldest', 'location', 'age'] as SortBy[]).map((sort) => (
-                  <TouchableOpacity
-                    key={sort}
-                    onPress={() => {
-                      setSortBy(sort);
-                      setActiveMenu(null);
-                    }}
-                    style={{
-                      padding: 10,
-                      borderRadius: 4,
-                      backgroundColor: sortBy === sort ? '#FFEDD5' : 'transparent',
-                      marginBottom: 4,
-                    }}>
-                    <Text style={{ fontSize: 14, fontWeight: sortBy === sort ? '600' : '400', color: sortBy === sort ? '#C2410C' : colors.text, textTransform: 'capitalize' }}>
-                      {sort === 'newest' ? 'Newest first' : sort === 'oldest' ? 'Oldest first' : sort === 'age' ? 'Age' : sort}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
               </View>
             )}
           </View>
@@ -511,55 +594,93 @@ export default function MissingPetsPage() {
                 key={pet.id}
                 onPress={() => router.push(`/missing/pet`)}
                 style={{
-                  backgroundColor: '#FFEDD5',
-                  borderRadius: 8,
-                  padding: 14,
-                  marginBottom: 12,
+                  backgroundColor: colors.surface,
+                  borderRadius: 12,
+                  marginBottom: 16,
                   borderWidth: 2,
                   borderColor: '#F97316',
+                  overflow: 'hidden',
                 }}
                 activeOpacity={0.7}>
-                <View style={{ marginBottom: 8 }}>
-                  <Text style={{ fontSize: 16, fontWeight: '700', color: colors.text }}>
+                {/* Header Section with colored background */}
+                <View style={{
+                  backgroundColor: '#F97316',
+                  padding: 14,
+                }}>
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: '#FFFFFF' }}>
                     {pet.name}
                   </Text>
-                  <Text style={{ fontSize: 13, color: '#C2410C', fontWeight: '600', marginTop: 2 }}>
+                  <Text style={{ fontSize: 13, color: '#FFFFFF', opacity: 0.95, marginTop: 2 }}>
                     {pet.breed} • {pet.species}
                   </Text>
                 </View>
 
-                <Text style={{ fontSize: 13, color: '#64748B', marginBottom: 10, lineHeight: 18 }} numberOfLines={2}>
-                  {pet.description}
-                </Text>
-
-                <View style={{ backgroundColor: '#FFFFFF', padding: 8, borderRadius: 6, marginBottom: 10 }}>
-                  <Text style={{ fontSize: 12, fontWeight: '600', color: '#C2410C' }}>
-                    Last Seen: {pet.lastSeen}
+                {/* Description Section */}
+                <View style={{ padding: 14, backgroundColor: colors.surface }}>
+                  <Text style={{ fontSize: 14, color: '#64748B', lineHeight: 20, marginBottom: 12 }} numberOfLines={2}>
+                    {pet.description}
                   </Text>
-                </View>
 
-                <View style={{ flexDirection: 'row', gap: 14, marginBottom: 10 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <MapPin size={14} color="#F97316" />
-                    <Text style={{ fontSize: 12, color: '#64748B' }}>
+                  {/* Last Seen Info */}
+                  <View style={{ backgroundColor: '#FFF7ED', padding: 10, borderRadius: 6, marginBottom: 12, borderWidth: 1, borderColor: '#FDBA74' }}>
+                    <Text style={{ fontSize: 12, fontWeight: '600', color: '#C2410C' }}>
+                      Last Seen: {pet.lastSeen}
+                    </Text>
+                  </View>
+
+                  {/* Location Info */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                    <MapPin size={16} color="#64748B" />
+                    <Text style={{ fontSize: 13, color: '#475569', marginLeft: 8, flex: 1 }}>
                       {pet.location}
                     </Text>
                   </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Clock size={14} color="#F97316" />
-                    <Text style={{ fontSize: 12, color: '#64748B' }}>
+
+                  {/* Time Info */}
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                    <Clock size={16} color="#64748B" />
+                    <Text style={{ fontSize: 13, color: '#475569', marginLeft: 8 }}>
                       {formatDate(pet.date)}
                     </Text>
                   </View>
+
+                  {/* Reward Info */}
+                  {pet.reward && (
+                    <View style={{ 
+                      flexDirection: 'row', 
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: '#D1FAE5',
+                      borderWidth: 1,
+                      borderColor: '#10B981',
+                      borderRadius: 6,
+                      paddingHorizontal: 12,
+                      paddingVertical: 6,
+                    }}>
+                      <Text style={{ fontSize: 16, marginRight: 6 }}>💰</Text>
+                      <Text style={{ fontSize: 13, color: '#065F46', fontWeight: '600' }}>
+                        Reward: {pet.reward}
+                      </Text>
+                    </View>
+                  )}
                 </View>
 
-                {pet.reward && (
-                  <View style={{ backgroundColor: '#DCFCE7', padding: 8, borderRadius: 6, borderWidth: 1, borderColor: '#22C55E' }}>
-                    <Text style={{ fontSize: 12, fontWeight: '700', color: '#16A34A', textAlign: 'center' }}>
-                      💰 Reward: {pet.reward}
-                    </Text>
-                  </View>
-                )}
+                {/* Footer Section with status badge */}
+                <View style={{
+                  backgroundColor: '#FFEDD5',
+                  padding: 12,
+                  alignItems: 'center',
+                }}>
+                  <Text style={{ 
+                    fontSize: 13, 
+                    fontWeight: '600', 
+                    color: '#C2410C',
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                  }}>
+                    🐾 MISSING PET
+                  </Text>
+                </View>
               </TouchableOpacity>
             ))
           ) : (
