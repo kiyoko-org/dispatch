@@ -112,10 +112,6 @@ export default function ProfilePage() {
     router.push('/(protected)/profile/notifications');
   };
 
-  const handlePrivacyPress = () => {
-    router.push('/(protected)/profile/privacy');
-  };
-
   const handleAppearancePress = () => {
     router.push('/(protected)/profile/appearance');
   };
@@ -161,19 +157,6 @@ export default function ProfilePage() {
           sublabel: 'Manage notification settings',
           icon: Bell,
           onPress: handleNotificationsPress,
-          showChevron: true,
-        },
-      ],
-    },
-    {
-      title: 'Security',
-      items: [
-        {
-          id: 'privacy',
-          label: 'Privacy and security',
-          sublabel: 'Manage your data and privacy',
-          icon: Shield,
-          onPress: handlePrivacyPress,
           showChevron: true,
         },
       ],

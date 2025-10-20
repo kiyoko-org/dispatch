@@ -30,27 +30,6 @@ export default function NotificationsPage() {
       icon: Bell,
       enabled: true,
     },
-    {
-      id: 'nearby',
-      label: 'Nearby Incidents',
-      description: 'Incidents reported near your location',
-      icon: MapPin,
-      enabled: false,
-    },
-    {
-      id: 'messages',
-      label: 'Messages',
-      description: 'New messages and communications',
-      icon: MessageSquare,
-      enabled: true,
-    },
-    {
-      id: 'community',
-      label: 'Community Updates',
-      description: 'News and updates from your community',
-      icon: Megaphone,
-      enabled: false,
-    },
   ]);
 
   const toggleSetting = (id: string) => {
