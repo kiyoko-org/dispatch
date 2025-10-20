@@ -5,7 +5,7 @@ type NationalIdData = {
 		date_issued: string,
 		first_name: string,
 		last_name: string,
-		middle_name: string,
+		middle_name?: string,
 		pcn: string,
 		place_of_birth: string,
 		sex: string,
@@ -46,6 +46,8 @@ export async function verifyNationalIdQR(data: string): Promise<boolean> {
 
 	if (response.ok) {
 		const json = await response.json() as NationalIdData;
+
+		console.log(json)
 
 		if (json.meta.qr_type && json.data.pcn) {
 			return true

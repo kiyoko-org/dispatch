@@ -14,6 +14,7 @@ import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { supabase } from 'lib/supabase';
 import { useTheme } from 'components/ThemeContext';
+import { registerForFCMToken } from 'hooks/useFCMToken';
 
 AppState.addEventListener('change', (state) => {
   if (state === 'active') {
@@ -41,7 +42,7 @@ export default function Login() {
 
   async function signInWithEmail() {
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error, data } = await supabase.auth.signInWithPassword({
       email: email,
       password: password,
     });
@@ -60,6 +61,21 @@ export default function Login() {
       }
       return;
     }
+
+    const fcmToken = await registerForFCMToken();
+    if (fcmToken && data.user) {
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ fcm_token: fcmToken })
+        .eq('id', data.user.id);
+
+      if (updateError) {
+        console.error('Error updating FCM token:', updateError);
+      } else {
+        console.log('[Login] FCM token updated successfully');
+      }
+    }
+
     setLoading(false);
     Alert.alert(`Signed in successfully! Welcome back!`);
     router.dismissAll();
@@ -357,9 +373,7 @@ export default function Login() {
                 className="rounded-xl py-4"
                 style={{ backgroundColor: colors.primary }}
                 onPress={handleSendHelp}>
-                <Text className="text-center text-base font-semibold text-white">
-                  Send Message
-                </Text>
+                <Text className="text-center text-base font-semibold text-white">Send Message</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -370,7 +384,9 @@ export default function Login() {
                   borderColor: colors.border,
                 }}
                 onPress={() => setShowHelpModal(false)}>
-                <Text className="text-center text-base font-semibold" style={{ color: colors.text }}>
+                <Text
+                  className="text-center text-base font-semibold"
+                  style={{ color: colors.text }}>
                   Cancel
                 </Text>
               </TouchableOpacity>

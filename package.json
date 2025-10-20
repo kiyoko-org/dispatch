@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@expo/metro-runtime": "~5.0.4",
-    "@kiyoko-org/dispatch-lib": "github:kiyoko-org/dispatch-lib#38277571705b118ae2d2636daadf3d816aa2908a",
+    "@kiyoko-org/dispatch-lib": "github:kiyoko-org/dispatch-lib#218a3d8ee6b74fbb9aeae99d2fd9c1b367cfb18e",
     "@react-native-async-storage/async-storage": "^2.2.0",
     "@react-native-community/netinfo": "^11.4.1",
     "@supabase/supabase-js": "^2.54.0",

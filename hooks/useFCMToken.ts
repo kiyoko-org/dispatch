@@ -1,14 +1,18 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 
 export function useFCMToken() {
+  const [token, setToken] = useState<string | null>(null);
+
   useEffect(() => {
-    registerForFCMToken();
+    registerForFCMToken().then(setToken);
   }, []);
+
+  return token;
 }
 
-async function registerForFCMToken() {
+export async function registerForFCMToken(): Promise<string | null> {
   try {
     if (Platform.OS === 'android') {
       await Notifications.setNotificationChannelAsync('default', {
@@ -28,9 +32,8 @@ async function registerForFCMToken() {
 
     if (finalStatus !== 'granted') {
       console.log('[FCM] Permission denied');
-      return;
+      return null;
     }
-		console.log("GotHERER")
 
     const devicePushToken = await Notifications.getDevicePushTokenAsync();
     console.log('[FCM] Device Token:', devicePushToken.data);
@@ -39,7 +42,10 @@ async function registerForFCMToken() {
     Notifications.addPushTokenListener((token) => {
       console.log('[FCM] Token refreshed:', token.data);
     });
+
+    return devicePushToken.data;
   } catch (error) {
     console.error('[FCM] Error getting token:', error);
+    return null;
   }
 }
