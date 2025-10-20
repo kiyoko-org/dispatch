@@ -1,4 +1,4 @@
-type NationalIdData = {
+export type NationalIdData = {
 	data: {
 		best_finger_captured: string[],
 		birth_date: string,
@@ -16,7 +16,7 @@ type NationalIdData = {
 	}
 }
 
-export async function verifyNationalIdQR(data: string): Promise<boolean> {
+export async function verifyNationalIdQR(data: string): Promise<NationalIdData | null> {
 
 	const value = {
 		value: data
@@ -50,9 +50,9 @@ export async function verifyNationalIdQR(data: string): Promise<boolean> {
 		console.log(json)
 
 		if (json.meta.qr_type && json.data.pcn) {
-			return true
+			return json
 		}
 	}
 
-	return false
+	return null
 }

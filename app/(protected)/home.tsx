@@ -415,41 +415,6 @@ export default function Home() {
                 backgroundColor: currentColors.cardBg,
                 padding: 12,
               }}
-              onPress={() => router.push('/trust-score')}>
-              <View style={{ alignItems: 'center' }}>
-                <View
-                  style={{
-                    marginBottom: 8,
-                    height: 32,
-                    width: 32,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}>
-                  <Shield size={20} color={currentColors.cardIcon} />
-                </View>
-                <Text style={{ fontSize: 20, fontWeight: 'bold', color: currentColors.cardText }}>
-                  0%
-                </Text>
-                <Text
-                  style={{
-                    textAlign: 'center',
-                    fontSize: 12,
-                    fontWeight: '500',
-                    color: currentColors.cardSubtext,
-                  }}>
-                  Trust Score
-                </Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={{
-                width: '48%',
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: currentColors.cardBorder,
-                backgroundColor: currentColors.cardBg,
-                padding: 12,
-              }}
               onPress={() => router.push('/cases')}>
               <View style={{ alignItems: 'center' }}>
                 <View
@@ -473,41 +438,6 @@ export default function Home() {
                     color: currentColors.cardSubtext,
                   }}>
                   Reports
-                </Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={{
-                width: '48%',
-                borderRadius: 8,
-                borderWidth: 1,
-                borderColor: currentColors.cardBorder,
-                backgroundColor: currentColors.cardBg,
-                padding: 12,
-              }}
-              onPress={() => router.push('/cases')}>
-              <View style={{ alignItems: 'center' }}>
-                <View
-                  style={{
-                    marginBottom: 8,
-                    height: 32,
-                    width: 32,
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}>
-                  <CheckCircle size={20} color={currentColors.cardIcon} />
-                </View>
-                <Text style={{ fontSize: 20, fontWeight: 'bold', color: currentColors.cardText }}>
-                  0
-                </Text>
-                <Text
-                  style={{
-                    textAlign: 'center',
-                    fontSize: 12,
-                    fontWeight: '500',
-                    color: currentColors.cardSubtext,
-                  }}>
-                  Verified
                 </Text>
               </View>
             </TouchableOpacity>

@@ -16,11 +16,15 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { supabase } from 'lib/supabase';
 import { createURL } from 'expo-linking';
-import { verifyNationalIdQR } from 'lib/id';
+import { verifyNationalIdQR, type NationalIdData } from 'lib/id';
 import { useTheme } from 'components/ThemeContext';
 import Dropdown from 'components/Dropdown';
 import { z } from 'zod';
 import { useBarangays } from '@kiyoko-org/dispatch-lib';
+
+// Security validation: Reject dangerous characters that could enable SQL injection or XSS attacks
+const dangerousCharsRegex = /[`;><\x00]/;
+const hasDangerousCharacters = (val: string) => dangerousCharsRegex.test(val);
 
 const signUpSchema = z
   .object({
@@ -28,14 +32,22 @@ const signUpSchema = z
       .string()
       .trim()
       .min(3, 'First name must be at least 3 characters')
-      .max(20, 'First name must be at most 20 characters'),
+      .max(20, 'First name must be at most 20 characters')
+      .refine(
+        (val) => !hasDangerousCharacters(val),
+        'Invalid characters detected. Please remove special characters like quotes, brackets, or semicolons'
+      ),
 
     middleName: z
       .string()
       .trim()
       .refine((val) => val === '' || (val.length >= 3 && val.length <= 20), {
         message: 'Middle name must be 3-20 characters long',
-      }),
+      })
+      .refine(
+        (val) => val === '' || !hasDangerousCharacters(val),
+        'Invalid characters detected. Please remove special characters like quotes, brackets, or semicolons'
+      ),
 
     noMiddleName: z.boolean(),
 
@@ -43,53 +55,105 @@ const signUpSchema = z
       .string()
       .trim()
       .min(3, 'Last name must be at least 3 characters')
-      .max(20, 'Last name must be at most 20 characters'),
+      .max(20, 'Last name must be at most 20 characters')
+      .refine(
+        (val) => !hasDangerousCharacters(val),
+        'Invalid characters detected. Please remove special characters like quotes, brackets, or semicolons'
+      ),
 
     suffix: z.string(),
 
-    userType: z.enum(['resident', 'student', 'work']),
+    sex: z.enum(['Male', 'Female'], {
+      message: 'Please select your sex',
+    }),
 
-    permanentStreet: z.string().trim(),
-    permanentBarangay: z.string().trim().min(1, 'Barangay is required'),
-    permanentCity: z.string().trim().min(1, 'City is required'),
-    permanentProvince: z.string().trim().min(1, 'Province is required'),
+    birthYear: z
+      .string()
+      .min(1, 'Year is required')
+      .refine((val) => /^\d{4}$/.test(val), 'Year must be 4 digits')
+      .refine((val) => {
+        const year = parseInt(val);
+        const currentYear = new Date().getFullYear();
+        const minYear = 1900;
+        const maxYear = currentYear - 18;
+        return year >= minYear && year <= maxYear;
+      }, `Year must be between 1900 and ${new Date().getFullYear() - 18}`),
 
-    temporaryStreet: z.string(),
-    temporaryBarangay: z.string(),
-    temporaryCity: z.string(),
-    temporaryProvince: z.string(),
+    birthMonth: z
+      .string()
+      .min(1, 'Month is required')
+      .refine((val) => /^\d{1,2}$/.test(val), 'Month must be numeric')
+      .refine((val) => {
+        const month = parseInt(val);
+        return month >= 1 && month <= 12;
+      }, 'Month must be between 1 and 12'),
+
+    birthDay: z
+      .string()
+      .min(1, 'Day is required')
+      .refine((val) => /^\d{1,2}$/.test(val), 'Day must be numeric')
+      .refine((val) => {
+        const day = parseInt(val);
+        return day >= 1 && day <= 31;
+      }, 'Day must be between 1 and 31'),
+
+    permanentStreet: z
+      .string()
+      .trim()
+      .refine(
+        (val) => val === '' || !hasDangerousCharacters(val),
+        'Invalid characters detected. Please remove special characters like quotes, brackets, or semicolons'
+      ),
+    permanentBarangay: z
+      .string()
+      .trim()
+      .min(1, 'Barangay is required')
+      .refine(
+        (val) => !hasDangerousCharacters(val),
+        'Invalid characters detected. Please remove special characters like quotes, brackets, or semicolons'
+      ),
+    permanentCity: z
+      .string()
+      .trim()
+      .min(1, 'City is required')
+      .refine(
+        (val) => !hasDangerousCharacters(val),
+        'Invalid characters detected. Please remove special characters like quotes, brackets, or semicolons'
+      ),
+    permanentProvince: z
+      .string()
+      .trim()
+      .min(1, 'Province is required')
+      .refine(
+        (val) => !hasDangerousCharacters(val),
+        'Invalid characters detected. Please remove special characters like quotes, brackets, or semicolons'
+      ),
+
+    birthCity: z.string(),
+    birthProvince: z.string(),
 
     email: z
       .string()
       .trim()
       .min(1, 'Email is required')
-      .email('Please enter a valid email address'),
+      .email('Please enter a valid email address')
+      .refine(
+        (val) => !hasDangerousCharacters(val),
+        'Invalid characters detected. Please remove special characters like quotes, brackets, or semicolons'
+      ),
 
-    phoneNumber: z
+    password: z
       .string()
-      .trim()
-      .min(10, 'Phone number must be at least 10 digits')
-      .regex(/^[0-9+\-\s()]*$/, 'Please enter a valid phone number'),
-
-    password: z.string().min(6, 'Password must be at least 6 characters long'),
+      .min(8, 'Password must be at least 8 characters long')
+      .max(64, 'Password must not exceed 64 characters')
+      .refine((val) => /[A-Z]/.test(val), 'Password must contain at least one uppercase letter')
+      .refine((val) => /[a-z]/.test(val), 'Password must contain at least one lowercase letter')
+      .refine((val) => /[0-9]/.test(val), 'Password must contain at least one number')
+      .refine(
+        (val) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(val),
+        'Password must contain at least one special character'
+      ),
   })
-  .refine(
-    (data) => {
-      if (data.userType === 'student' || data.userType === 'work') {
-        return (
-          data.temporaryStreet.trim().length > 0 &&
-          data.temporaryBarangay.trim().length > 0 &&
-          data.temporaryCity.trim().length > 0 &&
-          data.temporaryProvince.trim().length > 0
-        );
-      }
-      return true;
-    },
-    {
-      message: 'All temporary address fields are required for students and workers',
-      path: ['temporaryStreet'],
-    }
-  )
   .refine(
     (data) => {
       if (!data.noMiddleName) {
@@ -101,6 +165,33 @@ const signUpSchema = z
       message: 'Middle name is required',
       path: ['middleName'],
     }
+  )
+  .refine(
+    (data) => {
+      // Validate birthdate combination
+      if (!data.birthYear || !data.birthMonth || !data.birthDay) {
+        return true; // Individual field validations will catch this
+      }
+
+      const year = parseInt(data.birthYear);
+      const month = parseInt(data.birthMonth);
+      const day = parseInt(data.birthDay);
+
+      // Check if year is within valid range
+      const currentYear = new Date().getFullYear();
+      if (year < 1900 || year > currentYear - 18) {
+        return false;
+      }
+
+      // Get days in the month
+      const daysInMonth = new Date(year, month, 0).getDate();
+      
+      return day <= daysInMonth;
+    },
+    {
+      message: 'Invalid date for the selected month/year',
+      path: ['birthDay'],
+    }
   );
 
 export default function RootLayout() {
@@ -110,8 +201,6 @@ export default function RootLayout() {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [countryCode, setCountryCode] = useState('PH+63');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [firstName, setFirstName] = useState('');
@@ -120,27 +209,27 @@ export default function RootLayout() {
   const [middleName, setMiddleName] = useState('');
   const [noMiddleName, setNoMiddleName] = useState(false);
   const [lastName, setLastName] = useState('');
-  const [userType, setUserType] = useState<'resident' | 'student' | 'work'>('resident');
 
   // Permanent Address Fields
   const [permanentStreet, setPermanentStreet] = useState('');
   const [permanentBarangay, setPermanentBarangay] = useState('');
-  const [permanentCity, setPermanentCity] = useState('Tuguegarao City');
-  const [permanentProvince, setPermanentProvince] = useState('Cagayan');
+  const [permanentCity, setPermanentCity] = useState('');
+  const [permanentProvince, setPermanentProvince] = useState('');
 
   // Temporary Address Fields
-  const [temporaryStreet, setTemporaryStreet] = useState('');
-  const [temporaryBarangay, setTemporaryBarangay] = useState('');
-  const [temporaryCity, setTemporaryCity] = useState('');
-  const [temporaryProvince, setTemporaryProvince] = useState('');
+  const [sex, setSex] = useState<'Male' | 'Female' | ''>('');
+  const [birthYear, setBirthYear] = useState('');
+  const [birthMonth, setBirthMonth] = useState('');
+  const [birthDay, setBirthDay] = useState('');
+  const [birthCity, setBirthCity] = useState('');
+  const [birthProvince, setBirthProvince] = useState('');
 
   // Dropdown visibility states
   const [showPermanentBarangayDropdown, setShowPermanentBarangayDropdown] = useState(false);
   const [showPermanentCityDropdown, setShowPermanentCityDropdown] = useState(false);
   const [showPermanentProvinceDropdown, setShowPermanentProvinceDropdown] = useState(false);
-  const [showTemporaryBarangayDropdown, setShowTemporaryBarangayDropdown] = useState(false);
-  const [showTemporaryCityDropdown, setShowTemporaryCityDropdown] = useState(false);
-  const [showTemporaryProvinceDropdown, setShowTemporaryProvinceDropdown] = useState(false);
+  const [showBirthCityDropdown, setShowBirthCityDropdown] = useState(false);
+  const [showBirthProvinceDropdown, setShowBirthProvinceDropdown] = useState(false);
 
   // Philippine address options
   const provinces: string[] = [];
@@ -157,11 +246,18 @@ export default function RootLayout() {
   const [isScanning, setIsScanning] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [verified, setVerified] = useState(false);
+  const [idData, setIdData] = useState<NationalIdData | null>(null);
+  const [idMismatchError, setIdMismatchError] = useState<string | null>(null);
 
-  // Selfie verification state
-  const [selfieModalVisible, setSelfieModalVisible] = useState(false);
-  const [selfieTaken, setSelfieTaken] = useState(false);
-  const [selfieVerified, setSelfieVerified] = useState(false);
+  // Helper function to get days in month (handles leap years)
+  const getDaysInMonth = (year: string, month: string): number => {
+    const y = parseInt(year);
+    const m = parseInt(month);
+    if (isNaN(y) || isNaN(m) || m < 1 || m > 12) {
+      return 31; // Default to 31 if invalid
+    }
+    return new Date(y, m, 0).getDate();
+  };
 
   async function signUpWithEmail() {
     setLoading(true);
@@ -181,13 +277,13 @@ export default function RootLayout() {
           middle_name: middleName,
           no_middle_name: noMiddleName,
           last_name: lastName,
-          phone_number: phoneNumber,
-          user_type: userType,
           role: 'user',
+          sex: sex,
+          birth_date: `${birthYear}-${birthMonth.padStart(2, '0')}-${birthDay.padStart(2, '0')}`,
           permanent_address_1: `${permanentStreet}, ${permanentBarangay}`,
           permanent_address_2: `${permanentCity}, ${permanentProvince}`,
-          temporary_address_1: `${temporaryStreet}, ${temporaryBarangay}`,
-          temporary_address_2: `${temporaryCity}, ${temporaryProvince}`,
+          birth_city: birthCity,
+          birth_province: birthProvince,
         },
       },
     });
@@ -211,7 +307,30 @@ export default function RootLayout() {
 
   const isNameValid = (name: string) => {
     const trimmed = name.trim();
-    return trimmed.length >= 3 && trimmed.length <= 20;
+    return trimmed.length >= 3 && trimmed.length <= 20 && !hasDangerousCharacters(trimmed);
+  };
+
+  const validateField = (fieldName: string, value: any) => {
+    try {
+      // Create a partial schema for just this field
+      const fieldSchema = signUpSchema.shape[fieldName as keyof typeof signUpSchema.shape];
+      if (fieldSchema) {
+        fieldSchema.parse(value);
+        // Clear error if validation passes
+        setValidationErrors((prev) => {
+          const newErrors = { ...prev };
+          delete newErrors[fieldName];
+          return newErrors;
+        });
+      }
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        setValidationErrors((prev) => ({
+          ...prev,
+          [fieldName]: error.issues[0].message,
+        }));
+      }
+    }
   };
 
   const validateStep1 = () => {
@@ -222,17 +341,17 @@ export default function RootLayout() {
         noMiddleName,
         lastName,
         suffix,
-        userType,
+        sex,
+        birthYear,
+        birthMonth,
+        birthDay,
         permanentStreet,
         permanentBarangay,
         permanentCity,
         permanentProvince,
-        temporaryStreet,
-        temporaryBarangay,
-        temporaryCity,
-        temporaryProvince,
+        birthCity,
+        birthProvince,
         email,
-        phoneNumber,
         password,
       });
       setValidationErrors({});
@@ -258,17 +377,17 @@ export default function RootLayout() {
         noMiddleName,
         lastName,
         suffix,
-        userType,
+        sex,
+        birthYear,
+        birthMonth,
+        birthDay,
         permanentStreet,
         permanentBarangay,
         permanentCity,
         permanentProvince,
-        temporaryStreet,
-        temporaryBarangay,
-        temporaryCity,
-        temporaryProvince,
+        birthCity,
+        birthProvince,
         email,
-        phoneNumber,
         password,
       });
       return true;
@@ -277,12 +396,78 @@ export default function RootLayout() {
     }
   };
 
-  const nextStep = () => {
-    if (currentStep === 1) {
-      if (validateStep1()) {
-        setCurrentStep(currentStep + 1);
+  const validateIdDataMatch = () => {
+    if (!idData) {
+      return true; // Skip validation if no ID data
+    }
+
+    const errors: string[] = [];
+    
+    // Normalize function to handle case-insensitive comparison
+    const normalize = (str: string) => str.toLowerCase().trim();
+
+    // Check first name
+    if (normalize(firstName) !== normalize(idData.data.first_name)) {
+      errors.push(`First name doesn't match ID (ID shows: ${idData.data.first_name})`);
+    }
+
+    // Check last name
+    if (normalize(lastName) !== normalize(idData.data.last_name)) {
+      errors.push(`Last name doesn't match ID (ID shows: ${idData.data.last_name})`);
+    }
+
+    // Check middle name (if provided)
+    if (!noMiddleName && middleName) {
+      if (normalize(middleName) !== normalize(idData.data.middle_name || '')) {
+        errors.push(`Middle name doesn't match ID (ID shows: ${idData.data.middle_name || 'None'})`);
       }
-    } else if (currentStep < 3) {
+    }
+
+    // Check suffix (if provided)
+    if (suffix && idData.data.suffix) {
+      if (normalize(suffix) !== normalize(idData.data.suffix)) {
+        errors.push(`Suffix doesn't match ID (ID shows: ${idData.data.suffix})`);
+      }
+    }
+
+    // Check sex
+    if (sex && idData.data.sex) {
+      if (normalize(sex) !== normalize(idData.data.sex)) {
+        errors.push(`Sex doesn't match ID (ID shows: ${idData.data.sex})`);
+      }
+    }
+
+    // Check place of birth (if provided)
+    if ((birthCity || birthProvince) && idData.data.place_of_birth) {
+      const userBirthPlace = `${birthCity}${birthCity && birthProvince ? ', ' : ''}${birthProvince}`.trim();
+      if (normalize(userBirthPlace) !== normalize(idData.data.place_of_birth)) {
+        errors.push(`Place of birth doesn't match ID (ID shows: ${idData.data.place_of_birth})`);
+      }
+    }
+
+    if (errors.length > 0) {
+      setIdMismatchError(errors.join('\n'));
+      return false;
+    }
+
+    setIdMismatchError(null);
+    return true;
+  };
+
+  const nextStep = () => {
+    // Validate ID match when moving from step 2 to step 3
+    if (currentStep === 2 && idData) {
+      if (!validateIdDataMatch()) {
+        Alert.alert(
+          'ID Verification Mismatch',
+          'The details you entered do not match your National ID. Please review and correct your information or rescan your ID.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+    }
+
+    if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
     }
   };
@@ -330,14 +515,16 @@ export default function RootLayout() {
     setVerifying(true);
 
     verifyNationalIdQR(data)
-      .then((isValid) => {
-        if (isValid) {
+      .then((result) => {
+        if (result) {
           setVerified(true);
+          setIdData(result);
           // optionally inform user
           Alert.alert('Verification successful', 'Your ID has been verified.');
         } else {
           // failed: reset states so the user can rescan
           setVerified(false);
+          setIdData(null);
           Alert.alert('Verification failed', 'Unable to verify the scanned QR. Please try again.', [
             {
               text: 'OK',
@@ -352,6 +539,7 @@ export default function RootLayout() {
       .catch((err) => {
         console.error('Verification error', err);
         setVerified(false);
+        setIdData(null);
         Alert.alert('Verification error', 'An error occurred while verifying. Please try again.', [
           {
             text: 'OK',
@@ -401,31 +589,44 @@ export default function RootLayout() {
               {/* Form Fields */}
               <View>
                 <View className="mb-4">
-                  <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
-                    First Name *
-                  </Text>
+                  <View className="mb-2 flex-row items-center">
+                    <Text className="text-sm font-medium" style={{ color: colors.text }}>
+                      First Name
+                    </Text>
+                    <Text className="ml-1 text-base font-bold" style={{ color: '#EF4444' }}>
+                      *
+                    </Text>
+                  </View>
                   <TextInput
                     className="rounded-xl px-4 py-4 text-base"
                     style={{
                       backgroundColor: colors.surfaceVariant,
                       borderWidth: 1,
-                      borderColor:
-                        firstName.trim() !== '' && !isNameValid(firstName)
-                          ? '#EF4444'
-                          : colors.border,
+                      borderColor: validationErrors.firstName ? '#EF4444' : colors.border,
                       color: colors.text,
                     }}
                     value={firstName}
-                    onChangeText={setFirstName}
+                    onChangeText={(text) => {
+                      setFirstName(text);
+                      if (text.trim()) {
+                        validateField('firstName', text);
+                      } else {
+                        setValidationErrors((prev) => {
+                          const newErrors = { ...prev };
+                          delete newErrors.firstName;
+                          return newErrors;
+                        });
+                      }
+                    }}
                     placeholder="Enter your first name"
                     placeholderTextColor={colors.textSecondary}
                   />
-                  {firstName.trim() !== '' && !isNameValid(firstName) && (
+                  {validationErrors.firstName && (
                     <Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
-                      First name must be 3-20 characters long
+                      {validationErrors.firstName}
                     </Text>
                   )}
-                  {firstName.trim() === '' && (
+                  {!validationErrors.firstName && firstName.trim() === '' && (
                     <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
                       First name must be 3-20 characters long
                     </Text>
@@ -433,33 +634,48 @@ export default function RootLayout() {
                 </View>
 
                 <View className="mb-4">
-                  <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
-                    Middle Name {!noMiddleName && '*'}
-                  </Text>
+                  <View className="mb-2 flex-row items-center">
+                    <Text className="text-sm font-medium" style={{ color: colors.text }}>
+                      Middle Name
+                    </Text>
+                    {!noMiddleName && (
+                      <Text className="ml-1 text-base font-bold" style={{ color: '#EF4444' }}>
+                        *
+                      </Text>
+                    )}
+                  </View>
                   <TextInput
                     className="rounded-xl px-4 py-4 text-base"
                     style={{
                       backgroundColor: colors.surfaceVariant,
                       borderWidth: 1,
-                      borderColor:
-                        middleName.trim() !== '' && !isNameValid(middleName)
-                          ? '#EF4444'
-                          : colors.border,
+                      borderColor: validationErrors.middleName ? '#EF4444' : colors.border,
                       color: colors.text,
                       opacity: noMiddleName ? 0.5 : 1,
                     }}
                     value={middleName}
-                    onChangeText={setMiddleName}
+                    onChangeText={(text) => {
+                      setMiddleName(text);
+                      if (!noMiddleName && text.trim()) {
+                        validateField('middleName', text);
+                      } else {
+                        setValidationErrors((prev) => {
+                          const newErrors = { ...prev };
+                          delete newErrors.middleName;
+                          return newErrors;
+                        });
+                      }
+                    }}
                     placeholder="Enter your middle name"
                     placeholderTextColor={colors.textSecondary}
                     editable={!noMiddleName}
                   />
-                  {middleName.trim() !== '' && !isNameValid(middleName) && !noMiddleName && (
+                  {validationErrors.middleName && !noMiddleName && (
                     <Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
-                      Middle name must be 3-20 characters long
+                      {validationErrors.middleName}
                     </Text>
                   )}
-                  {!noMiddleName && middleName.trim() === '' && (
+                  {!validationErrors.middleName && !noMiddleName && middleName.trim() === '' && (
                     <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
                       Middle name must be 3-20 characters long (optional)
                     </Text>
@@ -486,23 +702,36 @@ export default function RootLayout() {
                 </View>
 
                 <View className="mb-4">
-                  <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
-                    Last Name *
-                  </Text>
+                  <View className="mb-2 flex-row items-center">
+                    <Text className="text-sm font-medium" style={{ color: colors.text }}>
+                      Last Name
+                    </Text>
+                    <Text className="ml-1 text-base font-bold" style={{ color: '#EF4444' }}>
+                      *
+                    </Text>
+                  </View>
                   <View className="flex-row gap-3">
                     <TextInput
                       className="flex-1 rounded-xl px-4 py-4 text-base"
                       style={{
                         backgroundColor: colors.surfaceVariant,
                         borderWidth: 1,
-                        borderColor:
-                          lastName.trim() !== '' && !isNameValid(lastName)
-                            ? '#EF4444'
-                            : colors.border,
+                        borderColor: validationErrors.lastName ? '#EF4444' : colors.border,
                         color: colors.text,
                       }}
                       value={lastName}
-                      onChangeText={setLastName}
+                      onChangeText={(text) => {
+                        setLastName(text);
+                        if (text.trim()) {
+                          validateField('lastName', text);
+                        } else {
+                          setValidationErrors((prev) => {
+                            const newErrors = { ...prev };
+                            delete newErrors.lastName;
+                            return newErrors;
+                          });
+                        }
+                      }}
                       placeholder="Enter your last name"
                       placeholderTextColor={colors.textSecondary}
                     />
@@ -525,12 +754,12 @@ export default function RootLayout() {
                     </TouchableOpacity>
                   </View>
 
-                  {lastName.trim() !== '' && !isNameValid(lastName) && (
+                  {validationErrors.lastName && (
                     <Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
-                      Last name must be 3-20 characters long
+                      {validationErrors.lastName}
                     </Text>
                   )}
-                  {lastName.trim() === '' && (
+                  {!validationErrors.lastName && lastName.trim() === '' && (
                     <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
                       Last name must be 3-20 characters long
                     </Text>
@@ -573,75 +802,272 @@ export default function RootLayout() {
                   )}
                 </View>
 
+                {/* Sex Selection */}
                 <View className="mb-4">
-                  <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
-                    User Type *
-                  </Text>
-                  <View className="flex-row gap-2">
+                  <View className="mb-2 flex-row items-center">
+                    <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                      Sex
+                    </Text>
+                    <Text className="ml-1 text-base font-bold" style={{ color: '#EF4444' }}>
+                      *
+                    </Text>
+                  </View>
+                  <View className="flex-row gap-3">
                     <TouchableOpacity
-                      className="flex-1 rounded-xl px-4 py-3"
+                      className="flex-1 flex-row items-center rounded-xl px-4 py-4"
                       style={{
-                        backgroundColor:
-                          userType === 'resident' ? colors.primary + '20' : colors.surfaceVariant,
+                        backgroundColor: sex === 'Male' ? colors.primary + '20' : colors.surfaceVariant,
                         borderWidth: 1,
-                        borderColor: userType === 'resident' ? colors.primary : colors.border,
+                        borderColor: sex === 'Male' ? colors.primary : colors.border,
                       }}
                       onPress={() => {
-                        setUserType('resident');
-                        setPermanentCity('Tuguegarao City');
-                        setPermanentProvince('Cagayan');
+                        setSex('Male');
+                        validateField('sex', 'Male');
                       }}>
+                      <View
+                        className="mr-3 h-5 w-5 items-center justify-center rounded-full"
+                        style={{
+                          backgroundColor: sex === 'Male' ? colors.primary : colors.surfaceVariant,
+                          borderWidth: 2,
+                          borderColor: sex === 'Male' ? colors.primary : colors.border,
+                        }}>
+                        {sex === 'Male' && (
+                          <View
+                            className="h-2 w-2 rounded-full"
+                            style={{ backgroundColor: '#FFFFFF' }}
+                          />
+                        )}
+                      </View>
                       <Text
-                        className="text-center text-sm font-medium"
-                        style={{ color: userType === 'resident' ? colors.primary : colors.text }}>
-                        Resident
+                        className="text-base"
+                        style={{
+                          color: sex === 'Male' ? colors.primary : colors.text,
+                          fontWeight: sex === 'Male' ? '600' : '400',
+                        }}>
+                        Male
                       </Text>
                     </TouchableOpacity>
+
                     <TouchableOpacity
-                      className="flex-1 rounded-xl px-4 py-3"
+                      className="flex-1 flex-row items-center rounded-xl px-4 py-4"
                       style={{
-                        backgroundColor:
-                          userType === 'student' ? colors.primary + '20' : colors.surfaceVariant,
+                        backgroundColor: sex === 'Female' ? colors.primary + '20' : colors.surfaceVariant,
                         borderWidth: 1,
-                        borderColor: userType === 'student' ? colors.primary : colors.border,
+                        borderColor: sex === 'Female' ? colors.primary : colors.border,
                       }}
                       onPress={() => {
-                        setUserType('student');
-                        setPermanentCity('');
-                        setPermanentProvince('');
+                        setSex('Female');
+                        validateField('sex', 'Female');
                       }}>
+                      <View
+                        className="mr-3 h-5 w-5 items-center justify-center rounded-full"
+                        style={{
+                          backgroundColor: sex === 'Female' ? colors.primary : colors.surfaceVariant,
+                          borderWidth: 2,
+                          borderColor: sex === 'Female' ? colors.primary : colors.border,
+                        }}>
+                        {sex === 'Female' && (
+                          <View
+                            className="h-2 w-2 rounded-full"
+                            style={{ backgroundColor: '#FFFFFF' }}
+                          />
+                        )}
+                      </View>
                       <Text
-                        className="text-center text-sm font-medium"
-                        style={{ color: userType === 'student' ? colors.primary : colors.text }}>
-                        Student
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      className="flex-1 rounded-xl px-4 py-3"
-                      style={{
-                        backgroundColor:
-                          userType === 'work' ? colors.primary + '20' : colors.surfaceVariant,
-                        borderWidth: 1,
-                        borderColor: userType === 'work' ? colors.primary : colors.border,
-                      }}
-                      onPress={() => {
-                        setUserType('work');
-                        setPermanentCity('');
-                        setPermanentProvince('');
-                      }}>
-                      <Text
-                        className="text-center text-sm font-medium"
-                        style={{ color: userType === 'work' ? colors.primary : colors.text }}>
-                        Work
+                        className="text-base"
+                        style={{
+                          color: sex === 'Female' ? colors.primary : colors.text,
+                          fontWeight: sex === 'Female' ? '600' : '400',
+                        }}>
+                        Female
                       </Text>
                     </TouchableOpacity>
                   </View>
+                  {validationErrors.sex && (
+                    <Text className="mt-1 text-sm" style={{ color: '#EF4444' }}>
+                      {validationErrors.sex}
+                    </Text>
+                  )}
+                </View>
+
+                {/* Birthdate */}
+                <View className="mb-4">
+                  <View className="mb-2 flex-row items-center">
+                    <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                      Birthdate
+                    </Text>
+                    <Text className="ml-1 text-base font-bold" style={{ color: '#EF4444' }}>
+                      *
+                    </Text>
+                    <Text className="ml-1 text-sm font-semibold" style={{ color: colors.text }}>
+                      (Must be 18 years or older)
+                    </Text>
+                  </View>
+                  <View className="flex-row gap-3">
+                    {/* Year */}
+                    <View className="flex-1">
+                      <Text className="mb-1 text-xs" style={{ color: colors.textSecondary }}>
+                        Year
+                      </Text>
+                      <TextInput
+                        className="rounded-xl px-4 py-4 text-base"
+                        style={{
+                          backgroundColor: colors.surfaceVariant,
+                          borderWidth: 1,
+                          borderColor: validationErrors.birthYear ? '#EF4444' : colors.border,
+                          color: colors.text,
+                        }}
+                        placeholder="YYYY"
+                        value={birthYear}
+                        onChangeText={(text) => {
+                          // Only allow numbers
+                          const numericValue = text.replace(/[^0-9]/g, '');
+                          
+                          if (numericValue.length === 0) {
+                            setBirthYear('');
+                            return;
+                          }
+                          
+                          const currentYear = new Date().getFullYear();
+                          const maxYear = currentYear - 18; // e.g., 2007 in 2025
+                          
+                          // Validate at each digit
+                          if (numericValue.length === 1) {
+                            // First digit must be 1 or 2 (for years 1900-2099)
+                            // But since max is 2007, if they type 3-9, reject
+                            if (numericValue === '1' || numericValue === '2') {
+                              setBirthYear(numericValue);
+                            }
+                          } else if (numericValue.length === 2) {
+                            const twoDigit = parseInt(numericValue);
+                            // 19xx or 20xx, but check if it could lead to valid year
+                            // For 18xx: invalid (< 1900)
+                            // For 19xx: valid
+                            // For 20xx: need to check if it can be <= maxYear
+                            if (numericValue === '19' || (numericValue === '20' && maxYear >= 2000)) {
+                              setBirthYear(numericValue);
+                            } else if (numericValue.startsWith('19') || 
+                                       (numericValue.startsWith('20') && parseInt(numericValue.substring(2)) === 0)) {
+                              setBirthYear(numericValue);
+                            }
+                          } else if (numericValue.length === 3) {
+                            const year3 = parseInt(numericValue);
+                            // Check if this 3-digit prefix could lead to a valid year
+                            // For 190x-199x: always valid
+                            // For 200x-207x: check against maxYear
+                            if ((year3 >= 190 && year3 <= 199) || 
+                                (year3 >= 200 && year3 <= Math.floor(maxYear / 10))) {
+                              setBirthYear(numericValue);
+                            }
+                          } else if (numericValue.length === 4) {
+                            const year = parseInt(numericValue);
+                            // Final validation: 1900 <= year <= maxYear
+                            if (year >= 1900 && year <= maxYear) {
+                              setBirthYear(numericValue);
+                            }
+                          }
+                        }}
+                        placeholderTextColor={colors.textSecondary}
+                        keyboardType="numeric"
+                        maxLength={4}
+                      />
+                    </View>
+
+                    {/* Month */}
+                    <View className="flex-1">
+                      <Text className="mb-1 text-xs" style={{ color: colors.textSecondary }}>
+                        Month
+                      </Text>
+                      <TextInput
+                        className="rounded-xl px-4 py-4 text-base"
+                        style={{
+                          backgroundColor: colors.surfaceVariant,
+                          borderWidth: 1,
+                          borderColor: validationErrors.birthMonth ? '#EF4444' : colors.border,
+                          color: colors.text,
+                        }}
+                        placeholder="MM"
+                        value={birthMonth}
+                        onChangeText={(text) => {
+                          // Only allow numbers
+                          const numericValue = text.replace(/[^0-9]/g, '');
+                          if (numericValue.length <= 2) {
+                            // Validate month range 1-12
+                            const monthNum = parseInt(numericValue);
+                            if (numericValue === '' || (monthNum >= 1 && monthNum <= 12)) {
+                              setBirthMonth(numericValue);
+                            }
+                          }
+                        }}
+                        placeholderTextColor={colors.textSecondary}
+                        keyboardType="numeric"
+                        maxLength={2}
+                      />
+                    </View>
+
+                    {/* Day */}
+                    <View className="flex-1">
+                      <Text className="mb-1 text-xs" style={{ color: colors.textSecondary }}>
+                        Day
+                      </Text>
+                      <TextInput
+                        className="rounded-xl px-4 py-4 text-base"
+                        style={{
+                          backgroundColor: colors.surfaceVariant,
+                          borderWidth: 1,
+                          borderColor: validationErrors.birthDay ? '#EF4444' : colors.border,
+                          color: colors.text,
+                        }}
+                        placeholder="DD"
+                        value={birthDay}
+                        onChangeText={(text) => {
+                          // Only allow numbers
+                          const numericValue = text.replace(/[^0-9]/g, '');
+                          if (numericValue.length <= 2) {
+                            const dayNum = parseInt(numericValue);
+                            
+                            // Get max days for current month/year
+                            let maxDays = 31;
+                            if (birthYear && birthMonth) {
+                              const year = parseInt(birthYear);
+                              const month = parseInt(birthMonth);
+                              if (!isNaN(year) && !isNaN(month) && month >= 1 && month <= 12) {
+                                maxDays = new Date(year, month, 0).getDate();
+                              }
+                            }
+                            
+                            if (numericValue === '' || (dayNum >= 1 && dayNum <= maxDays)) {
+                              setBirthDay(numericValue);
+                            }
+                          }
+                        }}
+                        placeholderTextColor={colors.textSecondary}
+                        keyboardType="numeric"
+                        maxLength={2}
+                      />
+                    </View>
+                  </View>
+                  {(validationErrors.birthYear || validationErrors.birthMonth || validationErrors.birthDay) ? (
+                    <Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
+                      {validationErrors.birthYear || validationErrors.birthMonth || validationErrors.birthDay}
+                    </Text>
+                  ) : (
+                    <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
+                      Year: 1900-{new Date().getFullYear() - 18}
+                      {birthYear && birthMonth && `, Days in ${['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][parseInt(birthMonth)]}: ${getDaysInMonth(birthYear, birthMonth)}`}
+                    </Text>
+                  )}
                 </View>
 
                 <View className="mb-4">
-                  <Text className="mb-2 text-sm font-semibold" style={{ color: colors.text }}>
-                    Permanent Address *
-                  </Text>
+                  <View className="mb-2 flex-row items-center">
+                    <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                      Permanent Address
+                    </Text>
+                    <Text className="ml-1 text-base font-bold" style={{ color: '#EF4444' }}>
+                      *
+                    </Text>
+                  </View>
 
                   {/* Street */}
                   <TextInput
@@ -649,12 +1075,23 @@ export default function RootLayout() {
                     style={{
                       backgroundColor: colors.surfaceVariant,
                       borderWidth: 1,
-                      borderColor: colors.border,
+                      borderColor: validationErrors.permanentStreet ? '#EF4444' : colors.border,
                       color: colors.text,
                     }}
                     placeholder="Street (optional)"
                     value={permanentStreet}
-                    onChangeText={setPermanentStreet}
+                    onChangeText={(text) => {
+                      setPermanentStreet(text);
+                      if (text.trim()) {
+                        validateField('permanentStreet', text);
+                      } else {
+                        setValidationErrors((prev) => {
+                          const newErrors = { ...prev };
+                          delete newErrors.permanentStreet;
+                          return newErrors;
+                        });
+                      }
+                    }}
                     placeholderTextColor={colors.textSecondary}
                   />
                   {validationErrors.permanentStreet && (
@@ -693,10 +1130,8 @@ export default function RootLayout() {
                       backgroundColor: colors.surfaceVariant,
                       borderWidth: 1,
                       borderColor: validationErrors.permanentCity ? '#EF4444' : colors.border,
-                      opacity: userType === 'resident' ? 0.7 : 1,
                     }}
-                    onPress={() => userType !== 'resident' && setShowPermanentCityDropdown(true)}
-                    disabled={userType === 'resident'}>
+                    onPress={() => setShowPermanentCityDropdown(true)}>
                     <Text
                       style={{
                         color: permanentCity ? colors.text : colors.textSecondary,
@@ -718,12 +1153,8 @@ export default function RootLayout() {
                       backgroundColor: colors.surfaceVariant,
                       borderWidth: 1,
                       borderColor: validationErrors.permanentProvince ? '#EF4444' : colors.border,
-                      opacity: userType === 'resident' ? 0.7 : 1,
                     }}
-                    onPress={() =>
-                      userType !== 'resident' && setShowPermanentProvinceDropdown(true)
-                    }
-                    disabled={userType === 'resident'}>
+                    onPress={() => setShowPermanentProvinceDropdown(true)}>
                     <Text
                       style={{
                         color: permanentProvince ? colors.text : colors.textSecondary,
@@ -739,107 +1170,73 @@ export default function RootLayout() {
                   )}
                 </View>
 
-                {(userType === 'student' || userType === 'work') && (
-                  <View className="mb-4">
-                    <Text className="mb-2 text-sm font-semibold" style={{ color: colors.text }}>
-                      Temporary Address *
+                {/* Place of Birth */}
+                <View className="mb-4">
+                  <View className="mb-2 flex-row items-center">
+                    <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                      Place of Birth
                     </Text>
-
-                    {/* Street */}
-                    <TextInput
-                      className="mb-3 rounded-xl px-4 py-4 text-base"
-                      style={{
-                        backgroundColor: colors.surfaceVariant,
-                        borderWidth: 1,
-                        borderColor: validationErrors.temporaryStreet ? '#EF4444' : colors.border,
-                        color: colors.text,
-                      }}
-                      placeholder="Street (optional)"
-                      value={temporaryStreet}
-                      onChangeText={setTemporaryStreet}
-                      placeholderTextColor={colors.textSecondary}
-                    />
-                    {validationErrors.temporaryStreet && (
-                      <Text className="mb-3 text-xs" style={{ color: '#EF4444' }}>
-                        {validationErrors.temporaryStreet}
-                      </Text>
-                    )}
-
-                    {/* Barangay Dropdown */}
-                    <TouchableOpacity
-                      className="mb-3 flex-row items-center justify-between rounded-xl px-4 py-4"
-                      style={{
-                        backgroundColor: colors.surfaceVariant,
-                        borderWidth: 1,
-                        borderColor: validationErrors.temporaryBarangay ? '#EF4444' : colors.border,
-                      }}
-                      onPress={() => setShowTemporaryBarangayDropdown(true)}>
-                      <Text
-                        style={{
-                          color: temporaryBarangay ? colors.text : colors.textSecondary,
-                        }}>
-                        {temporaryBarangay || 'Select Barangay'}
-                      </Text>
-                      <ChevronDown size={20} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                    {validationErrors.temporaryBarangay && (
-                      <Text className="mb-3 text-xs" style={{ color: '#EF4444' }}>
-                        {validationErrors.temporaryBarangay}
-                      </Text>
-                    )}
-
-                    {/* City Dropdown */}
-                    <TouchableOpacity
-                      className="mb-3 flex-row items-center justify-between rounded-xl px-4 py-4"
-                      style={{
-                        backgroundColor: colors.surfaceVariant,
-                        borderWidth: 1,
-                        borderColor: validationErrors.temporaryCity ? '#EF4444' : colors.border,
-                      }}
-                      onPress={() => setShowTemporaryCityDropdown(true)}>
-                      <Text
-                        style={{
-                          color: temporaryCity ? colors.text : colors.textSecondary,
-                        }}>
-                        {temporaryCity || 'Select City'}
-                      </Text>
-                      <ChevronDown size={20} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                    {validationErrors.temporaryCity && (
-                      <Text className="mb-3 text-xs" style={{ color: '#EF4444' }}>
-                        {validationErrors.temporaryCity}
-                      </Text>
-                    )}
-
-                    {/* Province Dropdown */}
-                    <TouchableOpacity
-                      className="flex-row items-center justify-between rounded-xl px-4 py-4"
-                      style={{
-                        backgroundColor: colors.surfaceVariant,
-                        borderWidth: 1,
-                        borderColor: validationErrors.temporaryProvince ? '#EF4444' : colors.border,
-                      }}
-                      onPress={() => setShowTemporaryProvinceDropdown(true)}>
-                      <Text
-                        style={{
-                          color: temporaryProvince ? colors.text : colors.textSecondary,
-                        }}>
-                        {temporaryProvince || 'Select Province'}
-                      </Text>
-                      <ChevronDown size={20} color={colors.textSecondary} />
-                    </TouchableOpacity>
-                    {validationErrors.temporaryProvince && (
-                      <Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
-                        {validationErrors.temporaryProvince}
-                      </Text>
-                    )}
+                    <Text className="ml-1 text-base font-bold" style={{ color: '#EF4444' }}>
+                      *
+                    </Text>
                   </View>
-                )}
+
+                  {/* Birth City Dropdown */}
+                  <TouchableOpacity
+                    className="mb-3 flex-row items-center justify-between rounded-xl px-4 py-4"
+                    style={{
+                      backgroundColor: colors.surfaceVariant,
+                      borderWidth: 1,
+                      borderColor: validationErrors.birthCity ? '#EF4444' : colors.border,
+                    }}
+                    onPress={() => setShowBirthCityDropdown(true)}>
+                    <Text
+                      style={{
+                        color: birthCity ? colors.text : colors.textSecondary,
+                      }}>
+                      {birthCity || 'Select City'}
+                    </Text>
+                    <ChevronDown size={20} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                  {validationErrors.birthCity && (
+                    <Text className="mb-3 text-xs" style={{ color: '#EF4444' }}>
+                      {validationErrors.birthCity}
+                    </Text>
+                  )}
+
+                  {/* Birth Province Dropdown */}
+                  <TouchableOpacity
+                    className="flex-row items-center justify-between rounded-xl px-4 py-4"
+                    style={{
+                      backgroundColor: colors.surfaceVariant,
+                      borderWidth: 1,
+                      borderColor: validationErrors.birthProvince ? '#EF4444' : colors.border,
+                    }}
+                    onPress={() => setShowBirthProvinceDropdown(true)}>
+                    <Text
+                      style={{
+                        color: birthProvince ? colors.text : colors.textSecondary,
+                      }}>
+                      {birthProvince || 'Select Province'}
+                    </Text>
+                    <ChevronDown size={20} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                  {validationErrors.birthProvince && (
+                    <Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
+                      {validationErrors.birthProvince}
+                    </Text>
+                  )}
+                </View>
 
                 <View className="mb-4">
-                  <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
-                    Email Address *
-                  </Text>
+                  <View className="mb-2 flex-row items-center">
+                    <Text className="text-sm font-medium" style={{ color: colors.text }}>
+                      Email Address
+                    </Text>
+                    <Text className="ml-1 text-base font-bold" style={{ color: '#EF4444' }}>
+                      *
+                    </Text>
+                  </View>
                   <TextInput
                     className="rounded-xl px-4 py-4 text-base"
                     style={{
@@ -852,20 +1249,14 @@ export default function RootLayout() {
                     value={email}
                     onChangeText={(text) => {
                       setEmail(text);
-                      // Validate email in real-time
                       if (text.trim()) {
-                        const result = z.string().email().safeParse(text.trim());
-                        if (!result.success) {
-                          setValidationErrors((prev) => ({
-                            ...prev,
-                            email: 'Please enter a valid email address',
-                          }));
-                        } else {
-                          setValidationErrors((prev) => {
-                            const { email, ...rest } = prev;
-                            return rest;
-                          });
-                        }
+                        validateField('email', text);
+                      } else {
+                        setValidationErrors((prev) => {
+                          const newErrors = { ...prev };
+                          delete newErrors.email;
+                          return newErrors;
+                        });
                       }
                     }}
                     placeholderTextColor={colors.textSecondary}
@@ -879,49 +1270,15 @@ export default function RootLayout() {
                   )}
                 </View>
 
-                <View className="mb-4">
-                  <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
-                    Phone Number *
-                  </Text>
-                  <View className="flex-row gap-3">
-                    <TouchableOpacity
-                      className="rounded-xl px-4 py-4"
-                      style={{
-                        backgroundColor: colors.surfaceVariant,
-                        borderWidth: 1,
-                        borderColor: colors.border,
-                      }}>
-                      <Text className="text-base" style={{ color: colors.text }}>
-                        {countryCode}
-                      </Text>
-                    </TouchableOpacity>
-
-                    <TextInput
-                      className="flex-1 rounded-xl px-4 py-4 text-base"
-                      style={{
-                        backgroundColor: colors.surfaceVariant,
-                        borderWidth: 1,
-                        borderColor: validationErrors.phoneNumber ? '#EF4444' : colors.border,
-                        color: colors.text,
-                      }}
-                      placeholder="Please enter your phone number"
-                      value={phoneNumber}
-                      onChangeText={setPhoneNumber}
-                      placeholderTextColor={colors.textSecondary}
-                      keyboardType="phone-pad"
-                    />
-                  </View>
-                  {validationErrors.phoneNumber && (
-                    <Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
-                      {validationErrors.phoneNumber}
-                    </Text>
-                  )}
-                </View>
-
                 <View className="mb-6">
-                  <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
-                    Password *
-                  </Text>
+                  <View className="mb-2 flex-row items-center">
+                    <Text className="text-sm font-medium" style={{ color: colors.text }}>
+                      Password
+                    </Text>
+                    <Text className="ml-1 text-base font-bold" style={{ color: '#EF4444' }}>
+                      *
+                    </Text>
+                  </View>
                   <View className="relative">
                     <TextInput
                       className="rounded-xl px-4 py-4 pr-12 text-base"
@@ -933,7 +1290,18 @@ export default function RootLayout() {
                       }}
                       placeholder="Create a password"
                       value={password}
-                      onChangeText={setPassword}
+                      onChangeText={(text) => {
+                        setPassword(text);
+                        if (text.trim()) {
+                          validateField('password', text);
+                        } else {
+                          setValidationErrors((prev) => {
+                            const newErrors = { ...prev };
+                            delete newErrors.password;
+                            return newErrors;
+                          });
+                        }
+                      }}
                       secureTextEntry={!showPassword}
                       placeholderTextColor={colors.textSecondary}
                     />
@@ -953,7 +1321,7 @@ export default function RootLayout() {
                     </Text>
                   ) : (
                     <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
-                      Password must be at least 6 characters long
+                      8-64 characters with uppercase, lowercase, number, and special character
                     </Text>
                   )}
                 </View>
@@ -963,11 +1331,9 @@ export default function RootLayout() {
               <TouchableOpacity
                 className="rounded-xl py-4"
                 style={{
-                  backgroundColor: isStep1Valid() ? colors.primary : colors.border,
-                  opacity: isStep1Valid() ? 1 : 0.5,
+                  backgroundColor: colors.primary,
                 }}
-                onPress={nextStep}
-                disabled={!isStep1Valid()}>
+                onPress={nextStep}>
                 <Text className="text-center text-base font-semibold text-white">NEXT STEP</Text>
               </TouchableOpacity>
 
@@ -1126,10 +1492,7 @@ export default function RootLayout() {
                   <TouchableOpacity
                     className="flex-1 rounded-xl py-4"
                     style={{ backgroundColor: colors.primary }}
-                    onPress={() => {
-                      // proceed to selfie verification (no requirement)
-                      nextStep();
-                    }}>
+                    onPress={nextStep}>
                     <Text className="text-center text-base font-semibold text-white">
                       NEXT STEP
                     </Text>
@@ -1153,176 +1516,220 @@ export default function RootLayout() {
             </View>
           )}
 
-          {/* Step 3: Selfie Verification */}
+          {/* Step 3: Verify Details */}
           {currentStep === 3 && (
             <View>
               {/* Heading */}
               <View className="mb-8">
                 <Text className="mb-2 text-3xl font-bold" style={{ color: colors.text }}>
-                  Selfie Verification
+                  Verify Your Details
                 </Text>
                 <Text className="text-base" style={{ color: colors.textSecondary }}>
-                  Take a selfie to verify your identity
+                  Please review your information before completing registration
                 </Text>
               </View>
 
-              {/* Selfie Instructions */}
-              <View
-                className="mb-6 rounded-xl p-4"
-                style={{
-                  backgroundColor: colors.primary + '10',
-                  borderWidth: 1,
-                  borderColor: colors.primary + '30',
-                }}>
-                <Text className="mb-2 text-sm font-semibold" style={{ color: colors.text }}>
-                  Before taking your selfie:
-                </Text>
-                <View className="space-y-2">
+              {/* ID Mismatch Error */}
+              {idMismatchError && (
+                <View
+                  className="mb-6 rounded-xl p-4"
+                  style={{
+                    backgroundColor: '#FEE2E2',
+                    borderWidth: 1,
+                    borderColor: '#EF4444',
+                  }}>
                   <View className="flex-row items-start">
-                    <Text className="mr-2" style={{ color: colors.primary }}>
-                      •
+                    <Text className="mr-2 text-base" style={{ color: '#EF4444' }}>
+                      ⚠️
                     </Text>
-                    <Text className="flex-1 text-sm" style={{ color: colors.text }}>
-                      Find a well-lit area
-                    </Text>
-                  </View>
-                  <View className="flex-row items-start">
-                    <Text className="mr-2" style={{ color: colors.primary }}>
-                      •
-                    </Text>
-                    <Text className="flex-1 text-sm" style={{ color: colors.text }}>
-                      Remove glasses, hats, or masks
-                    </Text>
-                  </View>
-                  <View className="flex-row items-start">
-                    <Text className="mr-2" style={{ color: colors.primary }}>
-                      •
-                    </Text>
-                    <Text className="flex-1 text-sm" style={{ color: colors.text }}>
-                      Keep your face centered and clearly visible
-                    </Text>
-                  </View>
-                  <View className="flex-row items-start">
-                    <Text className="mr-2" style={{ color: colors.primary }}>
-                      •
-                    </Text>
-                    <Text className="flex-1 text-sm" style={{ color: colors.text }}>
-                      Maintain a neutral expression
-                    </Text>
+                    <View className="flex-1">
+                      <Text className="mb-2 text-sm font-semibold" style={{ color: '#DC2626' }}>
+                        ID Verification Mismatch
+                      </Text>
+                      <Text className="text-xs" style={{ color: '#991B1B' }}>
+                        {idMismatchError}
+                      </Text>
+                      <Text className="mt-2 text-xs" style={{ color: '#991B1B' }}>
+                        Please update your information to match your National ID or rescan your ID.
+                      </Text>
+                    </View>
                   </View>
                 </View>
-              </View>
+              )}
 
-              {/* Selfie Capture Section */}
+              {/* Details Review */}
               <View className="mb-6">
-                <Text className="mb-3 text-sm font-medium" style={{ color: colors.text }}>
-                  Take Your Selfie
-                </Text>
-                <TouchableOpacity
-                  className="items-center justify-center rounded-xl border-2 border-dashed p-8"
+                {/* Personal Information */}
+                <View
+                  className="mb-4 rounded-xl p-4"
                   style={{
                     backgroundColor: colors.surfaceVariant,
+                    borderWidth: 1,
                     borderColor: colors.border,
-                  }}
-                  onPress={async () => {
-                    try {
-                      if (permission && !permission.granted) {
-                        const { granted } = await requestPermission();
-                        if (!granted) {
-                          Alert.alert(
-                            'Permission required',
-                            'Camera permission is required to take a selfie.'
-                          );
-                          return;
-                        }
-                      }
-                      setSelfieModalVisible(true);
-                    } catch (error) {
-                      console.error('Camera permission error', error);
-                      Alert.alert('Error', 'Unable to request camera permission.');
-                    }
                   }}>
-                  <View className="items-center">
-                    <View
-                      className="mb-3 h-16 w-16 items-center justify-center rounded-lg"
-                      style={{ backgroundColor: colors.background }}>
-                      {selfieVerified ? (
-                        <Check size={28} color={colors.success || '#10B981'} />
-                      ) : (
-                        <CameraIcon size={28} color={colors.textSecondary} />
+                  <Text className="mb-3 text-sm font-semibold" style={{ color: colors.text }}>
+                    Personal Information
+                    {idData && (
+                      <Text className="text-xs font-normal" style={{ color: colors.textSecondary }}>
+                        {' '}(ID Verified)
+                      </Text>
+                    )}
+                  </Text>
+                  <View className="space-y-2">
+                    <View className="py-2">
+                      <Text className="mb-1 text-xs" style={{ color: colors.textSecondary }}>
+                        Name:
+                      </Text>
+                      <Text className="text-sm font-medium" style={{ color: colors.text }}>
+                        {firstName} {!noMiddleName && middleName} {lastName} {suffix}
+                      </Text>
+                      {idData && (
+                        <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
+                          ID: {idData.data.first_name} {idData.data.middle_name} {idData.data.last_name} {idData.data.suffix || ''}
+                        </Text>
                       )}
                     </View>
-
-                    <Text className="text-center font-medium" style={{ color: colors.text }}>
-                      {selfieVerified
-                        ? 'Selfie Verified!'
-                        : selfieTaken
-                          ? 'Retake Selfie'
-                          : 'Take Selfie'}
-                    </Text>
-                    <Text
-                      className="mt-1 text-center text-xs"
-                      style={{ color: colors.textSecondary }}>
-                      Position your face in the frame
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              </View>
-
-              {/* Camera Modal for Selfie */}
-              <Modal
-                visible={selfieModalVisible}
-                animationType="slide"
-                presentationStyle="fullScreen"
-                onRequestClose={() => setSelfieModalVisible(false)}>
-                <View className="flex-1 bg-black">
-                  <View className="flex-1">
-                    <CameraView style={{ flex: 1 }} facing="front" />
-                  </View>
-
-                  {/* Overlay with face guide */}
-                  <View className="absolute inset-0 items-center justify-center">
-                    <View
-                      style={{
-                        width: 250,
-                        height: 300,
-                        borderRadius: 150,
-                        borderWidth: 3,
-                        borderColor: 'rgba(255, 255, 255, 0.7)',
-                        borderStyle: 'dashed',
-                      }}
-                    />
-                  </View>
-
-                  <View className="absolute left-4 right-4 top-8 flex-row items-center justify-between">
-                    <Pressable
-                      onPress={() => setSelfieModalVisible(false)}
-                      className="rounded-full bg-black/40 p-2">
-                      <Text className="text-white">Close</Text>
-                    </Pressable>
-                  </View>
-
-                  <View className="absolute bottom-0 left-0 right-0 items-center pb-8">
-                    <Text className="mb-4 text-center text-white">
-                      Position your face within the oval
-                    </Text>
-                    <TouchableOpacity
-                      className="h-16 w-16 items-center justify-center rounded-full bg-white"
-                      onPress={() => {
-                        // Simulate taking a selfie
-                        setSelfieTaken(true);
-                        setSelfieVerified(true);
-                        setSelfieModalVisible(false);
-                        Alert.alert('Success', 'Selfie captured successfully!');
-                      }}>
-                      <View className="h-14 w-14 rounded-full border-4 border-gray-300" />
-                    </TouchableOpacity>
+                    <View className="flex-row justify-between py-2">
+                      <Text className="text-sm" style={{ color: colors.textSecondary }}>
+                        Email:
+                      </Text>
+                      <Text className="text-sm font-medium" style={{ color: colors.text }}>
+                        {email}
+                      </Text>
+                    </View>
+                    {sex && (
+                      <View className="flex-row justify-between py-2">
+                        <Text className="text-sm" style={{ color: colors.textSecondary }}>
+                          Sex:
+                        </Text>
+                        <Text className="text-sm font-medium" style={{ color: colors.text }}>
+                          {sex}
+                        </Text>
+                      </View>
+                    )}
+                    {idData?.data.birth_date && (
+                      <View className="flex-row justify-between py-2">
+                        <Text className="text-sm" style={{ color: colors.textSecondary }}>
+                          Birth Date:
+                        </Text>
+                        <Text className="text-sm font-medium" style={{ color: colors.text }}>
+                          {idData.data.birth_date}
+                        </Text>
+                      </View>
+                    )}
+                    {idData?.data.pcn && (
+                      <View className="flex-row justify-between py-2">
+                        <Text className="text-sm" style={{ color: colors.textSecondary }}>
+                          PCN:
+                        </Text>
+                        <Text className="text-sm font-medium" style={{ color: colors.text }}>
+                          {idData.data.pcn}
+                        </Text>
+                      </View>
+                    )}
+                    {idData?.data.date_issued && (
+                      <View className="flex-row justify-between py-2">
+                        <Text className="text-sm" style={{ color: colors.textSecondary }}>
+                          Date Issued:
+                        </Text>
+                        <Text className="text-sm font-medium" style={{ color: colors.text }}>
+                          {idData.data.date_issued}
+                        </Text>
+                      </View>
+                    )}
+                    {idData?.data.place_of_birth && (
+                      <View className="flex-row justify-between py-2">
+                        <Text className="text-sm" style={{ color: colors.textSecondary }}>
+                          Place of Birth (ID):
+                        </Text>
+                        <Text className="text-sm font-medium" style={{ color: colors.text }}>
+                          {idData.data.place_of_birth}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 </View>
-              </Modal>
+
+                {/* Permanent Address */}
+                <View
+                  className="mb-4 rounded-xl p-4"
+                  style={{
+                    backgroundColor: colors.surfaceVariant,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  }}>
+                  <Text className="mb-3 text-sm font-semibold" style={{ color: colors.text }}>
+                    Permanent Address
+                  </Text>
+                  <Text className="text-sm" style={{ color: colors.text }}>
+                    {permanentStreet && `${permanentStreet}, `}
+                    {permanentBarangay}
+                    {'\n'}
+                    {permanentCity}, {permanentProvince}
+                  </Text>
+                </View>
+
+                {/* Place of Birth */}
+                {(birthCity || birthProvince) && (
+                  <View
+                    className="mb-4 rounded-xl p-4"
+                    style={{
+                      backgroundColor: colors.surfaceVariant,
+                      borderWidth: 1,
+                      borderColor: colors.border,
+                    }}>
+                    <Text className="mb-3 text-sm font-semibold" style={{ color: colors.text }}>
+                      Place of Birth
+                    </Text>
+                    <Text className="text-sm" style={{ color: colors.text }}>
+                      {birthCity}{birthCity && birthProvince && ', '}{birthProvince}
+                    </Text>
+                  </View>
+                )}
+
+                {/* ID Verification Status */}
+                <View
+                  className="rounded-xl p-4"
+                  style={{
+                    backgroundColor: verified ? colors.success + '10' : colors.surfaceVariant,
+                    borderWidth: 1,
+                    borderColor: verified ? colors.success || '#10B981' : colors.border,
+                  }}>
+                  <View className="flex-row items-center">
+                    {verified ? (
+                      <Check size={20} color={colors.success || '#10B981'} />
+                    ) : (
+                      <Shield size={20} color={colors.textSecondary} />
+                    )}
+                    <Text
+                      className="ml-2 text-sm font-medium"
+                      style={{
+                        color: verified ? colors.success || '#10B981' : colors.textSecondary,
+                      }}>
+                      {verified ? 'ID Verified' : 'ID Verification Pending'}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Edit Button */}
+              <TouchableOpacity
+                className="mb-4 rounded-xl py-4"
+                style={{
+                  backgroundColor: colors.surfaceVariant,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+                onPress={() => setCurrentStep(1)}>
+                <Text
+                  className="text-center text-base font-medium"
+                  style={{ color: colors.text }}>
+                  Edit Details
+                </Text>
+              </TouchableOpacity>
 
               {/* Navigation and Complete */}
-              <View className="mt-8">
+              <View className="mt-4">
                 <View className="mb-4 flex-row gap-3">
                   <TouchableOpacity
                     className="flex-1 rounded-xl py-4"
@@ -1342,16 +1749,23 @@ export default function RootLayout() {
                     className="flex-1 rounded-xl py-4"
                     style={{
                       backgroundColor: colors.primary,
-                      opacity: loading ? 0.7 : 1,
+                      opacity: loading || idMismatchError ? 0.7 : 1,
                     }}
-                    disabled={loading}
+                    disabled={loading || !!idMismatchError}
                     onPress={() => {
-                      // proceed to finish registration (no requirement)
+                      // Final validation before signup
+                      if (idData && !validateIdDataMatch()) {
+                        Alert.alert(
+                          'Cannot Complete Registration',
+                          'Please correct the information that doesn\'t match your National ID before continuing.',
+                          [{ text: 'OK' }]
+                        );
+                        return;
+                      }
                       signUpWithEmail();
-                      router.replace('/auth/login');
                     }}>
                     <Text className="text-center text-base font-semibold text-white">
-                      {loading ? 'LOADING...' : 'FINISH'}
+                      {loading ? 'LOADING...' : 'CONFIRM & FINISH'}
                     </Text>
                   </TouchableOpacity>
                 </View>
@@ -1435,55 +1849,31 @@ export default function RootLayout() {
         title="Select Province"
       />
 
-      {/* Temporary Address Dropdowns */}
+      {/* Birth Place Dropdowns */}
       <Dropdown
-        isVisible={showTemporaryBarangayDropdown}
-        onClose={() => setShowTemporaryBarangayDropdown(false)}
-        onSelect={(item: string) => setTemporaryBarangay(item)}
-        data={
-          temporaryCity === 'Tuguegarao City'
-            ? tuguegaraoBarangays
-            : temporaryCity
-              ? barangays[temporaryCity] || []
-              : []
-        }
-        keyExtractor={(item, index) => `${item}-${index}`}
-        renderItem={({ item }) => (
-          <View className="px-4 py-3">
-            <Text style={{ color: colors.text }}>{item}</Text>
-          </View>
-        )}
-        title="Select Barangay"
-        searchable
-        searchPlaceholder="Search barangay..."
-      />
-
-      <Dropdown
-        isVisible={showTemporaryCityDropdown}
-        onClose={() => setShowTemporaryCityDropdown(false)}
+        isVisible={showBirthCityDropdown}
+        onClose={() => setShowBirthCityDropdown(false)}
         onSelect={(item: string) => {
-          setTemporaryCity(item);
-          setTemporaryBarangay(''); // Reset barangay when city changes
+          setBirthCity(item);
         }}
-        data={temporaryProvince ? cities[temporaryProvince] || [] : []}
+        data={birthProvince ? cities[birthProvince] || [] : []}
         keyExtractor={(item, index) => `${item}-${index}`}
         renderItem={({ item }) => (
           <View className="px-4 py-3">
             <Text style={{ color: colors.text }}>{item}</Text>
           </View>
         )}
-        title="Select City"
+        title="Select Birth City"
         searchable
         searchPlaceholder="Search city..."
       />
 
       <Dropdown
-        isVisible={showTemporaryProvinceDropdown}
-        onClose={() => setShowTemporaryProvinceDropdown(false)}
+        isVisible={showBirthProvinceDropdown}
+        onClose={() => setShowBirthProvinceDropdown(false)}
         onSelect={(item: string) => {
-          setTemporaryProvince(item);
-          setTemporaryCity(''); // Reset city when province changes
-          setTemporaryBarangay(''); // Reset barangay when province changes
+          setBirthProvince(item);
+          setBirthCity(''); // Reset city when province changes
         }}
         data={provinces}
         keyExtractor={(item, index) => `${item}-${index}`}
@@ -1492,8 +1882,9 @@ export default function RootLayout() {
             <Text style={{ color: colors.text }}>{item}</Text>
           </View>
         )}
-        title="Select Province"
+        title="Select Birth Province"
       />
+
     </View>
   );
 }
