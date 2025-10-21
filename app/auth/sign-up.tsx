@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { supabase } from 'lib/supabase';
 import { createURL } from 'expo-linking';
+import { registerForFCMToken } from 'hooks/useFCMToken';
 import { verifyNationalIdQR, type NationalIdData } from 'lib/id';
 import { useTheme } from 'components/ThemeContext';
 import Dropdown from 'components/Dropdown';
@@ -320,6 +321,8 @@ export default function RootLayout() {
 
     console.log('Redirect URL: ', createURL('/home'));
 
+    const fcmToken = await registerForFCMToken().catch(() => null);
+
     const {
       data: { session },
       error,
@@ -341,6 +344,7 @@ export default function RootLayout() {
           birth_city: birthCity,
           birth_province: birthProvince,
           id_card_number: idData?.data.pcn,
+          fcm_token: fcmToken,
         },
       },
     });

@@ -15,6 +15,7 @@ import { useRouter } from 'expo-router';
 import { supabase } from 'lib/supabase';
 import { useTheme } from 'components/ThemeContext';
 import { registerForFCMToken } from 'hooks/useFCMToken';
+import ActiveSessionDialog from 'components/ActiveSessionDialog';
 
 AppState.addEventListener('change', (state) => {
   if (state === 'active') {
@@ -44,6 +45,8 @@ export default function Login() {
   const [helpEmailError, setHelpEmailError] = useState('');
   const [helpSubjectError, setHelpSubjectError] = useState('');
   const [helpMessageError, setHelpMessageError] = useState('');
+  const [showActiveSessionDialog, setShowActiveSessionDialog] = useState(false);
+  const [activeSessionLoading, setActiveSessionLoading] = useState(false);
 
   async function signInWithEmail() {
     setLoading(true);
@@ -55,10 +58,7 @@ export default function Login() {
       console.error('Error signing in:', error);
       setLoading(false);
       if (error.message.includes('Database error granting user')) {
-        Alert.alert(
-          'Already Logged In',
-          'Your account is currently logged in on another device. Please log out from that device first before signing in here.'
-        );
+        setShowActiveSessionDialog(true);
       } else if (error.message.includes('Invalid login credentials')) {
         Alert.alert('Invalid Credentials', 'The email or password you entered is incorrect.');
       } else {
@@ -89,7 +89,7 @@ export default function Login() {
 
   function validateHelpName(value: string) {
     setHelpName(value);
-    
+
     if (value.trim() === '') {
       setHelpNameError('');
       return;
@@ -112,7 +112,7 @@ export default function Login() {
 
   function validateHelpEmail(value: string) {
     setHelpEmail(value);
-    
+
     if (value.trim() === '') {
       setHelpEmailError('');
       return;
@@ -130,7 +130,7 @@ export default function Login() {
 
   function validateHelpSubject(value: string) {
     setHelpSubject(value);
-    
+
     if (value.trim() === '') {
       setHelpSubjectError('');
       return;
@@ -146,7 +146,7 @@ export default function Login() {
 
   function validateHelpMessage(value: string) {
     setHelpMessage(value);
-    
+
     if (value.trim() === '') {
       setHelpMessageError('');
       return;
@@ -218,11 +218,14 @@ export default function Login() {
       `Name: ${helpName}\nEmail: ${helpEmail}\n\nMessage:\n${helpMessage}`
     );
     const mailtoUrl = `mailto:mirandastevendave1@gmail.com?subject=${subject}&body=${body}`;
-    
+
     // Open email client
     import('react-native').then(({ Linking }) => {
       Linking.openURL(mailtoUrl).catch(() => {
-        Alert.alert('Error', 'Could not open email client. Please contact mirandastevendave1@gmail.com directly.');
+        Alert.alert(
+          'Error',
+          'Could not open email client. Please contact mirandastevendave1@gmail.com directly.'
+        );
       });
     });
 
@@ -241,7 +244,7 @@ export default function Login() {
 
   function validateLogoutPcn(value: string) {
     setLogoutPcn(value);
-    
+
     if (value.trim() === '') {
       setLogoutPcnError('');
       return;
@@ -325,13 +328,45 @@ export default function Login() {
     }
   }
 
+  async function handleVerifyWithIdCard(pcn: string) {
+    setActiveSessionLoading(true);
+    try {
+      const { data, error } = await supabase.rpc('sign_out_with_id', {
+        id_card_number_input: pcn,
+      });
+
+      if (error) {
+        Alert.alert('Error', error.message || 'Failed to verify with ID card');
+        setActiveSessionLoading(false);
+        return;
+      }
+
+      if (data && data.success) {
+        Alert.alert(
+          'Success',
+          'Identity verified. Previous session logged out. Please try logging in again.'
+        );
+        setShowActiveSessionDialog(false);
+        setEmail('');
+        setPassword('');
+      } else {
+        Alert.alert('Error', data?.message || 'Failed to verify with ID card');
+      }
+    } catch (error) {
+      console.error('Verify error:', error);
+      Alert.alert('Error', 'An error occurred. Please try again.');
+    } finally {
+      setActiveSessionLoading(false);
+    }
+  }
+
   return (
     <View className="flex-1 px-6 pt-12" style={{ backgroundColor: colors.background }}>
       <StatusBar
         barStyle={isDark ? 'light-content' : 'dark-content'}
         backgroundColor={colors.background}
       />
-      
+
       <View className="mb-8">
         <Text className="mb-2 text-3xl font-bold" style={{ color: colors.text }}>
           Welcome Back
@@ -342,75 +377,75 @@ export default function Login() {
       </View>
 
       <View className="mb-4">
-            <RNTextInput
-              className="mb-4 rounded-xl px-4 py-4 text-base"
-              style={{
-                backgroundColor: colors.surfaceVariant,
-                borderWidth: 1,
-                borderColor: colors.border,
-                color: colors.text,
-              }}
-              placeholder="Please enter your Email"
-              value={email}
-              onChangeText={setEmail}
-              placeholderTextColor={colors.textSecondary}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
+        <RNTextInput
+          className="mb-4 rounded-xl px-4 py-4 text-base"
+          style={{
+            backgroundColor: colors.surfaceVariant,
+            borderWidth: 1,
+            borderColor: colors.border,
+            color: colors.text,
+          }}
+          placeholder="Please enter your Email"
+          value={email}
+          onChangeText={setEmail}
+          placeholderTextColor={colors.textSecondary}
+          keyboardType="email-address"
+          autoCapitalize="none"
+        />
 
-            <View className="relative mb-2">
-              <RNTextInput
-                className="rounded-xl px-4 py-4 pr-12 text-base"
-                style={{
-                  backgroundColor: colors.surfaceVariant,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  color: colors.text,
-                }}
-                placeholder="Please enter your password"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                placeholderTextColor={colors.textSecondary}
-              />
-              <TouchableOpacity
-                className="absolute right-4 top-1/2 -translate-y-1/2 transform"
-                onPress={() => setShowPassword(!showPassword)}>
-                {showPassword ? (
-                  <Eye size={20} color={colors.textSecondary} />
-                ) : (
-                  <EyeOff size={20} color={colors.textSecondary} />
-                )}
-              </TouchableOpacity>
-            </View>
-
-            <View className="items-end">
-              <TouchableOpacity>
-                <Text className="text-sm" style={{ color: colors.textSecondary }}>
-                  Forgot password?
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity className="mt-2" onPress={() => setShowLogoutModal(true)}>
-                <Text className="text-sm" style={{ color: colors.textSecondary }}>
-                  Logout account
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
+        <View className="relative mb-2">
+          <RNTextInput
+            className="rounded-xl px-4 py-4 pr-12 text-base"
+            style={{
+              backgroundColor: colors.surfaceVariant,
+              borderWidth: 1,
+              borderColor: colors.border,
+              color: colors.text,
+            }}
+            placeholder="Please enter your password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPassword}
+            placeholderTextColor={colors.textSecondary}
+          />
           <TouchableOpacity
-            className="mt-3 rounded-xl py-4"
-            style={{ backgroundColor: colors.primary }}
-            onPress={signInWithEmail}
-            disabled={loading}>
-            <Text className="text-center text-base font-semibold text-white">
-              {loading ? 'LOADING...' : 'LOGIN'}
+            className="absolute right-4 top-1/2 -translate-y-1/2 transform"
+            onPress={() => setShowPassword(!showPassword)}>
+            {showPassword ? (
+              <Eye size={20} color={colors.textSecondary} />
+            ) : (
+              <EyeOff size={20} color={colors.textSecondary} />
+            )}
+          </TouchableOpacity>
+        </View>
+
+        <View className="items-end">
+          <TouchableOpacity>
+            <Text className="text-sm" style={{ color: colors.textSecondary }}>
+              Forgot password?
             </Text>
           </TouchableOpacity>
+          <TouchableOpacity className="mt-2" onPress={() => setShowLogoutModal(true)}>
+            <Text className="text-sm" style={{ color: colors.textSecondary }}>
+              Logout account
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <TouchableOpacity
+        className="mt-3 rounded-xl py-4"
+        style={{ backgroundColor: colors.primary }}
+        onPress={signInWithEmail}
+        disabled={loading}>
+        <Text className="text-center text-base font-semibold text-white">
+          {loading ? 'LOADING...' : 'LOGIN'}
+        </Text>
+      </TouchableOpacity>
 
       <View className="mt-4 items-center">
         <Text className="text-center text-sm" style={{ color: colors.textSecondary }}>
-          Don't have an account?{' '}
+          Don&apos;t have an account?{' '}
           <Text style={{ color: colors.primary }} onPress={() => router.push('/auth/sign-up')}>
             Sign up
           </Text>
@@ -614,9 +649,10 @@ export default function Login() {
 
             <View className="mb-6">
               <Text className="mb-4 text-sm" style={{ color: colors.textSecondary }}>
-                To logout an account from another device, please enter your PCN (Philippine National ID) number below.
+                To logout an account from another device, please enter your PCN (Philippine National
+                ID) number below.
               </Text>
-              
+
               <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
                 PCN Number (16 digits)
               </Text>
@@ -648,9 +684,9 @@ export default function Login() {
 
             <TouchableOpacity
               className="rounded-xl py-4"
-              style={{ 
+              style={{
                 backgroundColor: colors.primary,
-                opacity: logoutLoading ? 0.7 : 1
+                opacity: logoutLoading ? 0.7 : 1,
               }}
               onPress={handleLogoutAccount}
               disabled={logoutLoading}>
@@ -678,6 +714,16 @@ export default function Login() {
           </View>
         </View>
       </Modal>
+
+      {/* Active Session Dialog */}
+      <ActiveSessionDialog
+        visible={showActiveSessionDialog}
+        onClose={() => {
+          setShowActiveSessionDialog(false);
+        }}
+        onVerifyWithId={handleVerifyWithIdCard}
+        isLoading={activeSessionLoading}
+      />
     </View>
   );
 }
