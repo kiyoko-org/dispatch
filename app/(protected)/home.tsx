@@ -16,6 +16,7 @@ import { useAuthContext } from 'components/AuthProvider';
 import { useTheme } from 'components/ThemeContext';
 import { supabase } from 'lib/supabase';
 import { useReports } from '@kiyoko-org/dispatch-lib';
+import { useRealtimeReports } from 'hooks/useRealtimeReports';
 import Splash from 'components/ui/Splash';
 import { LogoutOverlay } from 'components/LogoutOverlay';
 
@@ -27,14 +28,13 @@ export default function Home() {
   const router = useRouter();
   const { session, signOut, isLoggingOut } = useAuthContext();
   const { colors, selectedColorTheme, setSelectedColorTheme, isDark } = useTheme();
-  const { reports, fetchReports } = useReports();
+  const { reports: allReports, fetchReports } = useReports();
+  const { reports: userReports, loading: realtimeLoading } = useRealtimeReports();
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<Profile>();
-  const [reportsLoading, setReportsLoading] = useState(false);
-  const [reportCount, setReportCount] = useState<number | null>(null);
 
-  // Get recent reports from the hook
-  const recentReports = reports.slice(0, 5);
+  const recentReports = allReports.slice(0, 5);
+  const reportCount = userReports.length;
 
   // Get current theme colors
   const getCurrentColors = () => {
@@ -82,44 +82,12 @@ export default function Home() {
     router.push('/emergency');
   };
 
-  // Function to fetch recent reports
-  const fetchRecentReports = useCallback(async () => {
-    if (!session?.user?.id) return;
-
-    try {
-      setReportsLoading(true);
-      const result = await fetchReports?.();
-
-      if (result?.error) {
-        console.error('Error fetching recent reports:', result.error);
-        return;
-      }
-
-      // Filter reports to only include those reported by the current user
-      const userReports = reports.filter(report => report.reporter_id === session?.user?.id);
-      setReportCount(userReports.length);
-    } catch (error) {
-      console.error('Error fetching recent reports:', error);
-    } finally {
-      setReportsLoading(false);
-    }
-  }, [session?.user?.id, fetchReports, reports]);
-
   useEffect(() => {
     if (session?.user?.id) {
       getProfile();
-      fetchRecentReports();
+      fetchReports?.();
     }
-  }, [session?.user?.id]);
-
-  // Refresh recent reports when screen comes into focus
-  useFocusEffect(
-    useCallback(() => {
-      if (session?.user?.id) {
-        fetchRecentReports();
-      }
-    }, [session?.user?.id, fetchRecentReports])
-  );
+  }, [session?.user?.id, fetchReports]);
 
   if (loading) {
     return <Splash />;
@@ -174,8 +142,6 @@ export default function Home() {
         showBackButton={false}
         logoutPressed={handleLogout}
         recentReports={recentReports}
-        reportsLoading={reportsLoading}
-        onRefreshReports={fetchRecentReports}
       />
 
       {/* Main Content */}
@@ -428,7 +394,7 @@ export default function Home() {
                   <FileText size={20} color={currentColors.cardIcon} />
                 </View>
                 <Text style={{ fontSize: 20, fontWeight: 'bold', color: currentColors.cardText }}>
-                  {reportCount ?? '—'}
+                  {reportCount}
                 </Text>
                 <Text
                   style={{
@@ -481,7 +447,7 @@ export default function Home() {
         {/* Bottom Spacing */}
         <View style={{ height: 32 }} />
       </ScrollView>
-      
+
       {/* Logout Overlay */}
       <LogoutOverlay visible={isLoggingOut} />
     </View>
