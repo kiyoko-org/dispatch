@@ -235,7 +235,7 @@ export default function RootLayout() {
   const [showBirthCityDropdown, setShowBirthCityDropdown] = useState(false);
   const [showBirthProvinceDropdown, setShowBirthProvinceDropdown] = useState(false);
 
-  const allProvinces = getProvinces();
+  const allProvinces = getProvinces().sort();
   const permanentCityOptions = permanentProvince ? getMunicipalities(permanentProvince) : [];
   const permanentBarangayOptions = permanentCity
     ? getBarangays(permanentProvince, permanentCity)
@@ -1869,6 +1869,8 @@ export default function RootLayout() {
           </View>
         )}
         title="Select Province"
+        searchable
+        searchPlaceholder="Search province..."
       />
 
       {/* Birth Place Dropdowns */}
@@ -1905,6 +1907,8 @@ export default function RootLayout() {
           </View>
         )}
         title="Select Birth Province"
+        searchable
+        searchPlaceholder="Search province..."
       />
     </View>
   );
