@@ -1093,57 +1093,26 @@ export default function RootLayout() {
                     </Text>
                   </View>
 
-                  {/* Street */}
-                  <TextInput
-                    className="mb-3 rounded-xl px-4 py-4 text-base"
-                    style={{
-                      backgroundColor: colors.surfaceVariant,
-                      borderWidth: 1,
-                      borderColor: validationErrors.permanentStreet ? '#EF4444' : colors.border,
-                      color: colors.text,
-                    }}
-                    placeholder="Street (optional)"
-                    value={permanentStreet}
-                    onChangeText={(text) => {
-                      setPermanentStreet(text);
-                      if (text.trim()) {
-                        validateField('permanentStreet', text);
-                      } else {
-                        setValidationErrors((prev) => {
-                          const newErrors = { ...prev };
-                          delete newErrors.permanentStreet;
-                          return newErrors;
-                        });
-                      }
-                    }}
-                    placeholderTextColor={colors.textSecondary}
-                  />
-                  {validationErrors.permanentStreet && (
-                    <Text className="mb-3 text-xs" style={{ color: '#EF4444' }}>
-                      {validationErrors.permanentStreet}
-                    </Text>
-                  )}
-
-                  {/* Barangay Dropdown */}
+                  {/* Province Dropdown */}
                   <TouchableOpacity
                     className="mb-3 flex-row items-center justify-between rounded-xl px-4 py-4"
                     style={{
                       backgroundColor: colors.surfaceVariant,
                       borderWidth: 1,
-                      borderColor: validationErrors.permanentBarangay ? '#EF4444' : colors.border,
+                      borderColor: validationErrors.permanentProvince ? '#EF4444' : colors.border,
                     }}
-                    onPress={() => setShowPermanentBarangayDropdown(true)}>
+                    onPress={() => setShowPermanentProvinceDropdown(true)}>
                     <Text
                       style={{
-                        color: permanentBarangay ? colors.text : colors.textSecondary,
+                        color: permanentProvince ? colors.text : colors.textSecondary,
                       }}>
-                      {permanentBarangay || 'Select Barangay'}
+                      {permanentProvince || 'Select Province'}
                     </Text>
                     <ChevronDown size={20} color={colors.textSecondary} />
                   </TouchableOpacity>
-                  {validationErrors.permanentBarangay && (
+                  {validationErrors.permanentProvince && (
                     <Text className="mb-3 text-xs" style={{ color: '#EF4444' }}>
-                      {validationErrors.permanentBarangay}
+                      {validationErrors.permanentProvince}
                     </Text>
                   )}
 
@@ -1170,26 +1139,57 @@ export default function RootLayout() {
                     </Text>
                   )}
 
-                  {/* Province Dropdown */}
+                  {/* Barangay Dropdown */}
                   <TouchableOpacity
-                    className="flex-row items-center justify-between rounded-xl px-4 py-4"
+                    className="mb-3 flex-row items-center justify-between rounded-xl px-4 py-4"
                     style={{
                       backgroundColor: colors.surfaceVariant,
                       borderWidth: 1,
-                      borderColor: validationErrors.permanentProvince ? '#EF4444' : colors.border,
+                      borderColor: validationErrors.permanentBarangay ? '#EF4444' : colors.border,
                     }}
-                    onPress={() => setShowPermanentProvinceDropdown(true)}>
+                    onPress={() => setShowPermanentBarangayDropdown(true)}>
                     <Text
                       style={{
-                        color: permanentProvince ? colors.text : colors.textSecondary,
+                        color: permanentBarangay ? colors.text : colors.textSecondary,
                       }}>
-                      {permanentProvince || 'Select Province'}
+                      {permanentBarangay || 'Select Barangay'}
                     </Text>
                     <ChevronDown size={20} color={colors.textSecondary} />
                   </TouchableOpacity>
-                  {validationErrors.permanentProvince && (
+                  {validationErrors.permanentBarangay && (
+                    <Text className="mb-3 text-xs" style={{ color: '#EF4444' }}>
+                      {validationErrors.permanentBarangay}
+                    </Text>
+                  )}
+
+                  {/* Street */}
+                  <TextInput
+                    className="rounded-xl px-4 py-4 text-base"
+                    style={{
+                      backgroundColor: colors.surfaceVariant,
+                      borderWidth: 1,
+                      borderColor: validationErrors.permanentStreet ? '#EF4444' : colors.border,
+                      color: colors.text,
+                    }}
+                    placeholder="Street (optional)"
+                    value={permanentStreet}
+                    onChangeText={(text) => {
+                      setPermanentStreet(text);
+                      if (text.trim()) {
+                        validateField('permanentStreet', text);
+                      } else {
+                        setValidationErrors((prev) => {
+                          const newErrors = { ...prev };
+                          delete newErrors.permanentStreet;
+                          return newErrors;
+                        });
+                      }
+                    }}
+                    placeholderTextColor={colors.textSecondary}
+                  />
+                  {validationErrors.permanentStreet && (
                     <Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
-                      {validationErrors.permanentProvince}
+                      {validationErrors.permanentStreet}
                     </Text>
                   )}
                 </View>
@@ -1205,32 +1205,9 @@ export default function RootLayout() {
                     </Text>
                   </View>
 
-                  {/* Birth City Dropdown */}
-                  <TouchableOpacity
-                    className="mb-3 flex-row items-center justify-between rounded-xl px-4 py-4"
-                    style={{
-                      backgroundColor: colors.surfaceVariant,
-                      borderWidth: 1,
-                      borderColor: validationErrors.birthCity ? '#EF4444' : colors.border,
-                    }}
-                    onPress={() => setShowBirthCityDropdown(true)}>
-                    <Text
-                      style={{
-                        color: birthCity ? colors.text : colors.textSecondary,
-                      }}>
-                      {birthCity || 'Select City'}
-                    </Text>
-                    <ChevronDown size={20} color={colors.textSecondary} />
-                  </TouchableOpacity>
-                  {validationErrors.birthCity && (
-                    <Text className="mb-3 text-xs" style={{ color: '#EF4444' }}>
-                      {validationErrors.birthCity}
-                    </Text>
-                  )}
-
                   {/* Birth Province Dropdown */}
                   <TouchableOpacity
-                    className="flex-row items-center justify-between rounded-xl px-4 py-4"
+                    className="mb-3 flex-row items-center justify-between rounded-xl px-4 py-4"
                     style={{
                       backgroundColor: colors.surfaceVariant,
                       borderWidth: 1,
@@ -1246,8 +1223,31 @@ export default function RootLayout() {
                     <ChevronDown size={20} color={colors.textSecondary} />
                   </TouchableOpacity>
                   {validationErrors.birthProvince && (
-                    <Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
+                    <Text className="mb-3 text-xs" style={{ color: '#EF4444' }}>
                       {validationErrors.birthProvince}
+                    </Text>
+                  )}
+
+                  {/* Birth City Dropdown */}
+                  <TouchableOpacity
+                    className="flex-row items-center justify-between rounded-xl px-4 py-4"
+                    style={{
+                      backgroundColor: colors.surfaceVariant,
+                      borderWidth: 1,
+                      borderColor: validationErrors.birthCity ? '#EF4444' : colors.border,
+                    }}
+                    onPress={() => setShowBirthCityDropdown(true)}>
+                    <Text
+                      style={{
+                        color: birthCity ? colors.text : colors.textSecondary,
+                      }}>
+                      {birthCity || 'Select City'}
+                    </Text>
+                    <ChevronDown size={20} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                  {validationErrors.birthCity && (
+                    <Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
+                      {validationErrors.birthCity}
                     </Text>
                   )}
                 </View>
