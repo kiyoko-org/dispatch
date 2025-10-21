@@ -201,7 +201,7 @@ const signUpSchema = z
 export default function RootLayout() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { barangays: barangaysList, loading: barangaysLoading } = useBarangays();
+  useBarangays();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
@@ -241,7 +241,6 @@ export default function RootLayout() {
     ? getBarangays(permanentProvince, permanentCity)
     : [];
   const birthCityOptions = birthProvince ? getMunicipalities(birthProvince) : [];
-  const tuguegaraoBarangays = barangaysList.map((b) => b.name);
 
   // Camera + scanning state
   const [cameraModalVisible, setCameraModalVisible] = useState(false);
@@ -311,11 +310,6 @@ export default function RootLayout() {
 
   const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
-  const isNameValid = (name: string) => {
-    const trimmed = name.trim();
-    return trimmed.length >= 3 && trimmed.length <= 20 && !hasDangerousCharacters(trimmed);
-  };
-
   const validateField = (fieldName: string, value: any) => {
     try {
       // Create a partial schema for just this field
@@ -336,42 +330,6 @@ export default function RootLayout() {
           [fieldName]: error.issues[0].message,
         }));
       }
-    }
-  };
-
-  const validateStep1 = () => {
-    try {
-      signUpSchema.parse({
-        firstName,
-        middleName: noMiddleName ? '' : middleName,
-        noMiddleName,
-        lastName,
-        suffix,
-        sex,
-        birthYear,
-        birthMonth,
-        birthDay,
-        permanentStreet,
-        permanentBarangay,
-        permanentCity,
-        permanentProvince,
-        birthCity,
-        birthProvince,
-        email,
-        password,
-      });
-      setValidationErrors({});
-      return true;
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        const errors: Record<string, string> = {};
-        error.issues.forEach((err) => {
-          const path = err.path.join('.');
-          errors[path] = err.message;
-        });
-        setValidationErrors(errors);
-      }
-      return false;
     }
   };
 
@@ -397,7 +355,7 @@ export default function RootLayout() {
         password,
       });
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   };
@@ -951,7 +909,6 @@ export default function RootLayout() {
                               setBirthYear(numericValue);
                             }
                           } else if (numericValue.length === 2) {
-                            const twoDigit = parseInt(numericValue);
                             // 19xx or 20xx, but check if it could lead to valid year
                             // For 18xx: invalid (< 1900)
                             // For 19xx: valid
@@ -1358,7 +1315,9 @@ export default function RootLayout() {
                 className="rounded-xl py-4"
                 style={{
                   backgroundColor: colors.primary,
+                  opacity: isStep1Valid() ? 1 : 0.5,
                 }}
+                disabled={!isStep1Valid()}
                 onPress={nextStep}>
                 <Text className="text-center text-base font-semibold text-white">NEXT STEP</Text>
               </TouchableOpacity>
