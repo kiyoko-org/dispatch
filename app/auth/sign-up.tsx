@@ -251,7 +251,6 @@ export default function RootLayout() {
   const [verifying, setVerifying] = useState(false);
   const [verified, setVerified] = useState(false);
   const [idData, setIdData] = useState<NationalIdData | null>(null);
-  const [idMismatchError, setIdMismatchError] = useState<string | null>(null);
 
   // Helper function to get days in month (handles leap years)
   const getDaysInMonth = (year: string, month: string): number => {
@@ -261,6 +260,59 @@ export default function RootLayout() {
       return 31; // Default to 31 if invalid
     }
     return new Date(y, m, 0).getDate();
+  };
+
+  // Validate QR data against form data
+  const validateQRData = (idData: NationalIdData): string | null => {
+    const errors: string[] = [];
+
+    // Normalize for case-insensitive comparison
+    const normalizeString = (str: string) => str.trim().toLowerCase();
+    const formatDate = (dateStr: string) => {
+      const parts = dateStr.split('-');
+      if (parts.length === 3) {
+        return `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+      }
+      return dateStr;
+    };
+
+    // Check first name
+    if (normalizeString(idData.data.first_name) !== normalizeString(firstName)) {
+      errors.push('First name does not match ID');
+    }
+
+    // Check last name
+    if (normalizeString(idData.data.last_name) !== normalizeString(lastName)) {
+      errors.push('Last name does not match ID');
+    }
+
+    // Check middle name (if not marked as no middle name)
+    if (
+      !noMiddleName &&
+      idData.data.middle_name &&
+      normalizeString(idData.data.middle_name) !== normalizeString(middleName)
+    ) {
+      errors.push('Middle name does not match ID');
+    }
+
+    // Check sex (case-insensitive)
+    if (normalizeString(idData.data.sex) !== normalizeString(sex)) {
+      errors.push('Sex does not match ID');
+    }
+
+    // Check birth date
+    const userBirthDate = `${birthYear}-${birthMonth.padStart(2, '0')}-${birthDay.padStart(2, '0')}`;
+    if (formatDate(idData.data.birth_date) !== formatDate(userBirthDate)) {
+      errors.push('Birth date does not match ID');
+    }
+
+    // Check place of birth - format is "City, Province"
+    const userPlaceOfBirth = `${birthCity}, ${birthProvince}`;
+    if (normalizeString(idData.data.place_of_birth) !== normalizeString(userPlaceOfBirth)) {
+      errors.push('Place of birth does not match ID');
+    }
+
+    return errors.length > 0 ? errors.join('\n') : null;
   };
 
   async function signUpWithEmail() {
@@ -302,7 +354,14 @@ export default function RootLayout() {
     }
 
     if (!session) {
-      Alert.alert('Please check your inbox for email verification!');
+      Alert.alert('Please check your inbox for email verification!', '', [
+        {
+          text: 'OK',
+          onPress: () => {
+            router.replace('/auth/login');
+          },
+        },
+      ]);
     }
   }
 
@@ -360,80 +419,7 @@ export default function RootLayout() {
     }
   };
 
-  const validateIdDataMatch = () => {
-    if (!idData) {
-      return true; // Skip validation if no ID data
-    }
-
-    const errors: string[] = [];
-
-    // Normalize function to handle case-insensitive comparison
-    const normalize = (str: string) => str.toLowerCase().trim();
-
-    // Check first name
-    if (normalize(firstName) !== normalize(idData.data.first_name)) {
-      errors.push(`First name doesn't match ID (ID shows: ${idData.data.first_name})`);
-    }
-
-    // Check last name
-    if (normalize(lastName) !== normalize(idData.data.last_name)) {
-      errors.push(`Last name doesn't match ID (ID shows: ${idData.data.last_name})`);
-    }
-
-    // Check middle name (if provided)
-    if (!noMiddleName && middleName) {
-      if (normalize(middleName) !== normalize(idData.data.middle_name || '')) {
-        errors.push(
-          `Middle name doesn't match ID (ID shows: ${idData.data.middle_name || 'None'})`
-        );
-      }
-    }
-
-    // Check suffix (if provided)
-    if (suffix && idData.data.suffix) {
-      if (normalize(suffix) !== normalize(idData.data.suffix)) {
-        errors.push(`Suffix doesn't match ID (ID shows: ${idData.data.suffix})`);
-      }
-    }
-
-    // Check sex
-    if (sex && idData.data.sex) {
-      if (normalize(sex) !== normalize(idData.data.sex)) {
-        errors.push(`Sex doesn't match ID (ID shows: ${idData.data.sex})`);
-      }
-    }
-
-    // Check place of birth (if provided)
-    if ((birthCity || birthProvince) && idData.data.place_of_birth) {
-      const userBirthPlace =
-        `${birthCity}${birthCity && birthProvince ? ', ' : ''}${birthProvince}`.trim();
-      if (normalize(userBirthPlace) !== normalize(idData.data.place_of_birth)) {
-        errors.push(`Place of birth doesn't match ID (ID shows: ${idData.data.place_of_birth})`);
-      }
-    }
-
-    if (errors.length > 0) {
-      setIdMismatchError(errors.join('\n'));
-      return false;
-    }
-
-    setIdMismatchError(null);
-    return true;
-  };
-
   const nextStep = () => {
-    // Validate ID match when moving from step 2 to step 3
-    if (currentStep === 2 && idData) {
-      if (!validateIdDataMatch()) {
-        Alert.alert(
-          'ID Verification Mismatch',
-          'The details you entered do not match your National ID. Please review and correct your information or rescan your ID.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-    }
-
     if (currentStep < 3) {
       setCurrentStep(currentStep + 1);
     }
@@ -483,11 +469,27 @@ export default function RootLayout() {
 
     verifyNationalIdQR(data)
       .then((result) => {
-        if (result) {
-          setVerified(true);
-          setIdData(result);
-          // optionally inform user
-          Alert.alert('Verification successful', 'Your ID has been verified.');
+        if (result.isVerified && result.data) {
+          // Validate QR data against form data
+          const validationError = validateQRData(result.data);
+
+          if (validationError) {
+            setVerified(false);
+            setIdData(null);
+            Alert.alert('Verification failed', `Data mismatch:\n${validationError}`, [
+              {
+                text: 'OK',
+                onPress: () => {
+                  setScannedQr(null);
+                  setIsScanning(false);
+                },
+              },
+            ]);
+          } else {
+            setVerified(true);
+            setIdData(result.data);
+            Alert.alert('Verification successful', 'Your ID has been verified.');
+          }
         } else {
           // failed: reset states so the user can rescan
           setVerified(false);
@@ -1476,7 +1478,11 @@ export default function RootLayout() {
                   </TouchableOpacity>
                   <TouchableOpacity
                     className="flex-1 rounded-xl py-4"
-                    style={{ backgroundColor: colors.primary }}
+                    style={{
+                      backgroundColor: colors.primary,
+                      opacity: verified ? 1 : 0.5,
+                    }}
+                    disabled={!verified}
                     onPress={nextStep}>
                     <Text className="text-center text-base font-semibold text-white">
                       NEXT STEP
@@ -1513,34 +1519,6 @@ export default function RootLayout() {
                   Please review your information before completing registration
                 </Text>
               </View>
-
-              {/* ID Mismatch Error */}
-              {idMismatchError && (
-                <View
-                  className="mb-6 rounded-xl p-4"
-                  style={{
-                    backgroundColor: '#FEE2E2',
-                    borderWidth: 1,
-                    borderColor: '#EF4444',
-                  }}>
-                  <View className="flex-row items-start">
-                    <Text className="mr-2 text-base" style={{ color: '#EF4444' }}>
-                      ⚠️
-                    </Text>
-                    <View className="flex-1">
-                      <Text className="mb-2 text-sm font-semibold" style={{ color: '#DC2626' }}>
-                        ID Verification Mismatch
-                      </Text>
-                      <Text className="text-xs" style={{ color: '#991B1B' }}>
-                        {idMismatchError}
-                      </Text>
-                      <Text className="mt-2 text-xs" style={{ color: '#991B1B' }}>
-                        Please update your information to match your National ID or rescan your ID.
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              )}
 
               {/* Details Review */}
               <View className="mb-6">
@@ -1736,19 +1714,10 @@ export default function RootLayout() {
                     className="flex-1 rounded-xl py-4"
                     style={{
                       backgroundColor: colors.primary,
-                      opacity: loading || idMismatchError ? 0.7 : 1,
+                      opacity: loading ? 0.7 : 1,
                     }}
-                    disabled={loading || !!idMismatchError}
+                    disabled={loading}
                     onPress={() => {
-                      // Final validation before signup
-                      if (idData && !validateIdDataMatch()) {
-                        Alert.alert(
-                          'Cannot Complete Registration',
-                          "Please correct the information that doesn't match your National ID before continuing.",
-                          [{ text: 'OK' }]
-                        );
-                        return;
-                      }
                       signUpWithEmail();
                     }}>
                     <Text className="text-center text-base font-semibold text-white">

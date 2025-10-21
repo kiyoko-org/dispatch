@@ -4,6 +4,7 @@ import { supabase } from 'lib/supabase';
 import * as Linking from 'expo-linking';
 import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import { useRouter } from 'expo-router';
+import { registerForFCMToken } from 'hooks/useFCMToken';
 import { LogoutOverlay } from './LogoutOverlay';
 
 type AuthState = {
@@ -148,6 +149,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         console.log('Successfully set session from deep link');
+
+        if (data.user) {
+          const fcmToken = await registerForFCMToken();
+          if (fcmToken) {
+            const { error: updateError } = await supabase
+              .from('profiles')
+              .update({ fcm_token: fcmToken })
+              .eq('id', data.user.id);
+
+            if (updateError) {
+              console.error('Error updating FCM token:', updateError);
+            } else {
+              console.log('[DeepLink] FCM token updated successfully');
+            }
+          }
+        }
+
         setAuthState((prev) => ({ ...prev, isProcessingDeepLink: false }));
       }
     } catch (error) {
