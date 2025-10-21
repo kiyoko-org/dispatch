@@ -29,8 +29,8 @@ RETURNS TRIGGER
 SET search_path = ''
 AS $$
 BEGIN
-  INSERT INTO public.profiles (id, first_name, middle_name, last_name, avatar_url)
-  VALUES (new.id, new.raw_user_meta_data->>'first_name', new.raw_user_meta_data->>'middle_name', new.raw_user_meta_data->>'last_name', new.raw_user_meta_data->>'avatar_url');
+  INSERT INTO public.profiles (id, first_name, middle_name, last_name, avatar_url, id_card_number)
+  VALUES (new.id, new.raw_user_meta_data->>'first_name', new.raw_user_meta_data->>'middle_name', new.raw_user_meta_data->>'last_name', new.raw_user_meta_data->>'avatar_url', new.raw_user_meta_data->>'id_card_number');
   RETURN new;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

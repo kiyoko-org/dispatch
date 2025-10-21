@@ -71,13 +71,16 @@ const signUpSchema = z
       .string()
       .min(1, 'Year is required')
       .refine((val) => /^\d{4}$/.test(val), 'Year must be 4 digits')
-      .refine((val) => {
-        const year = parseInt(val);
-        const currentYear = new Date().getFullYear();
-        const minYear = 1900;
-        const maxYear = currentYear - 18;
-        return year >= minYear && year <= maxYear;
-      }, `Year must be between 1900 and ${new Date().getFullYear() - 18}`),
+      .refine(
+        (val) => {
+          const year = parseInt(val);
+          const currentYear = new Date().getFullYear();
+          const minYear = 1900;
+          const maxYear = currentYear - 18;
+          return year >= minYear && year <= maxYear;
+        },
+        `Year must be between 1900 and ${new Date().getFullYear() - 18}`
+      ),
 
     birthMonth: z
       .string()
@@ -185,7 +188,7 @@ const signUpSchema = z
 
       // Get days in the month
       const daysInMonth = new Date(year, month, 0).getDate();
-      
+
       return day <= daysInMonth;
     },
     {
@@ -284,6 +287,7 @@ export default function RootLayout() {
           permanent_address_2: `${permanentCity}, ${permanentProvince}`,
           birth_city: birthCity,
           birth_province: birthProvince,
+          id_card_number: idData?.data.pcn,
         },
       },
     });
@@ -402,7 +406,7 @@ export default function RootLayout() {
     }
 
     const errors: string[] = [];
-    
+
     // Normalize function to handle case-insensitive comparison
     const normalize = (str: string) => str.toLowerCase().trim();
 
@@ -419,7 +423,9 @@ export default function RootLayout() {
     // Check middle name (if provided)
     if (!noMiddleName && middleName) {
       if (normalize(middleName) !== normalize(idData.data.middle_name || '')) {
-        errors.push(`Middle name doesn't match ID (ID shows: ${idData.data.middle_name || 'None'})`);
+        errors.push(
+          `Middle name doesn't match ID (ID shows: ${idData.data.middle_name || 'None'})`
+        );
       }
     }
 
@@ -439,7 +445,8 @@ export default function RootLayout() {
 
     // Check place of birth (if provided)
     if ((birthCity || birthProvince) && idData.data.place_of_birth) {
-      const userBirthPlace = `${birthCity}${birthCity && birthProvince ? ', ' : ''}${birthProvince}`.trim();
+      const userBirthPlace =
+        `${birthCity}${birthCity && birthProvince ? ', ' : ''}${birthProvince}`.trim();
       if (normalize(userBirthPlace) !== normalize(idData.data.place_of_birth)) {
         errors.push(`Place of birth doesn't match ID (ID shows: ${idData.data.place_of_birth})`);
       }
@@ -816,7 +823,8 @@ export default function RootLayout() {
                     <TouchableOpacity
                       className="flex-1 flex-row items-center rounded-xl px-4 py-4"
                       style={{
-                        backgroundColor: sex === 'Male' ? colors.primary + '20' : colors.surfaceVariant,
+                        backgroundColor:
+                          sex === 'Male' ? colors.primary + '20' : colors.surfaceVariant,
                         borderWidth: 1,
                         borderColor: sex === 'Male' ? colors.primary : colors.border,
                       }}
@@ -851,7 +859,8 @@ export default function RootLayout() {
                     <TouchableOpacity
                       className="flex-1 flex-row items-center rounded-xl px-4 py-4"
                       style={{
-                        backgroundColor: sex === 'Female' ? colors.primary + '20' : colors.surfaceVariant,
+                        backgroundColor:
+                          sex === 'Female' ? colors.primary + '20' : colors.surfaceVariant,
                         borderWidth: 1,
                         borderColor: sex === 'Female' ? colors.primary : colors.border,
                       }}
@@ -862,7 +871,8 @@ export default function RootLayout() {
                       <View
                         className="mr-3 h-5 w-5 items-center justify-center rounded-full"
                         style={{
-                          backgroundColor: sex === 'Female' ? colors.primary : colors.surfaceVariant,
+                          backgroundColor:
+                            sex === 'Female' ? colors.primary : colors.surfaceVariant,
                           borderWidth: 2,
                           borderColor: sex === 'Female' ? colors.primary : colors.border,
                         }}>
@@ -922,15 +932,15 @@ export default function RootLayout() {
                         onChangeText={(text) => {
                           // Only allow numbers
                           const numericValue = text.replace(/[^0-9]/g, '');
-                          
+
                           if (numericValue.length === 0) {
                             setBirthYear('');
                             return;
                           }
-                          
+
                           const currentYear = new Date().getFullYear();
                           const maxYear = currentYear - 18; // e.g., 2007 in 2025
-                          
+
                           // Validate at each digit
                           if (numericValue.length === 1) {
                             // First digit must be 1 or 2 (for years 1900-2099)
@@ -944,10 +954,16 @@ export default function RootLayout() {
                             // For 18xx: invalid (< 1900)
                             // For 19xx: valid
                             // For 20xx: need to check if it can be <= maxYear
-                            if (numericValue === '19' || (numericValue === '20' && maxYear >= 2000)) {
+                            if (
+                              numericValue === '19' ||
+                              (numericValue === '20' && maxYear >= 2000)
+                            ) {
                               setBirthYear(numericValue);
-                            } else if (numericValue.startsWith('19') || 
-                                       (numericValue.startsWith('20') && parseInt(numericValue.substring(2)) === 0)) {
+                            } else if (
+                              numericValue.startsWith('19') ||
+                              (numericValue.startsWith('20') &&
+                                parseInt(numericValue.substring(2)) === 0)
+                            ) {
                               setBirthYear(numericValue);
                             }
                           } else if (numericValue.length === 3) {
@@ -955,8 +971,10 @@ export default function RootLayout() {
                             // Check if this 3-digit prefix could lead to a valid year
                             // For 190x-199x: always valid
                             // For 200x-207x: check against maxYear
-                            if ((year3 >= 190 && year3 <= 199) || 
-                                (year3 >= 200 && year3 <= Math.floor(maxYear / 10))) {
+                            if (
+                              (year3 >= 190 && year3 <= 199) ||
+                              (year3 >= 200 && year3 <= Math.floor(maxYear / 10))
+                            ) {
                               setBirthYear(numericValue);
                             }
                           } else if (numericValue.length === 4) {
@@ -1025,7 +1043,7 @@ export default function RootLayout() {
                           const numericValue = text.replace(/[^0-9]/g, '');
                           if (numericValue.length <= 2) {
                             const dayNum = parseInt(numericValue);
-                            
+
                             // Get max days for current month/year
                             let maxDays = 31;
                             if (birthYear && birthMonth) {
@@ -1035,7 +1053,7 @@ export default function RootLayout() {
                                 maxDays = new Date(year, month, 0).getDate();
                               }
                             }
-                            
+
                             if (numericValue === '' || (dayNum >= 1 && dayNum <= maxDays)) {
                               setBirthDay(numericValue);
                             }
@@ -1047,14 +1065,20 @@ export default function RootLayout() {
                       />
                     </View>
                   </View>
-                  {(validationErrors.birthYear || validationErrors.birthMonth || validationErrors.birthDay) ? (
+                  {validationErrors.birthYear ||
+                  validationErrors.birthMonth ||
+                  validationErrors.birthDay ? (
                     <Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
-                      {validationErrors.birthYear || validationErrors.birthMonth || validationErrors.birthDay}
+                      {validationErrors.birthYear ||
+                        validationErrors.birthMonth ||
+                        validationErrors.birthDay}
                     </Text>
                   ) : (
                     <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
                       Year: 1900-{new Date().getFullYear() - 18}
-                      {birthYear && birthMonth && `, Days in ${['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][parseInt(birthMonth)]}: ${getDaysInMonth(birthYear, birthMonth)}`}
+                      {birthYear &&
+                        birthMonth &&
+                        `, Days in ${['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][parseInt(birthMonth)]}: ${getDaysInMonth(birthYear, birthMonth)}`}
                     </Text>
                   )}
                 </View>
@@ -1571,7 +1595,8 @@ export default function RootLayout() {
                     Personal Information
                     {idData && (
                       <Text className="text-xs font-normal" style={{ color: colors.textSecondary }}>
-                        {' '}(ID Verified)
+                        {' '}
+                        (ID Verified)
                       </Text>
                     )}
                   </Text>
@@ -1585,7 +1610,8 @@ export default function RootLayout() {
                       </Text>
                       {idData && (
                         <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
-                          ID: {idData.data.first_name} {idData.data.middle_name} {idData.data.last_name} {idData.data.suffix || ''}
+                          ID: {idData.data.first_name} {idData.data.middle_name}{' '}
+                          {idData.data.last_name} {idData.data.suffix || ''}
                         </Text>
                       )}
                     </View>
@@ -1682,7 +1708,9 @@ export default function RootLayout() {
                       Place of Birth
                     </Text>
                     <Text className="text-sm" style={{ color: colors.text }}>
-                      {birthCity}{birthCity && birthProvince && ', '}{birthProvince}
+                      {birthCity}
+                      {birthCity && birthProvince && ', '}
+                      {birthProvince}
                     </Text>
                   </View>
                 )}
@@ -1721,9 +1749,7 @@ export default function RootLayout() {
                   borderColor: colors.border,
                 }}
                 onPress={() => setCurrentStep(1)}>
-                <Text
-                  className="text-center text-base font-medium"
-                  style={{ color: colors.text }}>
+                <Text className="text-center text-base font-medium" style={{ color: colors.text }}>
                   Edit Details
                 </Text>
               </TouchableOpacity>
@@ -1757,7 +1783,7 @@ export default function RootLayout() {
                       if (idData && !validateIdDataMatch()) {
                         Alert.alert(
                           'Cannot Complete Registration',
-                          'Please correct the information that doesn\'t match your National ID before continuing.',
+                          "Please correct the information that doesn't match your National ID before continuing.",
                           [{ text: 'OK' }]
                         );
                         return;
@@ -1884,7 +1910,6 @@ export default function RootLayout() {
         )}
         title="Select Birth Province"
       />
-
     </View>
   );
 }
