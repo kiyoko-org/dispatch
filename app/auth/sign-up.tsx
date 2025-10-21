@@ -21,6 +21,7 @@ import { useTheme } from 'components/ThemeContext';
 import Dropdown from 'components/Dropdown';
 import { z } from 'zod';
 import { useBarangays } from '@kiyoko-org/dispatch-lib';
+import { getProvinces, getMunicipalities, getBarangays } from 'lib/locations';
 
 // Security validation: Reject dangerous characters that could enable SQL injection or XSS attacks
 const dangerousCharsRegex = /[`;><\x00]/;
@@ -234,11 +235,12 @@ export default function RootLayout() {
   const [showBirthCityDropdown, setShowBirthCityDropdown] = useState(false);
   const [showBirthProvinceDropdown, setShowBirthProvinceDropdown] = useState(false);
 
-  // Philippine address options
-  const provinces: string[] = [];
-  const cities: Record<string, string[]> = {};
-  const barangays: Record<string, string[]> = {};
-
+  const allProvinces = getProvinces();
+  const permanentCityOptions = permanentProvince ? getMunicipalities(permanentProvince) : [];
+  const permanentBarangayOptions = permanentCity
+    ? getBarangays(permanentProvince, permanentCity)
+    : [];
+  const birthCityOptions = birthProvince ? getMunicipalities(birthProvince) : [];
   const tuguegaraoBarangays = barangaysList.map((b) => b.name);
 
   // Camera + scanning state
@@ -1820,13 +1822,7 @@ export default function RootLayout() {
         isVisible={showPermanentBarangayDropdown}
         onClose={() => setShowPermanentBarangayDropdown(false)}
         onSelect={(item: string) => setPermanentBarangay(item)}
-        data={
-          permanentCity === 'Tuguegarao City'
-            ? tuguegaraoBarangays
-            : permanentCity
-              ? barangays[permanentCity] || []
-              : []
-        }
+        data={permanentBarangayOptions}
         keyExtractor={(item, index) => `${item}-${index}`}
         renderItem={({ item }) => (
           <View className="px-4 py-3">
@@ -1843,9 +1839,9 @@ export default function RootLayout() {
         onClose={() => setShowPermanentCityDropdown(false)}
         onSelect={(item: string) => {
           setPermanentCity(item);
-          setPermanentBarangay(''); // Reset barangay when city changes
+          setPermanentBarangay('');
         }}
-        data={permanentProvince ? cities[permanentProvince] || [] : []}
+        data={permanentCityOptions}
         keyExtractor={(item, index) => `${item}-${index}`}
         renderItem={({ item }) => (
           <View className="px-4 py-3">
@@ -1862,10 +1858,10 @@ export default function RootLayout() {
         onClose={() => setShowPermanentProvinceDropdown(false)}
         onSelect={(item: string) => {
           setPermanentProvince(item);
-          setPermanentCity(''); // Reset city when province changes
-          setPermanentBarangay(''); // Reset barangay when province changes
+          setPermanentCity('');
+          setPermanentBarangay('');
         }}
-        data={provinces}
+        data={allProvinces}
         keyExtractor={(item, index) => `${item}-${index}`}
         renderItem={({ item }) => (
           <View className="px-4 py-3">
@@ -1882,7 +1878,7 @@ export default function RootLayout() {
         onSelect={(item: string) => {
           setBirthCity(item);
         }}
-        data={birthProvince ? cities[birthProvince] || [] : []}
+        data={birthCityOptions}
         keyExtractor={(item, index) => `${item}-${index}`}
         renderItem={({ item }) => (
           <View className="px-4 py-3">
@@ -1899,9 +1895,9 @@ export default function RootLayout() {
         onClose={() => setShowBirthProvinceDropdown(false)}
         onSelect={(item: string) => {
           setBirthProvince(item);
-          setBirthCity(''); // Reset city when province changes
+          setBirthCity('');
         }}
-        data={provinces}
+        data={allProvinces}
         keyExtractor={(item, index) => `${item}-${index}`}
         renderItem={({ item }) => (
           <View className="px-4 py-3">
