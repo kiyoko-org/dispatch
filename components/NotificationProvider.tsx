@@ -1,8 +1,10 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { NotificationBanner } from './NotificationBanner';
 
+type NotificationType = 'success' | 'error' | 'info' | 'warning';
+
 interface NotificationContextType {
-  showNotification: (message: string) => void;
+  showNotification: (message: string, type?: NotificationType) => void;
 }
 
 const NotificationContext = createContext<NotificationContextType>({
@@ -16,9 +18,11 @@ interface NotificationProviderProps {
 export function NotificationProvider({ children }: NotificationProviderProps) {
   const [message, setMessage] = useState<string>('');
   const [visible, setVisible] = useState(false);
+  const [type, setType] = useState<NotificationType>('info');
 
-  const showNotification = (newMessage: string) => {
+  const showNotification = (newMessage: string, newType: NotificationType = 'info') => {
     setMessage(newMessage);
+    setType(newType);
     setVisible(true);
   };
 
@@ -33,6 +37,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
         message={message}
         visible={visible}
         onDismiss={dismissNotification}
+        type={type}
       />
     </NotificationContext.Provider>
   );
