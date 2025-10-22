@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Animated, Dimensions, ScrollView } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, Animated } from 'react-native';
 import {
   User,
   Home,
@@ -10,17 +10,17 @@ import {
   Phone,
   LogOut,
   Bell,
-  Clock,
-  AlertCircle,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from './ThemeContext';
 import { useAuthContext } from './AuthProvider';
 import { supabase } from 'lib/supabase';
 import { SyncIndicator } from './SyncIndicator';
-import type { Database } from '@kiyoko-org/dispatch-lib';
+import { useNotifications } from '@kiyoko-org/dispatch-lib';
+import NotificationSidebar from './NotificationSidebar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-type Report = Database['public']['Tables']['reports']['Row'];
+type Report = any;
 
 interface HeaderWithSidebarProps {
   title: string;
@@ -43,12 +43,10 @@ interface HeaderWithSidebarProps {
 
 export default function HeaderWithSidebar({
   title,
-  showBackButton = false,
   backRoute,
   showStepProgress = false,
   stepProgressData,
   logoutPressed,
-  recentReports = [],
   reportsLoading = false,
   onRefreshReports,
   showSyncIndicator = false,
@@ -56,15 +54,20 @@ export default function HeaderWithSidebar({
   const router = useRouter();
   const { colors } = useTheme();
   const { session } = useAuthContext();
+  const { notifications, loading: notificationsLoading } = useNotifications();
+
+  const userNotifications = notifications
+    .filter((notif) => notif.user_id === session?.user?.id)
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const sidebarAnim = useRef(new Animated.Value(-300)).current;
-  const activityPanelWidth = Math.min(400, Dimensions.get('window').width * 0.85);
-  const activityAnim = useRef(new Animated.Value(activityPanelWidth)).current;
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isActivityOpen, setIsActivityOpen] = useState(false);
   const [userName, setUserName] = useState<string>('');
+  const [localNotifCount, setLocalNotifCount] = useState<number>(0);
 
   // Fetch user profile to get the name
   useEffect(() => {
@@ -95,6 +98,19 @@ export default function HeaderWithSidebar({
     fetchUserProfile();
   }, [session?.user?.id]);
 
+  // Load local notification count
+  useEffect(() => {
+    const loadNotifCount = async () => {
+      try {
+        const count = await AsyncStorage.getItem(`notif_count_${session?.user?.id}`);
+        setLocalNotifCount(count ? parseInt(count, 10) : 0);
+      } catch (error) {
+        console.error('Error loading notif count:', error);
+      }
+    };
+    loadNotifCount();
+  }, [session?.user?.id]);
+
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -115,6 +131,15 @@ export default function HeaderWithSidebar({
       router.push(backRoute);
     } else {
       router.back();
+    }
+  };
+
+  const saveNotifCount = async (count: number) => {
+    try {
+      await AsyncStorage.setItem(`notif_count_${session?.user?.id}`, count.toString());
+      setLocalNotifCount(count);
+    } catch (error) {
+      console.error('Error saving notif count:', error);
     }
   };
 
@@ -235,64 +260,11 @@ export default function HeaderWithSidebar({
   };
 
   const toggleActivity = () => {
-    if (isActivityOpen) {
-      // Close activity panel
-      Animated.timing(activityAnim, {
-        toValue: activityPanelWidth,
-        duration: 300,
-        useNativeDriver: true,
-      }).start(() => setIsActivityOpen(false));
-    } else {
-      // Open activity panel
-      setIsActivityOpen(true);
-      Animated.timing(activityAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
+    if (!isActivityOpen) {
+      // When opening, mark as read
+      saveNotifCount(userNotifications.length);
     }
-  };
-
-  const closeActivity = () => {
-    Animated.timing(activityAnim, {
-      toValue: activityPanelWidth,
-      duration: 300,
-      useNativeDriver: true,
-    }).start(() => setIsActivityOpen(false));
-  };
-
-  // Utility function to format timestamps as "time ago"
-  const formatTimeAgo = (dateString: string): string => {
-    const now = new Date();
-    const date = new Date(dateString);
-    const diffInMs = now.getTime() - date.getTime();
-    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
-    const diffInDays = Math.floor(diffInHours / 24);
-
-    if (diffInHours < 1) {
-      return 'Just now';
-    } else if (diffInHours < 24) {
-      return `${diffInHours}h ago`;
-    } else if (diffInDays < 7) {
-      return `${diffInDays}d ago`;
-    } else {
-      return date.toLocaleDateString();
-    }
-  };
-
-  // Utility function to get appropriate icon based on incident category
-  const getActivityIcon = (category: string) => {
-    const categoryIcons: Record<string, any> = {
-      'Emergency Situation': { icon: AlertTriangle, color: '#DC2626' },
-      'Crime in Progress': { icon: AlertCircle, color: '#EA580C' },
-      'Traffic Accident': { icon: AlertCircle, color: '#EA580C' },
-      'Suspicious Activity': { icon: AlertCircle, color: '#3B82F6' },
-      'Public Disturbance': { icon: AlertCircle, color: '#3B82F6' },
-      'Property Damage': { icon: AlertCircle, color: '#6B7280' },
-      'Other Incident': { icon: AlertCircle, color: '#6B7280' },
-    };
-
-    return categoryIcons[category] || { icon: Bell, color: '#475569' };
+    setIsActivityOpen(!isActivityOpen);
   };
 
   return (
@@ -337,7 +309,7 @@ export default function HeaderWithSidebar({
             style={{ backgroundColor: colors.surfaceVariant }}
             activeOpacity={0.7}>
             <Bell size={20} color={colors.text} />
-            {recentReports && recentReports.length > 0 && (
+            {localNotifCount < userNotifications.length && (
               <View
                 className="absolute right-1 top-1 h-2 w-2 rounded-full"
                 style={{ backgroundColor: colors.error }}
@@ -517,174 +489,15 @@ export default function HeaderWithSidebar({
         </View>
       </Animated.View>
 
-      {/* Activity Overlay */}
-      {isActivityOpen && (
-        <TouchableOpacity
-          style={[styles.overlay, { backgroundColor: colors.overlay }]}
-          onPress={closeActivity}
-          activeOpacity={1}
-        />
-      )}
-
-      {/* Activity Panel */}
-      <Animated.View
-        style={[
-          styles.activityPanel,
-          {
-            transform: [{ translateX: activityAnim }],
-            zIndex: 1001,
-            backgroundColor: colors.surface,
-          },
-        ]}>
-        <View
-          className="mb-4 p-4"
-          style={{ borderBottomColor: colors.border, borderBottomWidth: 1 }}>
-          <View className="flex-row items-center justify-between">
-            <View className="flex-row items-center">
-              <Bell size={20} color={colors.primary} />
-              <Text className="ml-2 text-lg font-bold" style={{ color: colors.text }}>
-                Recent Activity
-              </Text>
-            </View>
-            <TouchableOpacity
-              onPress={onRefreshReports}
-              disabled={reportsLoading}
-              className="rounded-lg p-2"
-              style={{ backgroundColor: colors.surfaceVariant }}>
-              <Clock
-                size={16}
-                color={reportsLoading ? colors.textSecondary : colors.primary}
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <ScrollView className="flex-1 px-4" showsVerticalScrollIndicator={false}>
-          <View style={{ gap: 12, paddingBottom: 16 }}>
-            {reportsLoading ? (
-              <View
-                style={{
-                  borderRadius: 8,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  backgroundColor: colors.surface,
-                  padding: 16,
-                }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View
-                    style={{
-                      marginRight: 12,
-                      height: 32,
-                      width: 32,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderRadius: 8,
-                      backgroundColor: colors.surfaceVariant,
-                    }}>
-                    <Clock size={20} color={colors.textSecondary} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text
-                      style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>
-                      Loading recent activity...
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            ) : recentReports.length > 0 ? (
-              recentReports.map((report) => {
-                const activityIcon = getActivityIcon(report.incident_category || '');
-                const IconComponent = activityIcon.icon;
-                return (
-                  <TouchableOpacity
-                    key={report.id}
-                    onPress={() => {
-                      setIsSidebarOpen(false);
-                      router.push(`/cases/${report.id}`);
-                    }}
-                    style={{
-                      borderRadius: 8,
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                      backgroundColor: colors.surface,
-                      padding: 16,
-                    }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                      <View
-                        style={{
-                          marginRight: 12,
-                          height: 32,
-                          width: 32,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          borderRadius: 8,
-                          backgroundColor: colors.surfaceVariant,
-                        }}>
-                        <IconComponent size={20} color={activityIcon.color} />
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text
-                          style={{
-                            fontSize: 14,
-                            fontWeight: '600',
-                            color: colors.text,
-                          }}>
-                          {report.incident_title || 'Incident Report'}
-                          {report.id && (
-                            <Text style={{ fontSize: 12, color: colors.textSecondary }}>
-                              {' '}
-                              #{report.id}
-                            </Text>
-                          )}
-                        </Text>
-                        <Text style={{ fontSize: 12, color: colors.textSecondary }}>
-                          {report.incident_category || 'General Incident'}
-                        </Text>
-                      </View>
-                      <Text style={{ fontSize: 12, color: colors.textSecondary }}>
-                        {report.created_at ? formatTimeAgo(report.created_at) : 'Recently'}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })
-            ) : (
-              <View
-                style={{
-                  borderRadius: 8,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  backgroundColor: colors.surface,
-                  padding: 16,
-                }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View
-                    style={{
-                      marginRight: 12,
-                      height: 32,
-                      width: 32,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      borderRadius: 8,
-                      backgroundColor: colors.surfaceVariant,
-                    }}>
-                    <Bell size={20} color={colors.textSecondary} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text
-                      style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>
-                      No recent activity
-                    </Text>
-                    <Text style={{ fontSize: 12, color: colors.textSecondary }}>
-                      Your recent reports will appear here
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            )}
-          </View>
-        </ScrollView>
-      </Animated.View>
+      <NotificationSidebar
+        userNotifications={userNotifications}
+        loading={notificationsLoading}
+        onRefreshReports={onRefreshReports}
+        reportsLoading={reportsLoading}
+        isOpen={isActivityOpen}
+        onToggle={toggleActivity}
+        userId={session?.user?.id || ''}
+      />
     </>
   );
 }
@@ -719,18 +532,6 @@ const styles = StyleSheet.create({
     height: '100%',
     shadowColor: '#000',
     shadowOffset: { width: 2, height: 0 },
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    elevation: 20,
-  },
-  activityPanel: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    width: Math.min(400, Dimensions.get('window').width * 0.85),
-    height: '100%',
-    shadowColor: '#000',
-    shadowOffset: { width: -2, height: 0 },
     shadowOpacity: 0.25,
     shadowRadius: 10,
     elevation: 20,
