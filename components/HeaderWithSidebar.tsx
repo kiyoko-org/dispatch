@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Animated } from 'react-native';
 import {
   User,
@@ -134,14 +134,24 @@ export default function HeaderWithSidebar({
     }
   };
 
-  const saveNotifCount = async (count: number) => {
-    try {
-      await AsyncStorage.setItem(`notif_count_${session?.user?.id}`, count.toString());
-      setLocalNotifCount(count);
-    } catch (error) {
-      console.error('Error saving notif count:', error);
+  const saveNotifCount = useCallback(
+    async (count: number) => {
+      try {
+        await AsyncStorage.setItem(`notif_count_${session?.user?.id}`, count.toString());
+        setLocalNotifCount(count);
+      } catch (error) {
+        console.error('Error saving notif count:', error);
+      }
+    },
+    [session?.user?.id]
+  );
+
+  // Update local count if sidebar is open and new notifications arrive
+  useEffect(() => {
+    if (isActivityOpen && userNotifications.length > localNotifCount) {
+      saveNotifCount(userNotifications.length);
     }
-  };
+  }, [userNotifications.length, isActivityOpen, localNotifCount, saveNotifCount]);
 
   const toggleSidebar = () => {
     if (isSidebarOpen) {
