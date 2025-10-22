@@ -33,10 +33,6 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showHelpModal, setShowHelpModal] = useState(false);
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [logoutPcn, setLogoutPcn] = useState('');
-  const [logoutLoading, setLogoutLoading] = useState(false);
-  const [logoutPcnError, setLogoutPcnError] = useState('');
   const [helpName, setHelpName] = useState('');
   const [helpEmail, setHelpEmail] = useState('');
   const [helpSubject, setHelpSubject] = useState('');
@@ -242,92 +238,6 @@ export default function Login() {
     setHelpMessageError('');
   }
 
-  function validateLogoutPcn(value: string) {
-    setLogoutPcn(value);
-
-    if (value.trim() === '') {
-      setLogoutPcnError('');
-      return;
-    }
-
-    // Check if contains non-numeric characters
-    if (!/^\d+$/.test(value)) {
-      setLogoutPcnError('PCN must contain only numeric digits (0-9)');
-      return;
-    }
-
-    // Check length
-    if (value.length < 16) {
-      setLogoutPcnError(`PCN must be 16 digits (${value.length}/16)`);
-      return;
-    }
-
-    if (value.length === 16) {
-      setLogoutPcnError('');
-      return;
-    }
-  }
-
-  async function handleLogoutAccount() {
-    if (!logoutPcn || logoutPcn.trim() === '') {
-      Alert.alert('Error', 'Please enter your PCN number');
-      return;
-    }
-
-    const trimmedPcn = logoutPcn.trim();
-
-    // Check if PCN contains only digits
-    if (!/^\d+$/.test(trimmedPcn)) {
-      Alert.alert('Invalid PCN', 'PCN number must contain only numeric digits (0-9).');
-      return;
-    }
-
-    // Check if PCN is exactly 16 digits
-    if (trimmedPcn.length !== 16) {
-      Alert.alert(
-        'Invalid PCN Length',
-        `PCN number must be exactly 16 digits. You entered ${trimmedPcn.length} digit${trimmedPcn.length !== 1 ? 's' : ''}.`
-      );
-      return;
-    }
-
-    setLogoutLoading(true);
-
-    try {
-      // Verify PCN exists in the database
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('pcn', trimmedPcn)
-        .single();
-
-      if (profileError || !profile) {
-        Alert.alert('Error', 'Invalid PCN number. Please check and try again.');
-        setLogoutLoading(false);
-        return;
-      }
-
-      // Sign out the user with this PCN
-      const { error: signOutError } = await supabase.auth.admin.signOut(profile.id);
-
-      if (signOutError) {
-        Alert.alert('Error', 'Failed to logout account. Please try again.');
-        setLogoutLoading(false);
-        return;
-      }
-
-      Alert.alert('Success', 'Account has been logged out successfully.');
-      setShowLogoutModal(false);
-      setLogoutPcn('');
-      setLogoutPcnError('');
-    } catch (error) {
-      console.error('Logout error:', error);
-      Alert.alert('Error', 'An error occurred. Please try again.');
-    } finally {
-      setLogoutLoading(false);
-    }
-  }
-
   async function handleVerifyWithIdCard(pcn: string) {
     setActiveSessionLoading(true);
     try {
@@ -423,11 +333,6 @@ export default function Login() {
           <TouchableOpacity>
             <Text className="text-sm" style={{ color: colors.textSecondary }}>
               Forgot password?
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity className="mt-2" onPress={() => setShowLogoutModal(true)}>
-            <Text className="text-sm" style={{ color: colors.textSecondary }}>
-              Logout account
             </Text>
           </TouchableOpacity>
         </View>
@@ -624,93 +529,6 @@ export default function Login() {
                 </Text>
               </TouchableOpacity>
             </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Logout Account Modal */}
-      <Modal
-        visible={showLogoutModal}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setShowLogoutModal(false)}>
-        <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
-          <View
-            className="rounded-t-3xl px-6 pb-8 pt-6"
-            style={{ backgroundColor: colors.background }}>
-            <View className="mb-6 flex-row items-center justify-between">
-              <Text className="text-xl font-bold" style={{ color: colors.text }}>
-                Logout Account
-              </Text>
-              <TouchableOpacity onPress={() => setShowLogoutModal(false)}>
-                <X size={24} color={colors.text} />
-              </TouchableOpacity>
-            </View>
-
-            <View className="mb-6">
-              <Text className="mb-4 text-sm" style={{ color: colors.textSecondary }}>
-                To logout an account from another device, please enter your PCN (Philippine National
-                ID) number below.
-              </Text>
-
-              <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
-                PCN Number (16 digits)
-              </Text>
-              <RNTextInput
-                className="rounded-xl px-4 py-3 text-base"
-                style={{
-                  backgroundColor: colors.surfaceVariant,
-                  borderWidth: 1,
-                  borderColor: logoutPcnError ? '#EF4444' : colors.border,
-                  color: colors.text,
-                }}
-                placeholder="Enter your 16-digit PCN number"
-                value={logoutPcn}
-                onChangeText={validateLogoutPcn}
-                placeholderTextColor={colors.textSecondary}
-                keyboardType="numeric"
-                maxLength={16}
-              />
-              {logoutPcnError ? (
-                <Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
-                  {logoutPcnError}
-                </Text>
-              ) : (
-                <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
-                  Enter the 16-digit PCN from your Philippine National ID
-                </Text>
-              )}
-            </View>
-
-            <TouchableOpacity
-              className="rounded-xl py-4"
-              style={{
-                backgroundColor: colors.primary,
-                opacity: logoutLoading ? 0.7 : 1,
-              }}
-              onPress={handleLogoutAccount}
-              disabled={logoutLoading}>
-              <Text className="text-center text-base font-semibold text-white">
-                {logoutLoading ? 'LOGGING OUT...' : 'LOGOUT ACCOUNT'}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              className="mt-3 rounded-xl py-4"
-              style={{
-                backgroundColor: colors.surfaceVariant,
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}
-              onPress={() => {
-                setShowLogoutModal(false);
-                setLogoutPcn('');
-                setLogoutPcnError('');
-              }}>
-              <Text className="text-center text-base font-semibold" style={{ color: colors.text }}>
-                Cancel
-              </Text>
-            </TouchableOpacity>
           </View>
         </View>
       </Modal>
