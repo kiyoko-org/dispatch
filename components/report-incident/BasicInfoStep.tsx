@@ -195,7 +195,7 @@ export default function BasicInfoStep({
         keyExtractor={(item) => item.name}
         renderItem={({ item }) => (
           <View className="px-4 py-3">
-            <Text className="font-medium text-slate-900">{item.name}</Text>
+            <Text className="font-medium" style={{ color: colors.text }}>{item.name}</Text>
           </View>
         )}
         title="Select Incident Category"
@@ -211,7 +211,7 @@ export default function BasicInfoStep({
         keyExtractor={(item, index) => index.toString()}
         renderItem={({ item }) => (
           <View className="px-4 py-3">
-            <Text className="text-slate-900">{item}</Text>
+            <Text style={{ color: colors.text }}>{item}</Text>
           </View>
         )}
         title="Select Subcategory"
