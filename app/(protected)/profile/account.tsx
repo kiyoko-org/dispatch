@@ -4,12 +4,9 @@ import {
   Text,
   ScrollView,
   StatusBar,
-  TextInput,
-  TouchableOpacity,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
-import { User, Mail, Phone, MapPin, Calendar, Save, Camera } from 'lucide-react-native';
+import { User, Mail, Calendar, CreditCard, MapPin, Cake } from 'lucide-react-native';
 import HeaderWithSidebar from 'components/HeaderWithSidebar';
 import { useTheme } from 'components/ThemeContext';
 import { useAuthContext } from 'components/AuthProvider';
@@ -17,10 +14,17 @@ import { supabase } from 'lib/supabase';
 
 type Profile = {
   first_name: string;
+  middle_name?: string;
   last_name: string;
+  suffix?: string;
   email: string;
   phone: string;
   address: string;
+  id_card_number?: string;
+  birth_date?: string;
+  sex?: string;
+  birth_city?: string;
+  birth_province?: string;
 };
 
 export default function AccountPage() {
@@ -28,13 +32,19 @@ export default function AccountPage() {
   const { session } = useAuthContext();
 
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [profile, setProfile] = useState<Profile>({
     first_name: '',
+    middle_name: '',
     last_name: '',
+    suffix: '',
     email: session?.user?.email || '',
     phone: '',
     address: '',
+    id_card_number: '',
+    birth_date: '',
+    sex: '',
+    birth_city: '',
+    birth_province: '',
   });
 
   useEffect(() => {
@@ -59,10 +69,17 @@ export default function AccountPage() {
       if (data) {
         setProfile({
           first_name: data.first_name || '',
+          middle_name: data.middle_name || '',
           last_name: data.last_name || '',
+          suffix: data.suffix || '',
           email: session.user.email || '',
           phone: data.phone || '',
           address: data.address || '',
+          id_card_number: data.id_card_number || '',
+          birth_date: data.birth_date || '',
+          sex: data.sex || '',
+          birth_city: data.birth_city || '',
+          birth_province: data.birth_province || '',
         });
       }
     } catch (error) {
@@ -72,31 +89,10 @@ export default function AccountPage() {
     }
   };
 
-  const handleSave = async () => {
-    if (!session?.user?.id) return;
-
-    try {
-      setSaving(true);
-      const { error } = await supabase
-        .from('profiles')
-        .upsert({
-          id: session.user.id,
-          first_name: profile.first_name,
-          last_name: profile.last_name,
-          phone: profile.phone,
-          address: profile.address,
-          updated_at: new Date().toISOString(),
-        });
-
-      if (error) throw error;
-
-      Alert.alert('Success', 'Your profile has been updated successfully.');
-    } catch (error) {
-      console.error('Error saving profile:', error);
-      Alert.alert('Error', 'Failed to update profile. Please try again.');
-    } finally {
-      setSaving(false);
-    }
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   };
 
   if (loading) {
@@ -124,32 +120,13 @@ export default function AccountPage() {
       <HeaderWithSidebar title="Your Account" showBackButton={false} />
       
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {/* Profile Picture */}
-        <View className="items-center py-6">
-          <View
-            className="w-24 h-24 rounded-full items-center justify-center"
-            style={{ backgroundColor: colors.surfaceVariant }}
-          >
-            <User size={40} color={colors.text} />
-          </View>
-          <TouchableOpacity
-            className="mt-3 flex-row items-center"
-            onPress={() => Alert.alert('Change Photo', 'Photo upload feature coming soon')}
-          >
-            <Camera size={16} color={colors.primary} />
-            <Text className="text-sm font-medium ml-2" style={{ color: colors.primary }}>
-              Change Photo
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Account Information */}
-        <View className="px-6 py-4">
+        {/* National ID Information */}
+        <View className="px-6 py-6">
           <Text
             className="text-sm font-semibold uppercase tracking-wide mb-4"
             style={{ color: colors.textSecondary }}
           >
-            Personal Information
+            National ID Information
           </Text>
 
           <View
@@ -160,92 +137,109 @@ export default function AccountPage() {
               borderColor: colors.border,
             }}
           >
-            {/* First Name */}
+            {/* ID Card Number (PCN) */}
             <View className="px-4 py-4">
-              <Text className="text-xs font-medium mb-2" style={{ color: colors.textSecondary }}>
-                FIRST NAME
+              <View className="flex-row items-center mb-2">
+                <CreditCard size={16} color={colors.textSecondary} />
+                <Text className="text-xs font-medium ml-2" style={{ color: colors.textSecondary }}>
+                  ID CARD NUMBER (PCN)
+                </Text>
+              </View>
+              <Text className="text-base font-medium" style={{ color: colors.text }}>
+                {profile.id_card_number || 'N/A'}
               </Text>
-              <TextInput
-                value={profile.first_name}
-                onChangeText={(text) => setProfile({ ...profile, first_name: text })}
-                placeholder="Enter your first name"
-                placeholderTextColor={colors.textSecondary}
-                className="text-base"
-                style={{ color: colors.text }}
-              />
             </View>
 
             <View className="h-px ml-4" style={{ backgroundColor: colors.border }} />
 
-            {/* Last Name */}
+            {/* Full Name */}
+            <View className="px-4 py-4">
+              <View className="flex-row items-center mb-2">
+                <User size={16} color={colors.textSecondary} />
+                <Text className="text-xs font-medium ml-2" style={{ color: colors.textSecondary }}>
+                  FULL NAME
+                </Text>
+              </View>
+              <Text className="text-base font-medium" style={{ color: colors.text }}>
+                {[profile.first_name, profile.middle_name, profile.last_name, profile.suffix]
+                  .filter(Boolean)
+                  .join(' ') || 'N/A'}
+              </Text>
+            </View>
+
+            <View className="h-px ml-4" style={{ backgroundColor: colors.border }} />
+
+            {/* Date of Birth */}
+            <View className="px-4 py-4">
+              <View className="flex-row items-center mb-2">
+                <Cake size={16} color={colors.textSecondary} />
+                <Text className="text-xs font-medium ml-2" style={{ color: colors.textSecondary }}>
+                  DATE OF BIRTH
+                </Text>
+              </View>
+              <Text className="text-base" style={{ color: colors.text }}>
+                {formatDate(profile.birth_date || '')}
+              </Text>
+            </View>
+
+            <View className="h-px ml-4" style={{ backgroundColor: colors.border }} />
+
+            {/* Sex */}
             <View className="px-4 py-4">
               <Text className="text-xs font-medium mb-2" style={{ color: colors.textSecondary }}>
-                LAST NAME
+                SEX
               </Text>
-              <TextInput
-                value={profile.last_name}
-                onChangeText={(text) => setProfile({ ...profile, last_name: text })}
-                placeholder="Enter your last name"
-                placeholderTextColor={colors.textSecondary}
-                className="text-base"
-                style={{ color: colors.text }}
-              />
+              <Text className="text-base" style={{ color: colors.text }}>
+                {profile.sex || 'N/A'}
+              </Text>
+            </View>
+
+            <View className="h-px ml-4" style={{ backgroundColor: colors.border }} />
+
+            {/* Place of Birth */}
+            <View className="px-4 py-4">
+              <View className="flex-row items-center mb-2">
+                <MapPin size={16} color={colors.textSecondary} />
+                <Text className="text-xs font-medium ml-2" style={{ color: colors.textSecondary }}>
+                  PLACE OF BIRTH
+                </Text>
+              </View>
+              <Text className="text-base" style={{ color: colors.text }}>
+                {[profile.birth_city, profile.birth_province]
+                  .filter(Boolean)
+                  .join(', ') || 'N/A'}
+              </Text>
             </View>
 
             <View className="h-px ml-4" style={{ backgroundColor: colors.border }} />
 
             {/* Email */}
             <View className="px-4 py-4">
-              <Text className="text-xs font-medium mb-2" style={{ color: colors.textSecondary }}>
-                EMAIL
-              </Text>
-              <View className="flex-row items-center">
+              <View className="flex-row items-center mb-2">
                 <Mail size={16} color={colors.textSecondary} />
-                <Text className="text-base ml-2" style={{ color: colors.text }}>
-                  {profile.email}
+                <Text className="text-xs font-medium ml-2" style={{ color: colors.textSecondary }}>
+                  EMAIL
                 </Text>
               </View>
-              <Text className="text-xs mt-2" style={{ color: colors.textSecondary }}>
-                Contact support to change your email address
+              <Text className="text-base" style={{ color: colors.text }}>
+                {profile.email || 'N/A'}
               </Text>
             </View>
+          </View>
 
-            <View className="h-px ml-4" style={{ backgroundColor: colors.border }} />
-
-            {/* Phone */}
-            <View className="px-4 py-4">
-              <Text className="text-xs font-medium mb-2" style={{ color: colors.textSecondary }}>
-                PHONE NUMBER
-              </Text>
-              <TextInput
-                value={profile.phone}
-                onChangeText={(text) => setProfile({ ...profile, phone: text })}
-                placeholder="Enter your phone number"
-                placeholderTextColor={colors.textSecondary}
-                keyboardType="phone-pad"
-                className="text-base"
-                style={{ color: colors.text }}
-              />
-            </View>
-
-            <View className="h-px ml-4" style={{ backgroundColor: colors.border }} />
-
-            {/* Address */}
-            <View className="px-4 py-4">
-              <Text className="text-xs font-medium mb-2" style={{ color: colors.textSecondary }}>
-                ADDRESS
-              </Text>
-              <TextInput
-                value={profile.address}
-                onChangeText={(text) => setProfile({ ...profile, address: text })}
-                placeholder="Enter your address"
-                placeholderTextColor={colors.textSecondary}
-                multiline
-                numberOfLines={2}
-                className="text-base"
-                style={{ color: colors.text }}
-              />
-            </View>
+          {/* Info Banner */}
+          <View
+            className="mt-4 rounded-2xl p-4"
+            style={{
+              backgroundColor: colors.surfaceVariant,
+              borderWidth: 1,
+              borderColor: colors.border,
+            }}
+          >
+            <Text className="text-sm" style={{ color: colors.textSecondary }}>
+              This information is sourced from your verified National ID and cannot be edited. 
+              Contact support if you need to update your details.
+            </Text>
           </View>
         </View>
 
@@ -280,27 +274,6 @@ export default function AccountPage() {
               </View>
             </View>
           </View>
-        </View>
-
-        {/* Save Button */}
-        <View className="px-6 py-4">
-          <TouchableOpacity
-            onPress={handleSave}
-            disabled={saving}
-            className="rounded-2xl py-4 flex-row items-center justify-center"
-            style={{ backgroundColor: colors.primary }}
-          >
-            {saving ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <>
-                <Save size={20} color="#FFFFFF" />
-                <Text className="text-base font-semibold ml-2 text-white">
-                  Save Changes
-                </Text>
-              </>
-            )}
-          </TouchableOpacity>
         </View>
 
         <View className="h-8" />

@@ -219,7 +219,9 @@ export default function DetailsStep({
           <View className="px-4 py-3">
             <View className="flex-row items-center">
               <Text className="mr-3 text-xl">{item.icon}</Text>
-              <Text className="font-medium text-slate-900">{item.name}</Text>
+              <Text className="font-medium" style={{ color: colors.text }}>
+                {item.name}
+              </Text>
             </View>
           </View>
         )}

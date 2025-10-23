@@ -147,8 +147,8 @@ export default function Home() {
       {/* Main Content */}
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Welcome Banner */}
-        <View style={{ padding: 24, backgroundColor: currentColors.headerBg }}>
-          <View className="mb-6">
+        <View style={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 16, backgroundColor: currentColors.headerBg }}>
+          <View>
             <Text
               style={{
                 marginBottom: 8,
