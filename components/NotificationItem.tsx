@@ -53,11 +53,30 @@ export default function NotificationItem({ title, body, created_at }: Notificati
 				padding: 16,
 				marginBottom: 12,
 			}}>
-			<Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }}>{title}</Text>
+			<View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+				<Text
+					style={{
+						fontSize: 14,
+						fontWeight: '600',
+						color: colors.text,
+						flex: 1,
+						marginRight: 12,
+					}}>
+					{title}
+				</Text>
+				{timeAgo ? (
+					<Text
+						style={{
+							fontSize: 11,
+							color: colors.textSecondary,
+							flexShrink: 0,
+							textAlign: 'right',
+						}}>
+						{timeAgo}
+					</Text>
+				) : null}
+			</View>
 			<Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 4 }}>{body}</Text>
-			{timeAgo ? (
-				<Text style={{ fontSize: 11, color: colors.textSecondary, marginTop: 8 }}>{timeAgo}</Text>
-			) : null}
 		</View>
 	);
 }
