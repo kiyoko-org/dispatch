@@ -419,10 +419,12 @@ export default function ReportIncidentIndex() {
   };
 
   // Transform categories from database to match component expectations
-  const incidentCategories: { name: string; severity: string }[] = categories.map((category) => ({
-    name: category.name,
-    severity: 'Medium', // Default severity since database doesn't have severity field
-  }));
+  const incidentCategories: { name: string; severity: string }[] = categories
+    .map((category) => ({
+      name: category.name,
+      severity: 'Medium', // Default severity since database doesn't have severity field
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const injuryOptions: { name: string; severity: string; icon: string }[] = [
     { name: 'Minor', severity: 'Low', icon: '🩹' },
@@ -437,7 +439,7 @@ export default function ReportIncidentIndex() {
   const subcategories: Record<string, string[]> = {};
   categories.forEach((category) => {
     if (category.sub_categories && category.sub_categories.length > 0) {
-      subcategories[category.name] = [...category.sub_categories, 'Other'];
+      subcategories[category.name] = [...category.sub_categories, 'Other'].sort();
     } else {
       subcategories[category.name] = ['Other'];
     }
