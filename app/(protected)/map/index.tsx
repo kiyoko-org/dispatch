@@ -66,6 +66,7 @@ export default function MapPage() {
 	const [loading, setLoading] = useState(true);
 	const [selectedCrime, setSelectedCrime] = useState<CrimeData | null>(null);
 	const [selectedCluster, setSelectedCluster] = useState<CrimeData[] | null>(null);
+	const [selectedReport, setSelectedReport] = useState<any | null>(null);
 	const [showHeatmap, setShowHeatmap] = useState(true);
 	const [showMarkers, setShowMarkers] = useState(true);
 	const [showReports, setShowReports] = useState(true);
@@ -75,7 +76,16 @@ export default function MapPage() {
 	const [filterEndDate, setFilterEndDate] = useState<Date | null>(null);
 	const [expandedCategories, setExpandedCategories] = useState<Set<CrimeCategory>>(new Set());
 	const [showFilters, setShowFilters] = useState(false);
-	const [mapRegion, setMapRegion] = useState<Region | null>(null);
+	
+	// Calculate center of Tuguegarao City
+	const initialRegion = {
+		latitude: 17.6132,
+		longitude: 121.7270,
+		latitudeDelta: 0.15,
+		longitudeDelta: 0.15,
+	};
+	
+	const [mapRegion, setMapRegion] = useState<Region | null>(initialRegion);
 	const [activeClusterTab, setActiveClusterTab] = useState<'all' | CrimeCategory>('all');
 	const mapRef = useRef<MapView>(null);
 	
@@ -322,14 +332,6 @@ export default function MapPage() {
 		
 		return result;
 	}, [filteredCrimes, mapRegion]);
-
-	// Calculate center of Tuguegarao City
-	const initialRegion = {
-		latitude: 17.6132,
-		longitude: 121.7270,
-		latitudeDelta: 0.15,
-		longitudeDelta: 0.15,
-	};
 
 	// Function to reset map to initial region
 	const resetMapRegion = () => {
@@ -755,6 +757,7 @@ export default function MapPage() {
 										onPress={() => { 
 											setSelectedCrime(crime); 
 											setSelectedCluster(null);
+											setSelectedReport(null);
 										}}
 										zIndex={3}
 									>
@@ -772,6 +775,7 @@ export default function MapPage() {
 										// Show cluster details
 										setSelectedCrime(null);
 										setSelectedCluster(cluster.items);
+										setSelectedReport(null);
 										setActiveClusterTab('all');
 									}}
 									zIndex={3}
@@ -783,15 +787,23 @@ export default function MapPage() {
 							);
 						})}
 
-					{/* Report Markers */}
-					{showReports && reports.filter(report => report.latitude && report.longitude).map((report) => (
+					{/* Report Markers - Only show resolved reports */}
+					{showReports && reports.filter(report => 
+						report.latitude && 
+						report.longitude && 
+						report.status === 'resolved'
+					).map((report) => (
 						<Marker
 							key={`report-${report.id}`}
 							coordinate={{
 								latitude: report.latitude,
 								longitude: report.longitude,
 							}}
-							onPress={() => setSelectedCrime(null)} // Clear crime selection when selecting report
+							onPress={() => {
+								setSelectedCrime(null);
+								setSelectedCluster(null);
+								setSelectedReport(report);
+							}}
 						>
 							<View style={[styles.reportMarkerContainer, { backgroundColor: '#FF6B35' }]} />
 						</Marker>
@@ -1472,7 +1484,7 @@ export default function MapPage() {
 				)}
 
 				{/* Crime Details Card */}
-				{selectedCrime && !showFilters && !selectedCluster && (
+				{selectedCrime && !showFilters && !selectedCluster && !selectedReport && (
 					<View 
 						className="absolute bottom-24 left-4 right-4 rounded-xl p-4 shadow-2xl"
 						style={{ backgroundColor: colors.card }}
@@ -1530,6 +1542,134 @@ export default function MapPage() {
 								{selectedCrime.offense}
 							</Text>
 						</View>
+					</View>
+				)}
+
+				{/* User Report Details Card */}
+				{selectedReport && !showFilters && !selectedCluster && !selectedCrime && (
+					<View 
+						className="absolute bottom-24 left-4 right-4 rounded-xl p-4 shadow-2xl"
+						style={{ backgroundColor: colors.card, maxHeight: '70%' }}
+					>
+						<View className="mb-3 flex-row items-start justify-between">
+							<View className="flex-1">
+								<View 
+									className="mb-2 self-start rounded-full px-3 py-1"
+									style={{ backgroundColor: '#FF6B35' + '20' }}
+								>
+									<Text 
+										className="text-xs font-bold uppercase"
+										style={{ color: '#FF6B35' }}
+									>
+										User Report
+									</Text>
+								</View>
+								<Text className="text-lg font-bold" style={{ color: colors.text }}>
+									{selectedReport.incident_title || selectedReport.incident_category || 'Incident Report'}
+								</Text>
+							</View>
+							<TouchableOpacity onPress={() => setSelectedReport(null)}>
+								<XCircle size={24} color={colors.textSecondary} />
+							</TouchableOpacity>
+						</View>
+
+						<ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 400 }}>
+							<View className="space-y-2">
+								{selectedReport.incident_category && (
+									<View className="flex-row items-center">
+										<AlertTriangle size={16} color={colors.textSecondary} />
+										<Text className="ml-2 text-sm font-semibold" style={{ color: colors.text }}>
+											Category: {selectedReport.incident_category}
+											{selectedReport.incident_subcategory && ` - ${selectedReport.incident_subcategory}`}
+										</Text>
+									</View>
+								)}
+
+								{(selectedReport.street_address || selectedReport.nearby_landmark) && (
+									<View className="flex-row items-start">
+										<MapPin size={16} color={colors.textSecondary} style={{ marginTop: 2 }} />
+										<View className="ml-2 flex-1">
+											{selectedReport.street_address && (
+												<Text className="text-sm" style={{ color: colors.textSecondary }}>
+													{selectedReport.street_address}
+												</Text>
+											)}
+											{selectedReport.nearby_landmark && (
+												<Text className="text-sm" style={{ color: colors.textSecondary }}>
+													Near: {selectedReport.nearby_landmark}
+												</Text>
+											)}
+										</View>
+									</View>
+								)}
+								
+								{(selectedReport.incident_date || selectedReport.incident_time) && (
+									<View className="flex-row items-center">
+										<Calendar size={16} color={colors.textSecondary} />
+										<Text className="ml-2 text-sm" style={{ color: colors.textSecondary }}>
+											{selectedReport.incident_date && selectedReport.incident_date}
+											{selectedReport.incident_time && ` at ${selectedReport.incident_time}`}
+										</Text>
+									</View>
+								)}
+							</View>
+
+							{selectedReport.what_happened && (
+								<View className="mt-3 rounded-lg p-3" style={{ backgroundColor: colors.background }}>
+									<Text className="text-xs font-semibold uppercase" style={{ color: colors.textSecondary }}>
+										Description
+									</Text>
+									<Text className="mt-1 text-sm" style={{ color: colors.text }}>
+										{selectedReport.what_happened}
+									</Text>
+								</View>
+							)}
+
+							{selectedReport.who_was_involved && (
+								<View className="mt-2 rounded-lg p-3" style={{ backgroundColor: colors.background }}>
+									<Text className="text-xs font-semibold uppercase" style={{ color: colors.textSecondary }}>
+										People Involved
+									</Text>
+									<Text className="mt-1 text-sm" style={{ color: colors.text }}>
+										{selectedReport.who_was_involved}
+									</Text>
+								</View>
+							)}
+
+							{selectedReport.suspect_description && (
+								<View className="mt-2 rounded-lg p-3" style={{ backgroundColor: colors.background }}>
+									<Text className="text-xs font-semibold uppercase" style={{ color: colors.textSecondary }}>
+										Suspect Description
+									</Text>
+									<Text className="mt-1 text-sm" style={{ color: colors.text }}>
+										{selectedReport.suspect_description}
+									</Text>
+								</View>
+							)}
+
+							{(selectedReport.number_of_witnesses || selectedReport.injuries_reported || selectedReport.property_damage) && (
+								<View className="mt-2 rounded-lg p-3" style={{ backgroundColor: colors.background }}>
+									<Text className="text-xs font-semibold uppercase mb-2" style={{ color: colors.textSecondary }}>
+										Additional Details
+									</Text>
+									{selectedReport.number_of_witnesses && (
+										<Text className="text-sm mb-1" style={{ color: colors.text }}>
+											• Witnesses: {selectedReport.number_of_witnesses}
+										</Text>
+									)}
+									{selectedReport.injuries_reported && (
+										<Text className="text-sm mb-1" style={{ color: colors.text }}>
+											• Injuries: {selectedReport.injuries_reported}
+										</Text>
+									)}
+									{selectedReport.property_damage && (
+										<Text className="text-sm" style={{ color: colors.text }}>
+											• Property Damage: {selectedReport.property_damage}
+										</Text>
+									)}
+								</View>
+							)}
+						</ScrollView>
 					</View>
 				)}
 
@@ -2002,7 +2142,7 @@ export default function MapPage() {
 				)}
 
 				{/* Report Button */}
-				{!selectedCrime && !showFilters && !selectedCluster && (
+				{!selectedCrime && !showFilters && !selectedCluster && !selectedReport && (
 					<View className="absolute bottom-4 left-0 right-0 flex-row justify-center">
 						<TouchableOpacity
 							className="flex-row items-center rounded-full px-6 py-4 shadow-2xl"
