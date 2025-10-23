@@ -11,18 +11,19 @@ import '../global.css';
 export default function RootLayout() {
   useFCMToken();
 
-return (
-<ThemeProvider>
-<DispatchProvider>
-<AuthProvider>
-<UserDataProvider>
-<NotificationProvider>
-  <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
-      <Stack.Screen name="(protected)" />
-      </Stack>
-      </NotificationProvider>
-      </UserDataProvider>
-      </AuthProvider>
+  return (
+    <ThemeProvider>
+      <DispatchProvider>
+        <AuthProvider>
+          <UserDataProvider>
+            <NotificationProvider>
+              <Stack screenOptions={{ headerShown: false, animation: 'none' }}>
+                <Stack.Screen name="(protected)" />
+                <Stack.Screen name="auth" />
+              </Stack>
+            </NotificationProvider>
+          </UserDataProvider>
+        </AuthProvider>
       </DispatchProvider>
     </ThemeProvider>
   );
