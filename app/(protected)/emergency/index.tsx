@@ -409,14 +409,8 @@ export default function EmergencyScreen() {
 
   const sendMessage = () => {
     if (emergencyNumber) {
-      // Navigate to messaging with the number
-      router.push({
-        pathname: '/messaging/chat',
-        params: {
-          phoneNumber: emergencyNumber,
-          isEmergency: '1',
-        },
-      });
+      triggerHapticFeedback('light');
+      Linking.openURL(`sms:${emergencyNumber}`);
     } else {
       Alert.alert('No Number', 'Please enter a phone number first');
     }
