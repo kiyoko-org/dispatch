@@ -43,6 +43,9 @@ export default function Login() {
   const [helpMessageError, setHelpMessageError] = useState('');
   const [showActiveSessionDialog, setShowActiveSessionDialog] = useState(false);
   const [activeSessionLoading, setActiveSessionLoading] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
 
   async function signInWithEmail() {
     setLoading(true);
@@ -270,6 +273,34 @@ export default function Login() {
     }
   }
 
+  async function handleForgotPassword() {
+    if (!forgotPasswordEmail.trim()) {
+      Alert.alert('Error', 'Please enter your email address');
+      return;
+    }
+
+    setForgotPasswordLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotPasswordEmail);
+
+      if (error) {
+        Alert.alert('Error', error.message || 'Failed to send password reset email');
+      } else {
+        Alert.alert(
+          'Success',
+          'Password reset link has been sent to your email. Please check your inbox and follow the instructions.'
+        );
+        setShowForgotPasswordModal(false);
+        setForgotPasswordEmail('');
+      }
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      Alert.alert('Error', 'An error occurred. Please try again.');
+    } finally {
+      setForgotPasswordLoading(false);
+    }
+  }
+
   return (
     <View className="flex-1 px-6 pt-12" style={{ backgroundColor: colors.background }}>
       <StatusBar
@@ -330,7 +361,7 @@ export default function Login() {
         </View>
 
         <View className="items-end">
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowForgotPasswordModal(true)}>
             <Text className="text-sm" style={{ color: colors.textSecondary }}>
               Forgot password?
             </Text>
@@ -542,6 +573,75 @@ export default function Login() {
         onVerifyWithId={handleVerifyWithIdCard}
         isLoading={activeSessionLoading}
       />
+
+      {/* Forgot Password Modal */}
+      <Modal
+        visible={showForgotPasswordModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowForgotPasswordModal(false)}>
+        <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <View
+            className="rounded-t-3xl px-6 pb-8 pt-6"
+            style={{ backgroundColor: colors.background }}>
+            <View className="mb-6 flex-row items-center justify-between">
+              <Text className="text-xl font-bold" style={{ color: colors.text }}>
+                Reset Password
+              </Text>
+              <TouchableOpacity onPress={() => setShowForgotPasswordModal(false)}>
+                <X size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <View className="mb-6">
+              <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
+                Enter your email address and we&apos;ll send you a link to reset your password.
+              </Text>
+            </View>
+
+            <View className="mb-6">
+              <RNTextInput
+                className="rounded-xl px-4 py-4 text-base"
+                style={{
+                  backgroundColor: colors.surfaceVariant,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  color: colors.text,
+                }}
+                placeholder="Enter your email"
+                value={forgotPasswordEmail}
+                onChangeText={setForgotPasswordEmail}
+                placeholderTextColor={colors.textSecondary}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+
+            <TouchableOpacity
+              className="rounded-xl py-4"
+              style={{ backgroundColor: colors.primary }}
+              onPress={handleForgotPassword}
+              disabled={forgotPasswordLoading}>
+              <Text className="text-center text-base font-semibold text-white">
+                {forgotPasswordLoading ? 'SENDING...' : 'Send Reset Link'}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              className="mt-3 rounded-xl py-4"
+              style={{
+                backgroundColor: colors.surfaceVariant,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}
+              onPress={() => setShowForgotPasswordModal(false)}>
+              <Text className="text-center text-base font-semibold" style={{ color: colors.text }}>
+                Cancel
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
