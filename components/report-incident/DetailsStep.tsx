@@ -36,10 +36,14 @@ export default function DetailsStep({
   return (
     <Card className="mb-5">
       <View className="mb-4 flex-row items-center">
-        <View className="mr-3 h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: colors.surfaceVariant }}>
+        <View
+          className="mr-3 h-8 w-8 items-center justify-center rounded-lg"
+          style={{ backgroundColor: colors.surfaceVariant }}>
           <AlertTriangle size={20} color={colors.text} />
         </View>
-        <Text className="text-xl font-bold" style={{ color: colors.text }}>Incident Details</Text>
+        <Text className="text-xl font-bold" style={{ color: colors.text }}>
+          Incident Details
+        </Text>
       </View>
 
       <View className="space-y-4">
@@ -55,18 +59,25 @@ export default function DetailsStep({
             multiline
             numberOfLines={4}
             className="mb-3 rounded-lg px-4 py-3"
-            style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, color: colors.text }}
+            style={{
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              borderWidth: 1,
+              color: colors.text,
+            }}
             placeholderTextColor={colors.textSecondary}
             textAlignVertical="top"
           />
           {validationErrors.what_happened && (
-            <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.what_happened}</Text>
+            <Text className="mb-3 mt-1 text-sm text-red-600">{validationErrors.what_happened}</Text>
           )}
         </View>
 
         {/* People Involved Section */}
         <View>
-          <Text className="mb-2 font-medium" style={{ color: colors.text }}>Who Was Involved?</Text>
+          <Text className="mb-2 font-medium" style={{ color: colors.text }}>
+            Who Was Involved?
+          </Text>
           <TextInput
             placeholder="Describe anyone involved (suspects, victims, etc.)"
             value={formData.who_was_involved}
@@ -74,7 +85,12 @@ export default function DetailsStep({
             multiline
             numberOfLines={3}
             className="mb-3 rounded-lg px-4 py-3"
-            style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, color: colors.text }}
+            style={{
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              borderWidth: 1,
+              color: colors.text,
+            }}
             placeholderTextColor={colors.textSecondary}
             textAlignVertical="top"
           />
@@ -84,39 +100,62 @@ export default function DetailsStep({
         <View className="space-y-4">
           <View className="flex-row space-x-4">
             <View className="flex-1">
-              <Text className="mb-2 font-medium" style={{ color: colors.text }}>Number of Witnesses</Text>
+              <Text className="mb-2 font-medium" style={{ color: colors.text }}>
+                Number of Witnesses
+              </Text>
               <TextInput
                 placeholder="0"
                 value={formData.number_of_witnesses}
                 onChangeText={(value) => onUpdateFormData({ number_of_witnesses: value })}
                 className="mb-3 rounded-lg px-4 py-3 text-center"
-                style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, color: colors.text }}
+                style={{
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  borderWidth: 1,
+                  color: colors.text,
+                }}
                 placeholderTextColor={colors.textSecondary}
                 keyboardType="numeric"
               />
             </View>
             <View className="flex-1">
-              <Text className="mb-2 font-medium" style={{ color: colors.text }}>Injuries Reported</Text>
+              <Text className="mb-2 font-medium" style={{ color: colors.text }}>
+                Injuries Reported
+              </Text>
               <TouchableOpacity
                 onPress={() => onOpenDropdown('injuries')}
                 className="mb-3 flex-row items-center justify-between rounded-lg px-4 py-3"
-                style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }}>
-                <Text style={{ color: formData.injuries_reported ? colors.text : colors.textSecondary }}>
+                style={{
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  borderWidth: 1,
+                }}>
+                <Text
+                  style={{
+                    color: formData.injuries_reported ? colors.text : colors.textSecondary,
+                  }}>
                   {formData.injuries_reported || 'Select injury level'}
                 </Text>
                 <Text style={{ color: colors.textSecondary }}>▼</Text>
               </TouchableOpacity>
             </View>
           </View>
-          
+
           <View>
-            <Text className="mb-2 font-medium" style={{ color: colors.text }}>Property Damage</Text>
+            <Text className="mb-2 font-medium" style={{ color: colors.text }}>
+              Property Damage
+            </Text>
             <TextInput
               placeholder="Describe any damage or estimated costs"
               value={formData.property_damage}
               onChangeText={(value) => onUpdateFormData({ property_damage: value })}
               className="mb-3 rounded-lg px-4 py-3"
-              style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, color: colors.text }}
+              style={{
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                borderWidth: 1,
+                color: colors.text,
+              }}
               placeholderTextColor={colors.textSecondary}
             />
           </View>
@@ -126,20 +165,29 @@ export default function DetailsStep({
         <View className="space-y-4">
           {/* Suspect Description */}
           <View>
-            <Text className="mb-2 font-medium" style={{ color: colors.text }}>Suspect Description</Text>
+            <Text className="mb-2 font-medium" style={{ color: colors.text }}>
+              Suspect Description
+            </Text>
             <TextInput
               placeholder="Physical description, clothing, vehicle, etc."
               value={formData.suspect_description}
               onChangeText={(value) => onUpdateFormData({ suspect_description: value })}
               className="mb-3 rounded-lg px-4 py-3"
-              style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, color: colors.text }}
+              style={{
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                borderWidth: 1,
+                color: colors.text,
+              }}
               placeholderTextColor={colors.textSecondary}
             />
           </View>
 
           {/* Witness Contacts */}
           <View>
-            <Text className="mb-2 font-medium" style={{ color: colors.text }}>Witness Contact Information</Text>
+            <Text className="mb-2 font-medium" style={{ color: colors.text }}>
+              Witness Contact Information
+            </Text>
             <TextInput
               placeholder="Names and contact info (with their permission)"
               value={formData.witness_contact_info}
@@ -147,7 +195,12 @@ export default function DetailsStep({
               multiline
               numberOfLines={2}
               className="mb-3 rounded-lg px-4 py-3"
-              style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, color: colors.text }}
+              style={{
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                borderWidth: 1,
+                color: colors.text,
+              }}
               placeholderTextColor={colors.textSecondary}
               textAlignVertical="top"
             />
@@ -166,32 +219,7 @@ export default function DetailsStep({
           <View className="px-4 py-3">
             <View className="flex-row items-center">
               <Text className="mr-3 text-xl">{item.icon}</Text>
-              <View className="flex-1">
-                <Text className="font-medium text-slate-900">{item.name}</Text>
-                <View
-                  className={`mt-1 self-start rounded-md px-2 py-1 ${
-                    item.severity === 'Critical'
-                      ? 'bg-red-100'
-                      : item.severity === 'High'
-                        ? 'bg-orange-100'
-                        : item.severity === 'Medium'
-                          ? 'bg-yellow-100'
-                          : 'bg-gray-100'
-                  }`}>
-                  <Text
-                    className={`text-xs font-medium ${
-                      item.severity === 'Critical'
-                        ? 'text-red-700'
-                        : item.severity === 'High'
-                          ? 'text-orange-700'
-                          : item.severity === 'Medium'
-                            ? 'text-yellow-700'
-                            : 'text-gray-700'
-                    }`}>
-                    {item.severity} Priority
-                  </Text>
-                </View>
-              </View>
+              <Text className="font-medium text-slate-900">{item.name}</Text>
             </View>
           </View>
         )}

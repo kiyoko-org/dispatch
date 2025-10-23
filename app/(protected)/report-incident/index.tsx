@@ -424,7 +424,14 @@ export default function ReportIncidentIndex() {
     severity: 'Medium', // Default severity since database doesn't have severity field
   }));
 
-  const injuryOptions: { name: string; severity: string; icon: string }[] = [];
+  const injuryOptions: { name: string; severity: string; icon: string }[] = [
+    { name: 'Minor', severity: 'Low', icon: '🩹' },
+    { name: 'Moderate', severity: 'Medium', icon: '⚠️' },
+    { name: 'Serious', severity: 'High', icon: '🚑' },
+    { name: 'Severe', severity: 'Critical', icon: '🆘' },
+    { name: 'Critical', severity: 'Critical', icon: '💔' },
+    { name: 'Fatal', severity: 'Critical', icon: '⚰️' },
+  ];
 
   // Create subcategories mapping from categories data
   const subcategories: Record<string, string[]> = {};
