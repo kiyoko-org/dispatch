@@ -237,11 +237,11 @@ export default function RootLayout() {
   const [showBirthProvinceDropdown, setShowBirthProvinceDropdown] = useState(false);
 
   const allProvinces = getProvinces().sort();
-  const permanentCityOptions = permanentProvince ? getMunicipalities(permanentProvince) : [];
+  const permanentCityOptions = permanentProvince ? getMunicipalities(permanentProvince).sort() : [];
   const permanentBarangayOptions = permanentCity
-    ? getBarangays(permanentProvince, permanentCity)
+    ? getBarangays(permanentProvince, permanentCity).sort()
     : [];
-  const birthCityOptions = birthProvince ? getMunicipalities(birthProvince) : [];
+  const birthCityOptions = birthProvince ? getMunicipalities(birthProvince).sort() : [];
 
   // Camera + scanning state
   const [cameraModalVisible, setCameraModalVisible] = useState(false);
