@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Animated, Dimensions } from 'react-native';
+import { Bell } from 'lucide-react-native';
 import { useTheme } from './ThemeContext';
 import { useNotifications } from '@kiyoko-org/dispatch-lib';
 import { useAuth } from 'hooks/useAuth';
@@ -64,9 +65,22 @@ export default function NotificationSidebar({ isOpen, onToggle }: NotificationSi
 					},
 				]}
 			>
+				<View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+					<Bell size={20} color={colors.primary} />
+					<Text
+						style={{
+							fontSize: 18,
+							fontWeight: '600',
+							color: colors.text,
+							marginLeft: 8,
+							flex: 1,
+						}}>
+						Notifications
+					</Text>
+				</View>
 				{userNotifications.map(notification => {
 					return (
-						<NotificationItem {...notification} />
+						<NotificationItem key={notification.id} {...notification} />
 					)
 				})}
 			</Animated.View>
