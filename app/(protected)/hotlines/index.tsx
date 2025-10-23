@@ -25,6 +25,7 @@ import { useTheme } from 'components/ThemeContext';
 import { useUserData } from 'contexts/UserDataContext';
 import { useHotlines } from '@kiyoko-org/dispatch-lib';
 import { useRouter } from 'expo-router';
+import { HotlineGroup } from 'lib/services/user-data.service';
 
 type Hotline = {
   id: string;
@@ -43,6 +44,7 @@ export default function HotlinesPage() {
     hotlineGroups,
     deleteHotline: deleteUserHotline,
     addHotlineGroup,
+    updateHotlineGroup,
     deleteHotlineGroup: deleteHotlineGroupFromContext,
   } = useUserData();
 
@@ -69,6 +71,8 @@ export default function HotlinesPage() {
   const hotlines: Hotline[] = [...serverHotlinesMapped, ...userHotlinesMapped];
   const [selectedHotlines, setSelectedHotlines] = useState<Set<string>>(new Set());
   const [showCreateGroupModal, setShowCreateGroupModal] = useState(false);
+  const [showEditNameModal, setShowEditNameModal] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<HotlineGroup | null>(null);
   const [newGroupName, setNewGroupName] = useState('');
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [isSelectionMode, setIsSelectionMode] = useState(false);
@@ -133,6 +137,94 @@ export default function HotlinesPage() {
     ]);
   };
 
+  const openEditGroupModal = (group: HotlineGroup) => {
+    setEditingGroup(group);
+    setNewGroupName(group.name);
+    setSelectedHotlines(new Set(group.hotlineIds));
+    setIsSelectionMode(true);
+  };
+
+  const editGroupNameOnly = (group: HotlineGroup) => {
+    setEditingGroup(group);
+    setNewGroupName(group.name);
+    setSelectedHotlines(new Set(group.hotlineIds));
+    setShowEditNameModal(true);
+  };
+
+  const handleUpdateGroup = async () => {
+    if (!editingGroup) return;
+    
+    // If no hotlines selected, delete the group
+    if (selectedHotlines.size === 0) {
+      Alert.alert(
+        'Delete Group',
+        'This group has no hotlines. Do you want to delete it?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              await deleteHotlineGroupFromContext(editingGroup.id);
+              setIsSelectionMode(false);
+              setEditingGroup(null);
+              setNewGroupName('');
+              setSelectedHotlines(new Set());
+            },
+          },
+        ]
+      );
+      return;
+    }
+
+    // Directly update hotlines without changing the name
+    const success = await updateHotlineGroup(editingGroup.id, {
+      hotlineIds: Array.from(selectedHotlines),
+    });
+
+    if (success) {
+      setNewGroupName('');
+      setSelectedHotlines(new Set());
+      setIsSelectionMode(false);
+      setEditingGroup(null);
+      Alert.alert(
+        'Success',
+        `Group updated with ${selectedHotlines.size} hotline(s)`
+      );
+    } else {
+      Alert.alert('Error', 'Failed to update group');
+    }
+  };
+
+  const confirmUpdateGroup = async () => {
+    if (!editingGroup) return;
+
+    const finalName = newGroupName.trim();
+    if (!finalName) {
+      Alert.alert('Error', 'Please enter a group name');
+      return;
+    }
+
+    const success = await updateHotlineGroup(editingGroup.id, {
+      name: finalName,
+      hotlineIds: Array.from(selectedHotlines),
+    });
+
+    if (success) {
+      setNewGroupName('');
+      setSelectedHotlines(new Set());
+      setIsSelectionMode(false);
+      setEditingGroup(null);
+      setShowEditNameModal(false);
+      Alert.alert(
+        'Success',
+        `Group "${finalName}" updated with ${selectedHotlines.size} hotline(s)`
+      );
+    } else {
+      Alert.alert('Error', 'Failed to update group');
+    }
+  };
+
   const toggleGroupExpansion = (groupId: string) => {
     const newExpanded = new Set(expandedGroups);
     if (newExpanded.has(groupId)) {
@@ -184,6 +276,24 @@ export default function HotlinesPage() {
 
   const getHotlineById = (id: string) => hotlines.find((h) => h.id === id);
 
+  // Check if hotline selection has changed from original
+  const hasSelectionChanged = () => {
+    if (!editingGroup) return true; // For new groups, always allow save
+    
+    const originalIds = new Set(editingGroup.hotlineIds);
+    const currentIds = selectedHotlines;
+    
+    // Check if sizes are different
+    if (originalIds.size !== currentIds.size) return true;
+    
+    // Check if all IDs match
+    for (const id of currentIds) {
+      if (!originalIds.has(id)) return true;
+    }
+    
+    return false;
+  };
+
   const groupedHotlines = hotlines.reduce(
     (acc, hotline) => {
       if (!acc[hotline.category]) {
@@ -223,6 +333,7 @@ export default function HotlinesPage() {
                     onPress={() => {
                       setIsSelectionMode(false);
                       setSelectedHotlines(new Set());
+                      setEditingGroup(null);
                     }}
                     className="flex-1 items-center justify-center rounded-xl py-3"
                     style={{
@@ -235,12 +346,21 @@ export default function HotlinesPage() {
                     </Text>
                   </TouchableOpacity>
                   <TouchableOpacity
-                    onPress={() => setShowCreateGroupModal(true)}
+                    onPress={() => {
+                      if (editingGroup) {
+                        handleUpdateGroup();
+                      } else {
+                        setShowCreateGroupModal(true);
+                      }
+                    }}
                     className="flex-1 items-center justify-center rounded-xl py-3"
-                    style={{ backgroundColor: colors.primary }}
-                    disabled={selectedHotlines.size === 0}>
+                    style={{ 
+                      backgroundColor: colors.primary,
+                      opacity: (!editingGroup && selectedHotlines.size === 0) || (editingGroup && !hasSelectionChanged()) ? 0.5 : 1
+                    }}
+                    disabled={(!editingGroup && selectedHotlines.size === 0) || (!!editingGroup && !hasSelectionChanged())}>
                     <Text className="text-base font-semibold text-white">
-                      Save ({selectedHotlines.size})
+                      {editingGroup ? 'Update' : 'Save'} ({selectedHotlines.size})
                     </Text>
                   </TouchableOpacity>
                 </>
@@ -307,6 +427,16 @@ export default function HotlinesPage() {
                     </View>
                   </View>
                   <View className="flex-row items-center gap-2">
+                    <TouchableOpacity 
+                      onPress={() => openEditGroupModal(group)} 
+                      className="p-2">
+                      <Plus size={18} color={colors.primary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      onPress={() => editGroupNameOnly(group)} 
+                      className="p-2">
+                      <Edit3 size={18} color={colors.primary} />
+                    </TouchableOpacity>
                     <TouchableOpacity onPress={() => deleteGroup(group.id)} className="p-2">
                       <Trash2 size={18} color={colors.error} />
                     </TouchableOpacity>
@@ -517,6 +647,76 @@ export default function HotlinesPage() {
                 className="flex-1 items-center rounded-xl py-3"
                 style={{ backgroundColor: colors.primary }}>
                 <Text className="text-base font-semibold text-white">Create</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit Group Name Modal */}
+      <Modal
+        visible={showEditNameModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowEditNameModal(false)}>
+        <View
+          className="flex-1 items-center justify-center"
+          style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}>
+          <View
+            className="w-11/12 max-w-md rounded-3xl p-6"
+            style={{ backgroundColor: colors.surface }}>
+            <View className="mb-4 flex-row items-center">
+              <Edit3 size={24} color={colors.primary} />
+              <Text className="ml-2 text-xl font-bold" style={{ color: colors.text }}>
+                Update Group
+              </Text>
+            </View>
+
+            <Text className="mb-4 text-sm" style={{ color: colors.textSecondary }}>
+              Update group with {selectedHotlines.size} selected hotline(s)
+            </Text>
+
+            <View className="mb-6">
+              <Text className="mb-2 text-xs font-medium" style={{ color: colors.textSecondary }}>
+                GROUP NAME
+              </Text>
+              <TextInput
+                value={newGroupName}
+                onChangeText={setNewGroupName}
+                placeholder="e.g., Hospital, Police, Fire..."
+                placeholderTextColor={colors.textSecondary}
+                className="rounded-xl px-4 py-3 text-base"
+                style={{
+                  backgroundColor: colors.surfaceVariant,
+                  color: colors.text,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}
+                autoFocus
+              />
+            </View>
+
+            <View className="flex-row gap-3">
+              <TouchableOpacity
+                onPress={() => {
+                  setShowEditNameModal(false);
+                }}
+                className="flex-1 items-center rounded-xl py-3"
+                style={{
+                  backgroundColor: colors.surfaceVariant,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                }}>
+                <Text className="text-base font-semibold" style={{ color: colors.text }}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={confirmUpdateGroup}
+                className="flex-1 items-center rounded-xl py-3"
+                style={{ backgroundColor: colors.primary }}>
+                <Text className="text-base font-semibold text-white">Update</Text>
               </TouchableOpacity>
             </View>
           </View>

@@ -38,6 +38,7 @@ interface UserDataContextType {
   deleteHotline: (hotlineId: string) => Promise<boolean>;
 
   addHotlineGroup: (group: Omit<HotlineGroup, 'id'>) => Promise<boolean>;
+  updateHotlineGroup: (groupId: string, updates: Partial<Omit<HotlineGroup, 'id'>>) => Promise<boolean>;
   deleteHotlineGroup: (groupId: string) => Promise<boolean>;
 
   sync: () => Promise<void>;
@@ -317,6 +318,33 @@ export function UserDataProvider({ children }: UserDataProviderProps) {
     [hotlineGroups, forceSync]
   );
 
+  // Update hotline group
+  const updateHotlineGroup = useCallback(
+    async (groupId: string, updates: Partial<Omit<HotlineGroup, 'id'>>): Promise<boolean> => {
+      try {
+        const updatedGroups = hotlineGroups.map((g) =>
+          g.id === groupId ? { ...g, ...updates } : g
+        );
+        setHotlineGroups(updatedGroups);
+
+        // Save to storage
+        const currentData = await UserDataService.getLocalData();
+        currentData.hotlineGroups = updatedGroups;
+        currentData.lastModified = new Date().toISOString();
+        await UserDataService.saveLocalData(currentData);
+
+        // Force immediate sync after mutation
+        forceSync();
+
+        return true;
+      } catch (error) {
+        console.error('Error updating hotline group:', error);
+        return false;
+      }
+    },
+    [hotlineGroups, forceSync]
+  );
+
   // Delete hotline group
   const deleteHotlineGroup = useCallback(
     async (groupId: string): Promise<boolean> => {
@@ -389,6 +417,7 @@ export function UserDataProvider({ children }: UserDataProviderProps) {
         addHotline,
         deleteHotline,
         addHotlineGroup,
+        updateHotlineGroup,
         deleteHotlineGroup,
         sync,
         forceSync,
