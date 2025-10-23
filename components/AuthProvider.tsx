@@ -129,9 +129,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const { access_token, refresh_token } = params;
+      const { access_token, refresh_token, type } = params;
 
-      // Only process if we have both tokens
+      // Check if this is a password recovery link - don't set session, navigate to reset screen instead
+      if (type === 'recovery' && access_token && refresh_token) {
+        console.log('Password recovery link detected, navigating to reset screen');
+        router.push({
+          pathname: '/password',
+          params: { access_token, refresh_token },
+        });
+        return;
+      }
+
+      // Only process if we have both tokens (for other auth flows like sign in)
       if (access_token && refresh_token) {
         console.log('Setting session from deep link tokens');
 

@@ -122,6 +122,8 @@ export default function ResetPassword() {
         return;
       }
 
+      await supabase.auth.signOut();
+
       Alert.alert('Success', 'Your password has been reset successfully!', [
         {
           text: 'Continue',
