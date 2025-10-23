@@ -10,14 +10,12 @@ import {
 } from 'react-native';
 import {
   User,
-  Bell,
   Shield,
   Moon,
   Phone,
   LogOut,
   ChevronRight,
   Palette,
-  HelpCircle,
   Settings,
   Search,
   Info,
@@ -38,6 +36,7 @@ type Profile = {
   phone?: string;
   address?: string;
   avatar_url?: string;
+  id_card_number?: string;
 };
 
 type MenuSection = {
@@ -108,16 +107,8 @@ export default function ProfilePage() {
     router.push('/(protected)/profile/account');
   };
 
-  const handleNotificationsPress = () => {
-    router.push('/(protected)/profile/notifications');
-  };
-
   const handleAppearancePress = () => {
     router.push('/(protected)/profile/appearance');
-  };
-
-  const handleHelpPress = () => {
-    router.push('/(protected)/profile/help');
   };
 
   const handleAboutPress = () => {
@@ -131,9 +122,11 @@ export default function ProfilePage() {
         {
           id: 'account',
           label: 'Your account',
-          sublabel: profile?.first_name && profile?.last_name 
-            ? `${profile.first_name} ${profile.last_name}` 
-            : session?.user?.email || 'Manage your account',
+          sublabel: profile?.id_card_number 
+            ? `PCN: ${profile.id_card_number}` 
+            : profile?.first_name && profile?.last_name 
+              ? `${profile.first_name} ${profile.last_name}`
+              : 'National ID information',
           icon: User,
           onPress: handleAccountPress,
           showChevron: true,
@@ -151,27 +144,11 @@ export default function ProfilePage() {
           onPress: handleAppearancePress,
           showChevron: true,
         },
-        {
-          id: 'notifications',
-          label: 'Notifications',
-          sublabel: 'Manage notification settings',
-          icon: Bell,
-          onPress: handleNotificationsPress,
-          showChevron: true,
-        },
       ],
     },
     {
       title: 'Support',
       items: [
-        {
-          id: 'help',
-          label: 'Help Center',
-          sublabel: 'Get help and contact support',
-          icon: HelpCircle,
-          onPress: handleHelpPress,
-          showChevron: true,
-        },
         {
           id: 'about',
           label: 'About',
