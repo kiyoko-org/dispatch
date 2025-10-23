@@ -1,5 +1,6 @@
 import { supabase } from '../supabase';
 import * as FileSystem from 'expo-file-system';
+import { FileUtils } from './file-utils';
 import {
   IStorageService,
   FileUploadOptions,
@@ -49,9 +50,9 @@ export class SupabaseStorageService implements IStorageService {
       // Convert file URI to Blob (React Native / Expo friendly)
       const blob = await this.fileUriToBlob(fileUri, fileType);
 
-	  if (onProgress) {
-	  	onProgress({percentage: 0, loaded: 0, total: fileSize});
-	  }
+      if (onProgress) {
+        onProgress({ percentage: 0, loaded: 0, total: fileSize });
+      }
 
       // Upload blob to Supabase Storage
       const { data, error } = await supabase.storage.from(bucket).upload(filePath, blob, {
@@ -59,9 +60,9 @@ export class SupabaseStorageService implements IStorageService {
         upsert: false,
       });
 
-	  if (onProgress) {
-	  	onProgress({percentage: 100, loaded: 100, total: fileSize});
-	  }
+      if (onProgress) {
+        onProgress({ percentage: 100, loaded: 100, total: fileSize });
+      }
 
       if (error) {
         throw this.mapSupabaseError(error);
@@ -397,14 +398,32 @@ export class SupabaseStorageService implements IStorageService {
       png: 'image/png',
       gif: 'image/gif',
       webp: 'image/webp',
+      bmp: 'image/bmp',
+      svg: 'image/svg+xml',
       pdf: 'application/pdf',
       doc: 'application/msword',
       docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       txt: 'text/plain',
+      rtf: 'text/rtf',
+      odt: 'application/vnd.oasis.opendocument.text',
+      xls: 'application/vnd.ms-excel',
+      xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      csv: 'text/csv',
+      ods: 'application/vnd.oasis.opendocument.spreadsheet',
+      ppt: 'application/vnd.ms-powerpoint',
+      pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      odp: 'application/vnd.oasis.opendocument.presentation',
       mp3: 'audio/mpeg',
       wav: 'audio/wav',
+      ogg: 'audio/ogg',
+      m4a: 'audio/m4a',
+      aac: 'audio/aac',
       mp4: 'video/mp4',
+      avi: 'video/avi',
       mov: 'video/quicktime',
+      wmv: 'video/wmv',
+      flv: 'video/flv',
+      webm: 'video/webm',
     };
 
     const detectedType = mimeTypes[extension || ''] || 'application/octet-stream';
