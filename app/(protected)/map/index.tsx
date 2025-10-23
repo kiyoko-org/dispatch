@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState, useRef } from 'react';
-import MapView, { Marker, Heatmap, PROVIDER_GOOGLE, Circle, Region } from 'react-native-maps';
+import MapView, { Marker, Heatmap, PROVIDER_GOOGLE, Circle, Region, Polyline } from 'react-native-maps';
 import { useReports } from '@kiyoko-org/dispatch-lib';
 import HeaderWithSidebar from 'components/HeaderWithSidebar';
 import { useTheme } from 'components/ThemeContext';
@@ -50,7 +50,7 @@ interface CrimeData {
 	lon: number;
 }
 
-type CrimeCategory = 'violent' | 'property' | 'drug' | 'traffic' | 'other';
+type CrimeCategory = 'violent' | 'property' | 'drug' | 'traffic' | 'operation' | 'other';
 
 interface CrimeTypeConfig {
 	category: CrimeCategory;
@@ -70,6 +70,10 @@ export default function MapPage() {
 	const [showMarkers, setShowMarkers] = useState(true);
 	const [showReports, setShowReports] = useState(true);
 	const [filterCategory, setFilterCategory] = useState<CrimeCategory | 'all'>('all');
+	const [filterSubcategory, setFilterSubcategory] = useState<string | null>(null);
+	const [filterStartDate, setFilterStartDate] = useState<Date | null>(null);
+	const [filterEndDate, setFilterEndDate] = useState<Date | null>(null);
+	const [expandedCategories, setExpandedCategories] = useState<Set<CrimeCategory>>(new Set());
 	const [showFilters, setShowFilters] = useState(false);
 	const [mapRegion, setMapRegion] = useState<Region | null>(null);
 	const [activeClusterTab, setActiveClusterTab] = useState<'all' | CrimeCategory>('all');
@@ -83,8 +87,8 @@ export default function MapPage() {
 	type MapType = 'standard' | 'satellite' | 'hybrid' | 'terrain';
 	const [mapType, setMapType] = useState<MapType>('standard');
 	
-	// Show category circles
-	const [showCategoryCircles, setShowCategoryCircles] = useState(true);
+	// Show legend expanded/collapsed
+	const [legendExpanded, setLegendExpanded] = useState(false);
 
 	// Reports integration
 	const { reports, fetchReports } = useReports();
@@ -147,6 +151,13 @@ export default function MapPage() {
 	// Categorize crimes
 	const getCrimeCategory = (crime: CrimeData): CrimeCategory => {
 		const type = crime.incidentType.toLowerCase();
+		
+		// Check if it's an Operation first
+		if (type.includes('operation')) {
+			return 'operation';
+		}
+		
+		// Then check for specific incident types
 		if (type.includes('murder') || type.includes('homicide') || type.includes('shooting') || 
 		    type.includes('stabbing') || type.includes('assault') || type.includes('violence')) {
 			return 'violent';
@@ -170,27 +181,89 @@ export default function MapPage() {
 			case 'property': return '#F59E0B'; // Orange
 			case 'drug': return '#7C3AED'; // Purple
 			case 'traffic': return '#3B82F6'; // Blue
+			case 'operation': return '#10B981'; // Green
 			default: return '#6B7280'; // Gray
 		}
 	};
 
-	// Filter crimes based on selected category
-	const filteredCrimes = filterCategory === 'all' 
-		? crimes 
-		: crimes.filter(crime => getCrimeCategory(crime) === filterCategory);
+	// Get subcategories (unique incident types) for each category
+	const getSubcategories = (category: CrimeCategory): string[] => {
+		const subcategories = crimes
+			.filter(crime => getCrimeCategory(crime) === category)
+			.map(crime => crime.incidentType)
+			.filter((value, index, self) => self.indexOf(value) === index) // unique
+			.sort();
+		return subcategories;
+	};
 
-	// Simple grid-based clustering (degrees-based, responsive to current map region)
+	// Toggle category expansion
+	const toggleCategory = (category: CrimeCategory) => {
+		const newExpanded = new Set(expandedCategories);
+		if (newExpanded.has(category)) {
+			newExpanded.delete(category);
+		} else {
+			newExpanded.add(category);
+		}
+		setExpandedCategories(newExpanded);
+	};
+
+	// Filter crimes based on selected category, subcategory, and date range
+	const filteredCrimes = useMemo(() => {
+		let filtered = crimes;
+		
+		// Filter by category if selected
+		if (filterCategory !== 'all') {
+			filtered = filtered.filter(crime => getCrimeCategory(crime) === filterCategory);
+		}
+		
+		// Filter by subcategory if selected
+		if (filterSubcategory) {
+			filtered = filtered.filter(crime => crime.incidentType === filterSubcategory);
+		}
+		
+		// Filter by date range if selected
+		if (filterStartDate || filterEndDate) {
+			filtered = filtered.filter(crime => {
+				const crimeDate = new Date(crime.dateCommitted);
+				if (filterStartDate && crimeDate < filterStartDate) return false;
+				if (filterEndDate) {
+					// Set end date to end of day
+					const endOfDay = new Date(filterEndDate);
+					endOfDay.setHours(23, 59, 59, 999);
+					if (crimeDate > endOfDay) return false;
+				}
+				return true;
+			});
+		}
+		
+		return filtered;
+	}, [crimes, filterCategory, filterSubcategory, filterStartDate, filterEndDate]);
+
+	// Grid-based clustering by location AND category with spidering for overlaps
 	const clusters = useMemo(() => {
-		if (!mapRegion) return [] as { lat: number; lon: number; items: CrimeData[] }[];
+		if (!mapRegion) return [] as { 
+			lat: number; 
+			lon: number; 
+			originalLat: number;
+			originalLon: number;
+			items: CrimeData[]; 
+			categories: Set<CrimeCategory>;
+			isMixed: boolean;
+			isSpider: boolean;
+			locationKey: string;
+		}[];
 
 		const cellSizeLat = Math.max(mapRegion.latitudeDelta / 20, 0.0005);
 		const cellSizeLon = Math.max(mapRegion.longitudeDelta / 20, 0.0005);
+		
+		// Key by location only (not category) to cluster at same location
 		const cellKey = (lat: number, lon: number) => {
 			const r = Math.floor((lat - mapRegion.latitude + mapRegion.latitudeDelta / 2) / cellSizeLat);
 			const c = Math.floor((lon - mapRegion.longitude + mapRegion.longitudeDelta / 2) / cellSizeLon);
 			return `${r}:${c}`;
 		};
 
+		// Group crimes by location only
 		const grid: Record<string, CrimeData[]> = {};
 		for (const crime of filteredCrimes) {
 			const key = cellKey(crime.lat, crime.lon);
@@ -198,22 +271,55 @@ export default function MapPage() {
 			grid[key].push(crime);
 		}
 
-		const result: { lat: number; lon: number; items: CrimeData[] }[] = [];
+		// Create clusters - one per location
+		const result: { 
+			lat: number; 
+			lon: number; 
+			originalLat: number;
+			originalLon: number;
+			items: CrimeData[]; 
+			categories: Set<CrimeCategory>;
+			isMixed: boolean;
+			isSpider: boolean;
+			locationKey: string;
+		}[] = [];
+		
 		for (const key in grid) {
 			const items = grid[key];
-			// centroid
+			
+			// Calculate centroid
 			let sumLat = 0;
 			let sumLon = 0;
-			for (const it of items) {
-				sumLat += it.lat;
-				sumLon += it.lon;
+			for (const crime of items) {
+				sumLat += crime.lat;
+				sumLon += crime.lon;
 			}
+			const centroidLat = sumLat / items.length;
+			const centroidLon = sumLon / items.length;
+			
+			// Determine categories present
+			const categories = new Set<CrimeCategory>();
+			for (const crime of items) {
+				categories.add(getCrimeCategory(crime));
+			}
+			const isMixed = categories.size > 1;
+			
+			const locationKey = `${centroidLat.toFixed(6)},${centroidLon.toFixed(6)}`;
+			
+			// Don't apply spidering here - will be done on click
 			result.push({
-				lat: sumLat / items.length,
-				lon: sumLon / items.length,
+				lat: centroidLat,
+				lon: centroidLon,
+				originalLat: centroidLat,
+				originalLon: centroidLon,
 				items,
+				categories,
+				isMixed,
+				isSpider: false,
+				locationKey,
 			});
 		}
+		
 		return result;
 	}, [filteredCrimes, mapRegion]);
 
@@ -229,45 +335,66 @@ export default function MapPage() {
 	const resetMapRegion = () => {
 		mapRef.current?.animateToRegion(initialRegion, 1000);
 		setMapRegion(initialRegion);
+		// Reset selections
+		setSelectedCrime(null);
+		setSelectedCluster(null);
 	};
 
-	// Kernel Density Estimation (KDE) - Using DBSCAN preprocessing for hotspot detection
-	// The native Heatmap component uses KDE internally, we enhance with DBSCAN clustering
+	// Kernel Density Estimation (KDE) - Using cluster centroids for alignment with markers
+	// This ensures heatmap centers align with visible markers on the map
 	const heatmapPoints = useMemo(() => {
-		const points: Point[] = filteredCrimes.map(crime => ({
-			lat: crime.lat,
-			lon: crime.lon,
-			data: crime
-		}));
-
-		// Use DBSCAN to identify hotspot clusters (500m radius, min 3 points)
-		const clusters = dbscan(points, 500, 3);
+		// Use mapRegion if available, otherwise use initialRegion
+		const region = mapRegion || initialRegion;
 		
-		// Generate heatmap points with weighted density based on clusters
-		const weightedPoints = filteredCrimes.map((crime) => {
-			const isViolent = getCrimeCategory(crime) === 'violent';
+		// If no crimes, return empty array (will be handled by conditional rendering)
+		if (filteredCrimes.length === 0) return [];
+		
+		// Use the same clustering logic as markers to ensure alignment
+		const cellSizeLat = Math.max(region.latitudeDelta / 20, 0.0005);
+		const cellSizeLon = Math.max(region.longitudeDelta / 20, 0.0005);
+		const cellKey = (lat: number, lon: number) => {
+			const r = Math.floor((lat - region.latitude + region.latitudeDelta / 2) / cellSizeLat);
+			const c = Math.floor((lon - region.longitude + region.longitudeDelta / 2) / cellSizeLon);
+			return `${r}:${c}`;
+		};
+
+		const grid: Record<string, CrimeData[]> = {};
+		for (const crime of filteredCrimes) {
+			const key = cellKey(crime.lat, crime.lon);
+			if (!grid[key]) grid[key] = [];
+			grid[key].push(crime);
+		}
+
+		const weightedPoints: Array<{ latitude: number; longitude: number; weight: number }> = [];
+		
+		for (const key in grid) {
+			const items = grid[key];
+			// Calculate centroid (same as marker position)
+			let sumLat = 0;
+			let sumLon = 0;
+			for (const it of items) {
+				sumLat += it.lat;
+				sumLon += it.lon;
+			}
+			const centroidLat = sumLat / items.length;
+			const centroidLon = sumLon / items.length;
 			
-			// Find if this point belongs to a cluster
-			const inCluster = clusters.some(cluster => 
-				cluster.points.some(p => 
-					(p as any).data === crime
-				)
-			);
+			// Calculate weight based on crime count and severity
+			let weight = items.length;
+			const violentCount = items.filter(crime => getCrimeCategory(crime) === 'violent').length;
 			
-			// Increase weight for violent crimes and clustered points
-			let weight = 1;
-			if (isViolent) weight += 1;
-			if (inCluster) weight += 0.5;
+			// Boost weight for violent crimes
+			weight += violentCount * 0.5;
 			
-			return {
-				latitude: crime.lat,
-				longitude: crime.lon,
+			weightedPoints.push({
+				latitude: centroidLat,
+				longitude: centroidLon,
 				weight
-			};
-		});
+			});
+		}
 
 		return weightedPoints;
-	}, [filteredCrimes]);
+	}, [filteredCrimes, mapRegion]);
 
 	// Get crime statistics
 	const crimeStats = {
@@ -276,6 +403,7 @@ export default function MapPage() {
 		property: crimes.filter(c => getCrimeCategory(c) === 'property').length,
 		drug: crimes.filter(c => getCrimeCategory(c) === 'drug').length,
 		traffic: crimes.filter(c => getCrimeCategory(c) === 'traffic').length,
+		operation: crimes.filter(c => getCrimeCategory(c) === 'operation').length,
 		other: crimes.filter(c => getCrimeCategory(c) === 'other').length,
 	};
 
@@ -362,6 +490,7 @@ export default function MapPage() {
 			property: [],
 			drug: [],
 			traffic: [],
+			operation: [],
 			other: []
 		};
 		
@@ -459,10 +588,10 @@ export default function MapPage() {
 						mapType={mapType}
 						customMapStyle={mapType === 'standard' ? (isDark ? darkMapStyle : lightMapStyle) : undefined}
 					>
-						{/* Kernel Density Estimation (KDE) with DBSCAN preprocessing 
-						    Algorithm: DBSCAN for hotspot detection + native KDE rendering
-						    Use Case: Hotspot detection, intensity visualization */}
-						{showHeatmap && heatmapType === 'density' && (
+						{/* Kernel Density Estimation (KDE) with cluster-based positioning
+						    Algorithm: Grid-based clustering + weighted KDE rendering
+						    Use Case: Hotspot detection, intensity visualization aligned with markers */}
+						{showHeatmap && heatmapType === 'density' && heatmapPoints.length > 0 && (
 							<Heatmap
 								points={heatmapPoints}
 								opacity={0.7}
@@ -598,95 +727,61 @@ export default function MapPage() {
 							);
 						})}
 
-						{/* Category Circles Overlay (works with all heatmap types) - Better clustered */}
-						{showCategoryCircles && heatmapType !== 'bubble' && bubbleData.map((bubble, idx) => {
-							const size = getBubbleSize(bubble.count);
-							const fillColor = getBubbleColor(bubble.category);
-							const strokeColor = getCrimeColor(bubble.category);
-							
-							return (
-								<Circle
-									key={`category-circle-${idx}`}
-									center={{ latitude: bubble.lat, longitude: bubble.lon }}
-									radius={size}
-									fillColor={fillColor}
-									strokeColor={strokeColor}
-									strokeWidth={2}
-									zIndex={10}
-								/>
-							);
-						})}
 
-						{/* Markers: cluster all crimes, show count when multiple */}
-						{showMarkers && clusters.map((cluster, idx) => {
+
+					{/* Markers: cluster crimes by location only */}
+					{showMarkers && clusters.map((cluster, idx) => {
 							const total = cluster.items.length;
 							
-							// If single crime, show individual marker
+							// Not expanded - show single marker for the location
+							// Use mixed color if multiple categories, or single category color
+							let markerColor: string;
+							if (cluster.isMixed) {
+								markerColor = '#9333ea'; // Purple for mixed reports
+							} else {
+								const singleCategory = Array.from(cluster.categories)[0];
+								markerColor = getCrimeColor(singleCategory);
+							}
+							
+							const markerKey = cluster.locationKey;
+							
+							// Single crime
 							if (total === 1) {
 								const crime = cluster.items[0];
-								const category = getCrimeCategory(crime);
-								const markerColor = getCrimeColor(category);
 								return (
 									<Marker
-										key={`single-${idx}`}
+										key={`marker-${markerKey}`}
 										coordinate={{ latitude: cluster.lat, longitude: cluster.lon }}
-										onPress={() => { setSelectedCrime(crime); setSelectedCluster(null); }}
+										onPress={() => { 
+											setSelectedCrime(crime); 
+											setSelectedCluster(null);
+										}}
+										zIndex={3}
 									>
-										<View style={[styles.markerContainer, { backgroundColor: markerColor }]}> 
-											<View style={styles.markerInner}>
-												{category === 'violent' && <AlertTriangle size={14} color="#FFF" />}
-												{category === 'property' && <ShoppingBag size={14} color="#FFF" />}
-												{category === 'drug' && <Activity size={14} color="#FFF" />}
-												{category === 'traffic' && <Car size={14} color="#FFF" />}
-												{category === 'other' && <MapPin size={14} color="#FFF" />}
-											</View>
-										</View>
+										<View style={[styles.markerContainer, { backgroundColor: markerColor }]} />
 									</Marker>
 								);
 							}
 							
-							// Multiple crimes - show cluster with count
-							// Use category color when filter is applied, otherwise use most common category color
-							let baseColor;
-							if (filterCategory !== 'all') {
-								// When a specific category is filtered, use that category's color
-								baseColor = getCrimeColor(filterCategory);
-							} else {
-								// When showing all categories, use the color of the most common category
-								const categoryCounts: Record<CrimeCategory, number> = {
-									violent: 0,
-									property: 0,
-									drug: 0,
-									traffic: 0,
-									other: 0
-								};
-								
-								// Count occurrences of each category
-								cluster.items.forEach(crime => {
-									const category = getCrimeCategory(crime);
-									categoryCounts[category]++;
-								});
-								
-								// Find the category with the highest count
-								const mostCommonCategory = Object.entries(categoryCounts)
-									.reduce((max, [category, count]) => 
-										count > max.count ? { category: category as CrimeCategory, count } : max
-									, { category: 'other' as CrimeCategory, count: 0 });
-								
-								baseColor = getCrimeColor(mostCommonCategory.category);
-							}
+							// Multiple crimes - show cluster with count, clicking shows breakdown
 							return (
 								<Marker
-									key={`cluster-${idx}`}
+									key={`marker-${markerKey}`}
 									coordinate={{ latitude: cluster.lat, longitude: cluster.lon }}
-									onPress={() => { setSelectedCrime(null); setSelectedCluster(cluster.items); setActiveClusterTab(filterCategory === 'all' ? 'all' : filterCategory); }}
+									onPress={() => { 
+										// Show cluster details
+										setSelectedCrime(null);
+										setSelectedCluster(cluster.items);
+										setActiveClusterTab('all');
+									}}
+									zIndex={3}
 								>
-									<View style={[styles.clusterContainer, { backgroundColor: baseColor }]}> 
+									<View style={[styles.clusterContainer, { backgroundColor: markerColor }]}> 
 										<Text style={styles.clusterText}>{total}</Text>
 									</View>
 								</Marker>
-								);
-								})}
+							);
+						})}
 
 					{/* Report Markers */}
 					{showReports && reports.filter(report => report.latitude && report.longitude).map((report) => (
@@ -697,13 +792,8 @@ export default function MapPage() {
 								longitude: report.longitude,
 							}}
 							onPress={() => setSelectedCrime(null)} // Clear crime selection when selecting report
-							pinColor="#FF6B35" // Orange color for reports
 						>
-							<View style={styles.reportMarkerContainer}>
-								<View style={[styles.reportMarkerInner, { backgroundColor: '#FF6B35' }]}>
-									<AlertTriangle size={16} color="#FFF" />
-								</View>
-							</View>
+							<View style={[styles.reportMarkerContainer, { backgroundColor: '#FF6B35' }]} />
 						</Marker>
 					))}
 				</MapView>
@@ -727,13 +817,17 @@ export default function MapPage() {
 						<ScrollView showsVerticalScrollIndicator={false}>
 							{/* Category Filters */}
 							<Text className="mb-2 text-sm font-semibold" style={{ color: colors.textSecondary }}>
-								Crime Category
+								Crime Categories
 							</Text>
 							
+							{/* All Crimes */}
 							<TouchableOpacity
 								className="mb-2 flex-row items-center rounded-lg p-3"
 								style={{ backgroundColor: filterCategory === 'all' ? colors.primary + '20' : colors.background }}
-								onPress={() => setFilterCategory('all')}
+								onPress={() => {
+									setFilterCategory('all');
+									setFilterSubcategory(null);
+								}}
 							>
 								<MapPinned size={20} color={colors.text} />
 								<Text className="ml-2 flex-1 font-medium" style={{ color: colors.text }}>
@@ -744,75 +838,427 @@ export default function MapPage() {
 								</Text>
 							</TouchableOpacity>
 
-							<TouchableOpacity
-								className="mb-2 flex-row items-center rounded-lg p-3"
-								style={{ backgroundColor: filterCategory === 'violent' ? '#DC262620' : colors.background }}
-								onPress={() => setFilterCategory('violent')}
-							>
-								<AlertTriangle size={20} color="#DC2626" />
-								<Text className="ml-2 flex-1 font-medium" style={{ color: colors.text }}>
-									Violent Crimes
-								</Text>
-								<Text className="font-bold" style={{ color: '#DC2626' }}>
-									{crimeStats.violent}
-								</Text>
-							</TouchableOpacity>
+							{/* Violent Crimes */}
+							<View className="mb-2">
+								<TouchableOpacity
+									className="flex-row items-center rounded-lg p-3"
+									style={{ backgroundColor: filterCategory === 'violent' ? '#DC262620' : colors.background }}
+									onPress={() => {
+										setFilterCategory('violent');
+										setFilterSubcategory(null);
+										toggleCategory('violent');
+									}}
+								>
+									<AlertTriangle size={20} color="#DC2626" />
+									<Text className="ml-2 flex-1 font-medium" style={{ color: colors.text }}>
+										Violent Crimes
+									</Text>
+									<Text className="font-bold mr-2" style={{ color: '#DC2626' }}>
+										{crimeStats.violent}
+									</Text>
+									<Text style={{ color: colors.textSecondary }}>
+										{expandedCategories.has('violent') ? '▼' : '▶'}
+									</Text>
+								</TouchableOpacity>
+								{expandedCategories.has('violent') && (
+									<View className="ml-4 mt-1" style={{ backgroundColor: colors.background, borderLeftWidth: 2, borderLeftColor: '#DC2626' }}>
+										{getSubcategories('violent').map((subcategory, idx) => (
+											<TouchableOpacity 
+												key={idx} 
+												className="py-2 px-3 rounded"
+												style={{ backgroundColor: filterSubcategory === subcategory ? '#DC262610' : 'transparent' }}
+												onPress={() => {
+													if (filterSubcategory === subcategory) {
+														setFilterSubcategory(null);
+													} else {
+														setFilterCategory('violent');
+														setFilterSubcategory(subcategory);
+													}
+												}}
+											>
+												<Text className="text-xs" style={{ color: filterSubcategory === subcategory ? '#DC2626' : colors.textSecondary, fontWeight: filterSubcategory === subcategory ? 'bold' : 'normal' }}>
+													• {subcategory} ({crimes.filter(c => c.incidentType === subcategory).length})
+												</Text>
+											</TouchableOpacity>
+										))}
+									</View>
+								)}
+							</View>
 
-							<TouchableOpacity
-								className="mb-2 flex-row items-center rounded-lg p-3"
-								style={{ backgroundColor: filterCategory === 'property' ? '#F59E0B20' : colors.background }}
-								onPress={() => setFilterCategory('property')}
-							>
-								<ShoppingBag size={20} color="#F59E0B" />
-								<Text className="ml-2 flex-1 font-medium" style={{ color: colors.text }}>
-									Property Crimes
-								</Text>
-								<Text className="font-bold" style={{ color: '#F59E0B' }}>
-									{crimeStats.property}
-								</Text>
-							</TouchableOpacity>
+							{/* Property Crimes */}
+							<View className="mb-2">
+								<TouchableOpacity
+									className="flex-row items-center rounded-lg p-3"
+									style={{ backgroundColor: filterCategory === 'property' ? '#F59E0B20' : colors.background }}
+									onPress={() => {
+										setFilterCategory('property');
+										setFilterSubcategory(null);
+										toggleCategory('property');
+									}}
+								>
+									<ShoppingBag size={20} color="#F59E0B" />
+									<Text className="ml-2 flex-1 font-medium" style={{ color: colors.text }}>
+										Property Crimes
+									</Text>
+									<Text className="font-bold mr-2" style={{ color: '#F59E0B' }}>
+										{crimeStats.property}
+									</Text>
+									<Text style={{ color: colors.textSecondary }}>
+										{expandedCategories.has('property') ? '▼' : '▶'}
+									</Text>
+								</TouchableOpacity>
+								{expandedCategories.has('property') && (
+									<View className="ml-4 mt-1" style={{ backgroundColor: colors.background, borderLeftWidth: 2, borderLeftColor: '#F59E0B' }}>
+										{getSubcategories('property').map((subcategory, idx) => (
+											<TouchableOpacity 
+												key={idx} 
+												className="py-2 px-3 rounded"
+												style={{ backgroundColor: filterSubcategory === subcategory ? '#F59E0B10' : 'transparent' }}
+												onPress={() => {
+													if (filterSubcategory === subcategory) {
+														setFilterSubcategory(null);
+													} else {
+														setFilterCategory('property');
+														setFilterSubcategory(subcategory);
+													}
+												}}
+											>
+												<Text className="text-xs" style={{ color: filterSubcategory === subcategory ? '#F59E0B' : colors.textSecondary, fontWeight: filterSubcategory === subcategory ? 'bold' : 'normal' }}>
+													• {subcategory} ({crimes.filter(c => c.incidentType === subcategory).length})
+												</Text>
+											</TouchableOpacity>
+										))}
+									</View>
+								)}
+							</View>
 
-							<TouchableOpacity
-								className="mb-2 flex-row items-center rounded-lg p-3"
-								style={{ backgroundColor: filterCategory === 'drug' ? '#7C3AED20' : colors.background }}
-								onPress={() => setFilterCategory('drug')}
-							>
-								<Activity size={20} color="#7C3AED" />
-								<Text className="ml-2 flex-1 font-medium" style={{ color: colors.text }}>
-									Drug-Related
-								</Text>
-								<Text className="font-bold" style={{ color: '#7C3AED' }}>
-									{crimeStats.drug}
-								</Text>
-							</TouchableOpacity>
+							{/* Drug-Related */}
+							<View className="mb-2">
+								<TouchableOpacity
+									className="flex-row items-center rounded-lg p-3"
+									style={{ backgroundColor: filterCategory === 'drug' ? '#7C3AED20' : colors.background }}
+									onPress={() => {
+										setFilterCategory('drug');
+										setFilterSubcategory(null);
+										toggleCategory('drug');
+									}}
+								>
+									<Activity size={20} color="#7C3AED" />
+									<Text className="ml-2 flex-1 font-medium" style={{ color: colors.text }}>
+										Drug-Related
+									</Text>
+									<Text className="font-bold mr-2" style={{ color: '#7C3AED' }}>
+										{crimeStats.drug}
+									</Text>
+									<Text style={{ color: colors.textSecondary }}>
+										{expandedCategories.has('drug') ? '▼' : '▶'}
+									</Text>
+								</TouchableOpacity>
+								{expandedCategories.has('drug') && (
+									<View className="ml-4 mt-1" style={{ backgroundColor: colors.background, borderLeftWidth: 2, borderLeftColor: '#7C3AED' }}>
+										{getSubcategories('drug').map((subcategory, idx) => (
+											<TouchableOpacity 
+												key={idx} 
+												className="py-2 px-3 rounded"
+												style={{ backgroundColor: filterSubcategory === subcategory ? '#7C3AED10' : 'transparent' }}
+												onPress={() => {
+													if (filterSubcategory === subcategory) {
+														setFilterSubcategory(null);
+													} else {
+														setFilterCategory('drug');
+														setFilterSubcategory(subcategory);
+													}
+												}}
+											>
+												<Text className="text-xs" style={{ color: filterSubcategory === subcategory ? '#7C3AED' : colors.textSecondary, fontWeight: filterSubcategory === subcategory ? 'bold' : 'normal' }}>
+													• {subcategory} ({crimes.filter(c => c.incidentType === subcategory).length})
+												</Text>
+											</TouchableOpacity>
+										))}
+									</View>
+								)}
+							</View>
 
-							<TouchableOpacity
-								className="mb-2 flex-row items-center rounded-lg p-3"
-								style={{ backgroundColor: filterCategory === 'traffic' ? '#3B82F620' : colors.background }}
-								onPress={() => setFilterCategory('traffic')}
-							>
-								<Car size={20} color="#3B82F6" />
-								<Text className="ml-2 flex-1 font-medium" style={{ color: colors.text }}>
-									Traffic Incidents
-								</Text>
-								<Text className="font-bold" style={{ color: '#3B82F6' }}>
-									{crimeStats.traffic}
-								</Text>
-							</TouchableOpacity>
+							{/* Traffic Incidents */}
+							<View className="mb-2">
+								<TouchableOpacity
+									className="flex-row items-center rounded-lg p-3"
+									style={{ backgroundColor: filterCategory === 'traffic' ? '#3B82F620' : colors.background }}
+									onPress={() => {
+										setFilterCategory('traffic');
+										setFilterSubcategory(null);
+										toggleCategory('traffic');
+									}}
+								>
+									<Car size={20} color="#3B82F6" />
+									<Text className="ml-2 flex-1 font-medium" style={{ color: colors.text }}>
+										Traffic Incidents
+									</Text>
+									<Text className="font-bold mr-2" style={{ color: '#3B82F6' }}>
+										{crimeStats.traffic}
+									</Text>
+									<Text style={{ color: colors.textSecondary }}>
+										{expandedCategories.has('traffic') ? '▼' : '▶'}
+									</Text>
+								</TouchableOpacity>
+								{expandedCategories.has('traffic') && (
+									<View className="ml-4 mt-1" style={{ backgroundColor: colors.background, borderLeftWidth: 2, borderLeftColor: '#3B82F6' }}>
+										{getSubcategories('traffic').map((subcategory, idx) => (
+											<TouchableOpacity 
+												key={idx} 
+												className="py-2 px-3 rounded"
+												style={{ backgroundColor: filterSubcategory === subcategory ? '#3B82F610' : 'transparent' }}
+												onPress={() => {
+													if (filterSubcategory === subcategory) {
+														setFilterSubcategory(null);
+													} else {
+														setFilterCategory('traffic');
+														setFilterSubcategory(subcategory);
+													}
+												}}
+											>
+												<Text className="text-xs" style={{ color: filterSubcategory === subcategory ? '#3B82F6' : colors.textSecondary, fontWeight: filterSubcategory === subcategory ? 'bold' : 'normal' }}>
+													• {subcategory} ({crimes.filter(c => c.incidentType === subcategory).length})
+												</Text>
+											</TouchableOpacity>
+										))}
+									</View>
+								)}
+							</View>
 
-							<TouchableOpacity
-								className="mb-2 flex-row items-center rounded-lg p-3"
-								style={{ backgroundColor: filterCategory === 'other' ? '#6B728020' : colors.background }}
-								onPress={() => setFilterCategory('other')}
-							>
-								<Users size={20} color="#6B7280" />
-								<Text className="ml-2 flex-1 font-medium" style={{ color: colors.text }}>
-									Other Crimes
+							{/* Police Operations */}
+							<View className="mb-2">
+								<TouchableOpacity
+									className="flex-row items-center rounded-lg p-3"
+									style={{ backgroundColor: filterCategory === 'operation' ? '#10B98120' : colors.background }}
+									onPress={() => {
+										setFilterCategory('operation');
+										setFilterSubcategory(null);
+										toggleCategory('operation');
+									}}
+								>
+									<MapPinned size={20} color="#10B981" />
+									<Text className="ml-2 flex-1 font-medium" style={{ color: colors.text }}>
+										Police Operations
+									</Text>
+									<Text className="font-bold mr-2" style={{ color: '#10B981' }}>
+										{crimeStats.operation}
+									</Text>
+									<Text style={{ color: colors.textSecondary }}>
+										{expandedCategories.has('operation') ? '▼' : '▶'}
+									</Text>
+								</TouchableOpacity>
+								{expandedCategories.has('operation') && (
+									<View className="ml-4 mt-1" style={{ backgroundColor: colors.background, borderLeftWidth: 2, borderLeftColor: '#10B981' }}>
+										{getSubcategories('operation').map((subcategory, idx) => (
+											<TouchableOpacity 
+												key={idx} 
+												className="py-2 px-3 rounded"
+												style={{ backgroundColor: filterSubcategory === subcategory ? '#10B98110' : 'transparent' }}
+												onPress={() => {
+													if (filterSubcategory === subcategory) {
+														setFilterSubcategory(null);
+													} else {
+														setFilterCategory('operation');
+														setFilterSubcategory(subcategory);
+													}
+												}}
+											>
+												<Text className="text-xs" style={{ color: filterSubcategory === subcategory ? '#10B981' : colors.textSecondary, fontWeight: filterSubcategory === subcategory ? 'bold' : 'normal' }}>
+													• {subcategory} ({crimes.filter(c => c.incidentType === subcategory).length})
+												</Text>
+											</TouchableOpacity>
+										))}
+									</View>
+								)}
+							</View>
+
+							{/* Other Crimes */}
+							<View className="mb-2">
+								<TouchableOpacity
+									className="flex-row items-center rounded-lg p-3"
+									style={{ backgroundColor: filterCategory === 'other' ? '#6B728020' : colors.background }}
+									onPress={() => {
+										setFilterCategory('other');
+										setFilterSubcategory(null);
+										toggleCategory('other');
+									}}
+								>
+									<Users size={20} color="#6B7280" />
+									<Text className="ml-2 flex-1 font-medium" style={{ color: colors.text }}>
+										Other Crimes
+									</Text>
+									<Text className="font-bold mr-2" style={{ color: '#6B7280' }}>
+										{crimeStats.other}
+									</Text>
+									<Text style={{ color: colors.textSecondary }}>
+										{expandedCategories.has('other') ? '▼' : '▶'}
+									</Text>
+								</TouchableOpacity>
+								{expandedCategories.has('other') && (
+									<View className="ml-4 mt-1" style={{ backgroundColor: colors.background, borderLeftWidth: 2, borderLeftColor: '#6B7280' }}>
+										{getSubcategories('other').map((subcategory, idx) => (
+											<TouchableOpacity 
+												key={idx} 
+												className="py-2 px-3 rounded"
+												style={{ backgroundColor: filterSubcategory === subcategory ? '#6B728010' : 'transparent' }}
+												onPress={() => {
+													if (filterSubcategory === subcategory) {
+														setFilterSubcategory(null);
+													} else {
+														setFilterCategory('other');
+														setFilterSubcategory(subcategory);
+													}
+												}}
+											>
+												<Text className="text-xs" style={{ color: filterSubcategory === subcategory ? '#6B7280' : colors.textSecondary, fontWeight: filterSubcategory === subcategory ? 'bold' : 'normal' }}>
+													• {subcategory} ({crimes.filter(c => c.incidentType === subcategory).length})
+												</Text>
+											</TouchableOpacity>
+										))}
+									</View>
+								)}
+							</View>
+
+							{/* Date Range Filter */}
+							<View className="mt-4 border-t pt-4" style={{ borderColor: colors.border }}>
+								<Text className="mb-2 text-sm font-semibold" style={{ color: colors.textSecondary }}>
+									Date Range
 								</Text>
-								<Text className="font-bold" style={{ color: '#6B7280' }}>
-									{crimeStats.other}
-								</Text>
-							</TouchableOpacity>
+
+								{/* Quick Date Presets */}
+								<View className="flex-row flex-wrap gap-2 mb-3">
+									<TouchableOpacity
+										className="px-3 py-1.5 rounded-full"
+										style={{ backgroundColor: colors.background }}
+										onPress={() => {
+											const today = new Date();
+											setFilterStartDate(today);
+											setFilterEndDate(today);
+										}}
+									>
+										<Text className="text-xs" style={{ color: colors.text }}>Today</Text>
+									</TouchableOpacity>
+									<TouchableOpacity
+										className="px-3 py-1.5 rounded-full"
+										style={{ backgroundColor: colors.background }}
+										onPress={() => {
+											const today = new Date();
+											const weekAgo = new Date(today);
+											weekAgo.setDate(today.getDate() - 7);
+											setFilterStartDate(weekAgo);
+											setFilterEndDate(today);
+										}}
+									>
+										<Text className="text-xs" style={{ color: colors.text }}>Last 7 Days</Text>
+									</TouchableOpacity>
+									<TouchableOpacity
+										className="px-3 py-1.5 rounded-full"
+										style={{ backgroundColor: colors.background }}
+										onPress={() => {
+											const today = new Date();
+											const monthAgo = new Date(today);
+											monthAgo.setMonth(today.getMonth() - 1);
+											setFilterStartDate(monthAgo);
+											setFilterEndDate(today);
+										}}
+									>
+										<Text className="text-xs" style={{ color: colors.text }}>Last 30 Days</Text>
+									</TouchableOpacity>
+									<TouchableOpacity
+										className="px-3 py-1.5 rounded-full"
+										style={{ backgroundColor: colors.background }}
+										onPress={() => {
+											const today = new Date();
+											const yearAgo = new Date(today);
+											yearAgo.setFullYear(today.getFullYear() - 1);
+											setFilterStartDate(yearAgo);
+											setFilterEndDate(today);
+										}}
+									>
+										<Text className="text-xs" style={{ color: colors.text }}>Last Year</Text>
+									</TouchableOpacity>
+								</View>
+								
+								<View className="mb-3">
+									<Text className="text-xs mb-1" style={{ color: colors.textSecondary }}>Start Date</Text>
+									<View className="flex-row items-center">
+										<TouchableOpacity
+											className="flex-1 rounded-lg p-3"
+											style={{ backgroundColor: colors.background }}
+											onPress={() => {
+												// Simple date input - you can enhance with a date picker
+												const input = prompt('Enter start date (YYYY-MM-DD):');
+												if (input) {
+													const date = new Date(input);
+													if (!isNaN(date.getTime())) {
+														setFilterStartDate(date);
+													}
+												}
+											}}
+										>
+											<Text style={{ color: colors.text }}>
+												{filterStartDate ? filterStartDate.toLocaleDateString() : 'Select start date'}
+											</Text>
+										</TouchableOpacity>
+										{filterStartDate && (
+											<TouchableOpacity
+												className="ml-2 p-2"
+												onPress={() => setFilterStartDate(null)}
+											>
+												<X size={20} color={colors.textSecondary} />
+											</TouchableOpacity>
+										)}
+									</View>
+								</View>
+
+								<View className="mb-2">
+									<Text className="text-xs mb-1" style={{ color: colors.textSecondary }}>End Date</Text>
+									<View className="flex-row items-center">
+										<TouchableOpacity
+											className="flex-1 rounded-lg p-3"
+											style={{ backgroundColor: colors.background }}
+											onPress={() => {
+												// Simple date input - you can enhance with a date picker
+												const input = prompt('Enter end date (YYYY-MM-DD):');
+												if (input) {
+													const date = new Date(input);
+													if (!isNaN(date.getTime())) {
+														setFilterEndDate(date);
+													}
+												}
+											}}
+										>
+											<Text style={{ color: colors.text }}>
+												{filterEndDate ? filterEndDate.toLocaleDateString() : 'Select end date'}
+											</Text>
+										</TouchableOpacity>
+										{filterEndDate && (
+											<TouchableOpacity
+												className="ml-2 p-2"
+												onPress={() => setFilterEndDate(null)}
+											>
+												<X size={20} color={colors.textSecondary} />
+											</TouchableOpacity>
+										)}
+									</View>
+								</View>
+
+								{(filterStartDate || filterEndDate) && (
+									<TouchableOpacity
+										className="mt-2 rounded-lg p-2"
+										style={{ backgroundColor: colors.primary + '20' }}
+										onPress={() => {
+											setFilterStartDate(null);
+											setFilterEndDate(null);
+										}}
+									>
+										<Text className="text-center text-xs font-medium" style={{ color: colors.primary }}>
+											Clear Date Filters
+										</Text>
+									</TouchableOpacity>
+								)}
+							</View>
 
 							{/* Map Type Selection */}
 							<View className="mt-4 border-t pt-4" style={{ borderColor: colors.border }}>
@@ -1019,31 +1465,7 @@ export default function MapPage() {
 								</View>
 							</TouchableOpacity>
 
-							<TouchableOpacity
-								className="flex-row items-center justify-between rounded-lg p-3"
-								style={{ backgroundColor: colors.background }}
-								onPress={() => setShowCategoryCircles(!showCategoryCircles)}
-							>
-								<View className="flex-1">
-									<Text className="font-medium" style={{ color: colors.text }}>
-										Show Category Circles
-									</Text>
-									<Text className="text-xs" style={{ color: colors.textSecondary }}>
-										Overlay colored circles on other heatmaps
-									</Text>
-								</View>
-								<View
-									className="h-6 w-11 rounded-full p-1"
-									style={{ backgroundColor: showCategoryCircles ? colors.primary : colors.border }}
-								>
-									<View
-										className="h-4 w-4 rounded-full bg-white"
-										style={{
-											transform: [{ translateX: showCategoryCircles ? 20 : 0 }]
-										}}
-									/>
-								</View>
-							</TouchableOpacity>
+
 						</View>
 					</ScrollView>
 					</View>
@@ -1111,20 +1533,50 @@ export default function MapPage() {
 					</View>
 				)}
 
-				{/* Cluster Details Card with Tabs */}
+				{/* Cluster Details Card with Category Breakdown */}
 				{selectedCluster && !showFilters && (
 					<View 
 						className="absolute bottom-24 left-4 right-4 rounded-xl p-4 shadow-2xl"
-						style={{ backgroundColor: colors.card }}
+						style={{ backgroundColor: colors.card, maxHeight: '70%' }}
 					>
 						<View className="mb-3 flex-row items-start justify-between">
-							<View className="flex-1">
+							<View style={{ flex: 1, marginRight: 12 }}>
 								<Text className="text-lg font-bold" style={{ color: colors.text }}>
-									Incidents in this area
+									{selectedCluster.length} Incident{selectedCluster.length > 1 ? 's' : ''} at this location
 								</Text>
-								<Text className="text-xs" style={{ color: colors.textSecondary }}>{selectedCluster.length} total</Text>
+								{/* Category Summary - Scrollable horizontally if too many */}
+								<ScrollView 
+									horizontal 
+									showsHorizontalScrollIndicator={false}
+									className="mt-2"
+									style={{ maxWidth: '100%' }}
+								>
+									{(() => {
+										const categoryCounts: Record<CrimeCategory, number> = {
+											violent: 0,
+											property: 0,
+											drug: 0,
+											traffic: 0,
+											operation: 0,
+											other: 0,
+										};
+										selectedCluster.forEach(crime => {
+											const cat = getCrimeCategory(crime);
+											categoryCounts[cat]++;
+										});
+										return (Object.keys(categoryCounts) as CrimeCategory[])
+											.filter(cat => categoryCounts[cat] > 0)
+											.map(cat => (
+												<View key={cat} className="mr-2 rounded-full px-3 py-1" style={{ backgroundColor: getCrimeColor(cat) + '20' }}>
+													<Text className="text-xs font-semibold" style={{ color: getCrimeColor(cat) }}>
+														{cat.charAt(0).toUpperCase() + cat.slice(1)}: {categoryCounts[cat]}
+													</Text>
+												</View>
+											));
+									})()}
+								</ScrollView>
 							</View>
-							<TouchableOpacity onPress={() => setSelectedCluster(null)}>
+							<TouchableOpacity onPress={() => setSelectedCluster(null)} style={{ marginTop: 2 }}>
 								<XCircle size={24} color={colors.textSecondary} />
 							</TouchableOpacity>
 						</View>
@@ -1174,19 +1626,60 @@ export default function MapPage() {
 							})()}
 						</ScrollView>
 
-						{/* List */}
-						<ScrollView style={{ maxHeight: 260 }} showsVerticalScrollIndicator={false}>
-							{(activeClusterTab === 'all' ? selectedCluster : selectedCluster.filter(c => getCrimeCategory(c) === activeClusterTab)).map((crime, idx) => (
-								<View key={idx} className="mb-2 rounded-lg p-3" style={{ backgroundColor: colors.background }}>
-									<View className="mb-1 flex-row items-center justify-between">
-										<Text className="font-semibold" style={{ color: colors.text }}>{crime.incidentType}</Text>
-										<View className="self-start rounded-full px-2 py-0.5" style={{ backgroundColor: getCrimeColor(getCrimeCategory(crime)) + '20' }}>
-											<Text className="text-xs" style={{ color: getCrimeColor(getCrimeCategory(crime)) }}>{getCrimeCategory(crime)}</Text>
+						{/* List grouped by subcategory (incident type) */}
+						<ScrollView style={{ maxHeight: 300 }} showsVerticalScrollIndicator={false}>
+							{(() => {
+								const filteredCrimes = activeClusterTab === 'all' 
+									? selectedCluster 
+									: selectedCluster.filter(c => getCrimeCategory(c) === activeClusterTab);
+								
+								// Group by incident type (subcategory)
+								const grouped: Record<string, CrimeData[]> = {};
+								filteredCrimes.forEach(crime => {
+									if (!grouped[crime.incidentType]) {
+										grouped[crime.incidentType] = [];
+									}
+									grouped[crime.incidentType].push(crime);
+								});
+								
+								return Object.entries(grouped).map(([incidentType, crimes]) => {
+									const category = getCrimeCategory(crimes[0]);
+									const color = getCrimeColor(category);
+									
+									return (
+										<View key={incidentType} className="mb-3">
+											<View className="mb-2" style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+												<View style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-start', marginRight: 8 }}>
+													<View style={{ width: 4, height: 16, borderRadius: 2, backgroundColor: color, marginRight: 8, marginTop: 2 }} />
+													<View style={{ flex: 1 }}>
+														<Text className="font-bold" style={{ color: colors.text, flexWrap: 'wrap' }}>
+															{incidentType}
+														</Text>
+														<Text className="text-xs mt-0.5" style={{ color: colors.textSecondary }}>
+															{crimes.length} incident{crimes.length > 1 ? 's' : ''}
+														</Text>
+													</View>
+												</View>
+												<View className="rounded-full px-2 py-0.5" style={{ backgroundColor: color + '20', marginTop: 2 }}>
+													<Text className="text-xs font-semibold" style={{ color }}>
+														{category}
+													</Text>
+												</View>
+											</View>
+											{crimes.map((crime, idx) => (
+												<View key={idx} className="ml-4 mb-1 p-2 rounded" style={{ backgroundColor: colors.background }}>
+													<Text className="text-xs" style={{ color: colors.textSecondary }}>
+														{crime.barangay}, {crime.municipal}
+													</Text>
+													<Text className="text-xs" style={{ color: colors.textSecondary }}>
+														{crime.dateCommitted} at {crime.timeCommitted}
+													</Text>
+												</View>
+											))}
 										</View>
-									</View>
-									<Text className="text-xs" style={{ color: colors.textSecondary }}>{crime.barangay}, {crime.municipal} • {crime.dateCommitted} {crime.timeCommitted}</Text>
-								</View>
-							))}
+									);
+								});
+							})()}
 						</ScrollView>
 					</View>
 				)}
@@ -1234,122 +1727,277 @@ export default function MapPage() {
 							</Text>
 						</View>
 
-						{/* Heatmap Legend */}
-						{showHeatmap && (
-							<View 
-								className="absolute right-4 top-32 rounded-xl px-3 py-2 shadow-lg"
-								style={{ backgroundColor: colors.card }}
-							>
-								<Text className="mb-2 text-xs font-semibold uppercase" style={{ color: colors.textSecondary }}>
-									{heatmapType === 'density' && 'Density'}
-									{heatmapType === 'choropleth' && 'Crime Rate'}
-									{heatmapType === 'graduated' && 'Symbol Size'}
-									{heatmapType === 'grid' && 'Grid Intensity'}
+						{/* Comprehensive Legend */}
+						<TouchableOpacity 
+							className="absolute right-4 top-32 rounded-xl shadow-lg"
+							style={{ backgroundColor: colors.card, maxWidth: width - 100 }}
+							onPress={() => setLegendExpanded(!legendExpanded)}
+							activeOpacity={0.8}
+						>
+							<View className="px-3 py-2">
+								<View className="flex-row items-center justify-between mb-1">
+									<Text className="text-xs font-bold uppercase" style={{ color: colors.textSecondary }}>
+										Legend
+									</Text>
+									<Text className="text-xs" style={{ color: colors.primary }}>
+										{legendExpanded ? '▼' : '▶'}
+									</Text>
+								</View>
+								
+								{/* Always show current visualization type */}
+								<Text className="text-xs font-semibold mb-2" style={{ color: colors.text }}>
+									{heatmapType === 'density' && '📊 Density Heatmap'}
+									{heatmapType === 'choropleth' && '🗺️ Choropleth (Area) Map'}
+									{heatmapType === 'graduated' && '⭕ Graduated Symbol Map'}
+									{heatmapType === 'grid' && '🔲 Grid-Based Heatmap'}
+									{heatmapType === 'bubble' && '🎯 Bubble Map (Categories)'}
 								</Text>
 								
-								{heatmapType === 'density' && (
-									<View className="space-y-1">
-										<View className="flex-row items-center">
-											<View className="h-3 w-3 rounded-full mr-2" style={{ backgroundColor: 'rgba(139, 0, 0, 1)' }} />
-											<Text className="text-xs" style={{ color: colors.text }}>Very High</Text>
+								{legendExpanded && (
+									<ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+										{/* Heatmap Visualization Legend */}
+										{showHeatmap && (
+											<>
+												<View className="mb-3 pb-3 border-b" style={{ borderColor: colors.border }}>
+													<Text className="text-xs font-semibold mb-1" style={{ color: colors.textSecondary }}>
+														HEATMAP INTENSITY
+													</Text>
+													
+													{heatmapType === 'density' && (
+														<>
+															<Text className="text-xs mb-2" style={{ color: colors.textSecondary }}>
+																Color gradient shows crime concentration hotspots
+															</Text>
+															<View className="space-y-1.5">
+																<View className="flex-row items-center">
+																	<View className="h-4 w-4 rounded-full mr-2" style={{ backgroundColor: 'rgba(139, 0, 0, 1)' }} />
+																	<Text className="text-xs flex-1" style={{ color: colors.text }}>Very High Density</Text>
+																</View>
+																<View className="flex-row items-center">
+																	<View className="h-4 w-4 rounded-full mr-2" style={{ backgroundColor: 'rgba(255, 0, 0, 0.95)' }} />
+																	<Text className="text-xs flex-1" style={{ color: colors.text }}>High Density</Text>
+																</View>
+																<View className="flex-row items-center">
+																	<View className="h-4 w-4 rounded-full mr-2" style={{ backgroundColor: 'rgba(255, 165, 0, 0.85)' }} />
+																	<Text className="text-xs flex-1" style={{ color: colors.text }}>Medium-High</Text>
+																</View>
+																<View className="flex-row items-center">
+																	<View className="h-4 w-4 rounded-full mr-2" style={{ backgroundColor: 'rgba(255, 255, 0, 0.8)' }} />
+																	<Text className="text-xs flex-1" style={{ color: colors.text }}>Medium</Text>
+																</View>
+																<View className="flex-row items-center">
+																	<View className="h-4 w-4 rounded-full mr-2" style={{ backgroundColor: 'rgba(124, 252, 0, 0.7)' }} />
+																	<Text className="text-xs flex-1" style={{ color: colors.text }}>Low-Medium</Text>
+																</View>
+																<View className="flex-row items-center">
+																	<View className="h-4 w-4 rounded-full mr-2" style={{ backgroundColor: 'rgba(0, 255, 0, 0.5)' }} />
+																	<Text className="text-xs flex-1" style={{ color: colors.text }}>Low Density</Text>
+																</View>
+															</View>
+														</>
+													)}
+													
+													{heatmapType === 'choropleth' && (
+														<>
+															<Text className="text-xs mb-2" style={{ color: colors.textSecondary }}>
+																Circle size and color show area crime rates. Based on barangay aggregation.
+															</Text>
+															<View className="space-y-1.5">
+																<View className="flex-row items-center">
+																	<View className="h-5 w-5 rounded-full mr-2" style={{ backgroundColor: 'rgba(220, 38, 38, 0.6)' }} />
+																	<Text className="text-xs flex-1" style={{ color: colors.text }}>High Rate</Text>
+																</View>
+																<View className="flex-row items-center">
+																	<View className="h-4 w-4 rounded-full mr-2" style={{ backgroundColor: 'rgba(251, 191, 36, 0.6)' }} />
+																	<Text className="text-xs flex-1" style={{ color: colors.text }}>Medium Rate</Text>
+																</View>
+																<View className="flex-row items-center">
+																	<View className="h-3 w-3 rounded-full mr-2" style={{ backgroundColor: 'rgba(59, 130, 246, 0.6)' }} />
+																	<Text className="text-xs flex-1" style={{ color: colors.text }}>Low Rate</Text>
+																</View>
+															</View>
+															<Text className="text-xs mt-2" style={{ color: colors.textSecondary }}>
+																Color based on crime concentration{'\n'}Radius: 400-1000m based on count
+															</Text>
+														</>
+													)}
+													
+													{heatmapType === 'graduated' && (
+														<>
+															<Text className="text-xs mb-2" style={{ color: colors.textSecondary }}>
+																Circle size represents crime density. Larger = more incidents.
+															</Text>
+															<View className="space-y-1.5">
+																<View className="flex-row items-center">
+																	<View className="h-6 w-6 rounded-full mr-2" style={{ backgroundColor: 'rgba(220, 38, 38, 0.5)', borderWidth: 2, borderColor: 'rgba(220, 38, 38, 0.9)' }} />
+																	<Text className="text-xs flex-1" style={{ color: colors.text }}>Large (Most incidents)</Text>
+																</View>
+																<View className="flex-row items-center">
+																	<View className="h-5 w-5 rounded-full mr-2" style={{ backgroundColor: 'rgba(220, 38, 38, 0.5)', borderWidth: 2, borderColor: 'rgba(220, 38, 38, 0.9)' }} />
+																	<Text className="text-xs flex-1" style={{ color: colors.text }}>Medium</Text>
+																</View>
+																<View className="flex-row items-center">
+																	<View className="h-3 w-3 rounded-full mr-2" style={{ backgroundColor: 'rgba(220, 38, 38, 0.5)', borderWidth: 2, borderColor: 'rgba(220, 38, 38, 0.9)' }} />
+																	<Text className="text-xs flex-1" style={{ color: colors.text }}>Small (Fewest incidents)</Text>
+																</View>
+															</View>
+															<Text className="text-xs mt-2" style={{ color: colors.textSecondary }}>
+																Size proportional to crime count{'\n'}Radius: 200-1200m
+															</Text>
+														</>
+													)}
+													
+													{heatmapType === 'grid' && (
+														<>
+															<Text className="text-xs mb-2" style={{ color: colors.textSecondary }}>
+																Geographic grid cells (~600-800m). Color intensity shows crime concentration.
+															</Text>
+															<View className="space-y-1.5">
+																<View className="flex-row items-center">
+																	<View className="h-4 w-6 rounded mr-2" style={{ backgroundColor: 'rgba(255, 69, 0, 0.8)' }} />
+																	<Text className="text-xs flex-1" style={{ color: colors.text }}>Very High Density</Text>
+																</View>
+																<View className="flex-row items-center">
+																	<View className="h-4 w-6 rounded mr-2" style={{ backgroundColor: 'rgba(255, 215, 0, 0.7)' }} />
+																	<Text className="text-xs flex-1" style={{ color: colors.text }}>High Density</Text>
+																</View>
+																<View className="flex-row items-center">
+																	<View className="h-4 w-6 rounded mr-2" style={{ backgroundColor: 'rgba(154, 205, 50, 0.6)' }} />
+																	<Text className="text-xs flex-1" style={{ color: colors.text }}>Medium Density</Text>
+																</View>
+																<View className="flex-row items-center">
+																	<View className="h-4 w-6 rounded mr-2" style={{ backgroundColor: 'rgba(0, 255, 0, 0.5)' }} />
+																	<Text className="text-xs flex-1" style={{ color: colors.text }}>Low Density</Text>
+																</View>
+																<View className="flex-row items-center">
+																	<View className="h-4 w-6 rounded mr-2" style={{ backgroundColor: 'rgba(144, 238, 144, 0.4)' }} />
+																	<Text className="text-xs flex-1" style={{ color: colors.text }}>Very Low Density</Text>
+																</View>
+															</View>
+															<Text className="text-xs mt-2" style={{ color: colors.textSecondary }}>
+																Color based on relative crime density
+															</Text>
+														</>
+													)}
+													
+													{heatmapType === 'bubble' && (
+														<>
+															<Text className="text-xs mb-2" style={{ color: colors.textSecondary }}>
+																Circles grouped by crime category. Size = incident count.
+															</Text>
+															<View className="space-y-1.5">
+																<View className="flex-row items-center">
+																	<View className="h-4 w-4 rounded-full mr-2" style={{ backgroundColor: '#DC2626' }} />
+																	<Text className="text-xs flex-1" style={{ color: colors.text }}>Violent Crimes</Text>
+																</View>
+																<View className="flex-row items-center">
+																	<View className="h-4 w-4 rounded-full mr-2" style={{ backgroundColor: '#F59E0B' }} />
+																	<Text className="text-xs flex-1" style={{ color: colors.text }}>Property Crimes</Text>
+																</View>
+																<View className="flex-row items-center">
+																	<View className="h-4 w-4 rounded-full mr-2" style={{ backgroundColor: '#7C3AED' }} />
+																	<Text className="text-xs flex-1" style={{ color: colors.text }}>Drug-Related</Text>
+																</View>
+																<View className="flex-row items-center">
+																	<View className="h-4 w-4 rounded-full mr-2" style={{ backgroundColor: '#3B82F6' }} />
+																	<Text className="text-xs flex-1" style={{ color: colors.text }}>Traffic Incidents</Text>
+																</View>
+																<View className="flex-row items-center">
+																	<View className="h-4 w-4 rounded-full mr-2" style={{ backgroundColor: '#10B981' }} />
+																	<Text className="text-xs flex-1" style={{ color: colors.text }}>Police Operations</Text>
+																</View>
+																<View className="flex-row items-center">
+																	<View className="h-4 w-4 rounded-full mr-2" style={{ backgroundColor: '#6B7280' }} />
+																	<Text className="text-xs flex-1" style={{ color: colors.text }}>Other</Text>
+																</View>
+															</View>
+															<Text className="text-xs mt-2" style={{ color: colors.textSecondary }}>
+																Radius: 200-800m based on incident count
+															</Text>
+														</>
+													)}
+												</View>
+											</>
+										)}
+										
+										{/* Markers Legend */}
+										{showMarkers && (
+											<View className="mb-3 pb-3 border-b" style={{ borderColor: colors.border }}>
+												<Text className="text-xs font-semibold mb-1" style={{ color: colors.textSecondary }}>
+													CRIME MARKERS
+												</Text>
+												<View className="space-y-1.5">
+													<View className="flex-row items-center">
+														<View className="h-5 w-5 rounded-full mr-2" style={{ backgroundColor: '#DC2626' }} />
+														<Text className="text-xs flex-1" style={{ color: colors.text }}>Violent Crimes</Text>
+													</View>
+													<View className="flex-row items-center">
+														<View className="h-5 w-5 rounded-full mr-2" style={{ backgroundColor: '#F59E0B' }} />
+														<Text className="text-xs flex-1" style={{ color: colors.text }}>Property Crimes</Text>
+													</View>
+													<View className="flex-row items-center">
+														<View className="h-5 w-5 rounded-full mr-2" style={{ backgroundColor: '#7C3AED' }} />
+														<Text className="text-xs flex-1" style={{ color: colors.text }}>Drug-Related</Text>
+													</View>
+													<View className="flex-row items-center">
+														<View className="h-5 w-5 rounded-full mr-2" style={{ backgroundColor: '#3B82F6' }} />
+														<Text className="text-xs flex-1" style={{ color: colors.text }}>Traffic Incidents</Text>
+													</View>
+													<View className="flex-row items-center">
+														<View className="h-5 w-5 rounded-full mr-2" style={{ backgroundColor: '#10B981' }} />
+														<Text className="text-xs flex-1" style={{ color: colors.text }}>Police Operations</Text>
+													</View>
+													<View className="flex-row items-center">
+														<View className="h-5 w-5 rounded-full mr-2" style={{ backgroundColor: '#6B7280' }} />
+														<Text className="text-xs flex-1" style={{ color: colors.text }}>Other</Text>
+													</View>
+													<View className="flex-row items-center mt-2">
+														<View className="h-5 w-5 rounded-full mr-2" style={{ backgroundColor: '#9333ea' }} />
+														<Text className="text-xs flex-1" style={{ color: colors.text }}>Mixed Reports (Multiple Categories)</Text>
+													</View>
+													<View className="flex-row items-center mt-2">
+														<View className="h-6 w-6 rounded-full mr-2 items-center justify-center" style={{ backgroundColor: '#DC2626' }}>
+															<Text className="text-white text-xs font-bold">5</Text>
+														</View>
+														<Text className="text-xs flex-1" style={{ color: colors.text }}>Cluster (multiple incidents)</Text>
+													</View>
+													<Text className="text-xs mt-2" style={{ color: colors.textSecondary }}>
+														Note: Click on a cluster to see all incidents at that location grouped by category and type
+													</Text>
+												</View>
+											</View>
+										)}
+										
+										{/* Reports Legend */}
+										{showReports && (
+											<View className="mb-2">
+												<Text className="text-xs font-semibold mb-1" style={{ color: colors.textSecondary }}>
+													USER REPORTS
+												</Text>
+												<View className="flex-row items-center">
+													<View className="h-5 w-5 rounded-full mr-2" style={{ backgroundColor: '#FF6B35' }} />
+													<Text className="text-xs flex-1" style={{ color: colors.text }}>Citizen Reports (Real-time)</Text>
+												</View>
+											</View>
+										)}
+										
+										{/* How to Read Section */}
+										<View className="mt-3 pt-3 border-t" style={{ borderColor: colors.border }}>
+											<Text className="text-xs font-semibold mb-1" style={{ color: colors.primary }}>
+												💡 HOW TO READ THIS MAP
+											</Text>
+											<Text className="text-xs leading-4" style={{ color: colors.textSecondary }}>
+												{heatmapType === 'density' && '• Darker red areas = higher crime concentration\n• Smooth gradients show hotspot patterns\n• Best for identifying danger zones'}
+												{heatmapType === 'choropleth' && '• Circle color = crime rate in that area\n• Circle size = total incident count\n• Compare different neighborhoods'}
+												{heatmapType === 'graduated' && '• Larger circles = more incidents\n• All circles same color (red)\n• Clear visual hierarchy of hotspots'}
+												{heatmapType === 'grid' && '• Each square = geographic grid cell\n• Color intensity = crime density\n• Systematic spatial coverage'}
+												{heatmapType === 'bubble' && '• Each bubble = crime category cluster\n• Size = number of incidents\n• Color = crime type'}
+											</Text>
 										</View>
-										<View className="flex-row items-center">
-											<View className="h-3 w-3 rounded-full mr-2" style={{ backgroundColor: 'rgba(255, 165, 0, 0.85)' }} />
-											<Text className="text-xs" style={{ color: colors.text }}>Medium</Text>
-										</View>
-										<View className="flex-row items-center">
-											<View className="h-3 w-3 rounded-full mr-2" style={{ backgroundColor: 'rgba(0, 255, 0, 0.5)' }} />
-											<Text className="text-xs" style={{ color: colors.text }}>Low</Text>
-										</View>
-									</View>
-								)}
-								
-								{heatmapType === 'choropleth' && (
-									<View className="space-y-1">
-										<View className="flex-row items-center">
-											<View className="h-3 w-3 rounded-full mr-2" style={{ backgroundColor: 'rgba(220, 38, 38, 0.6)' }} />
-											<Text className="text-xs" style={{ color: colors.text }}>High</Text>
-										</View>
-										<View className="flex-row items-center">
-											<View className="h-3 w-3 rounded-full mr-2" style={{ backgroundColor: 'rgba(251, 191, 36, 0.6)' }} />
-											<Text className="text-xs" style={{ color: colors.text }}>Medium</Text>
-										</View>
-										<View className="flex-row items-center">
-											<View className="h-3 w-3 rounded-full mr-2" style={{ backgroundColor: 'rgba(59, 130, 246, 0.6)' }} />
-											<Text className="text-xs" style={{ color: colors.text }}>Low</Text>
-										</View>
-									</View>
-								)}
-								
-								{heatmapType === 'graduated' && (
-									<View className="space-y-1">
-										<View className="flex-row items-center">
-											<View className="h-4 w-4 rounded-full mr-2" style={{ backgroundColor: 'rgba(220, 38, 38, 0.4)', borderWidth: 2, borderColor: 'rgba(220, 38, 38, 0.8)' }} />
-											<Text className="text-xs" style={{ color: colors.text }}>Large</Text>
-										</View>
-										<View className="flex-row items-center">
-											<View className="h-3 w-3 rounded-full mr-2" style={{ backgroundColor: 'rgba(220, 38, 38, 0.4)', borderWidth: 2, borderColor: 'rgba(220, 38, 38, 0.8)' }} />
-											<Text className="text-xs" style={{ color: colors.text }}>Medium</Text>
-										</View>
-										<View className="flex-row items-center">
-											<View className="h-2 w-2 rounded-full mr-2" style={{ backgroundColor: 'rgba(220, 38, 38, 0.4)', borderWidth: 2, borderColor: 'rgba(220, 38, 38, 0.8)' }} />
-											<Text className="text-xs" style={{ color: colors.text }}>Small</Text>
-										</View>
-									</View>
-								)}
-								
-								{heatmapType === 'grid' && (
-									<View className="space-y-1">
-										<View className="flex-row items-center">
-											<View className="h-3 w-3 rounded mr-2" style={{ backgroundColor: 'rgba(255, 69, 0, 0.8)' }} />
-											<Text className="text-xs" style={{ color: colors.text }}>Very High (80-100%)</Text>
-										</View>
-										<View className="flex-row items-center">
-											<View className="h-3 w-3 rounded mr-2" style={{ backgroundColor: 'rgba(255, 215, 0, 0.7)' }} />
-											<Text className="text-xs" style={{ color: colors.text }}>High (60-80%)</Text>
-										</View>
-										<View className="flex-row items-center">
-											<View className="h-3 w-3 rounded mr-2" style={{ backgroundColor: 'rgba(154, 205, 50, 0.6)' }} />
-											<Text className="text-xs" style={{ color: colors.text }}>Medium (40-60%)</Text>
-										</View>
-										<View className="flex-row items-center">
-											<View className="h-3 w-3 rounded mr-2" style={{ backgroundColor: 'rgba(0, 255, 0, 0.5)' }} />
-											<Text className="text-xs" style={{ color: colors.text }}>Low (20-40%)</Text>
-										</View>
-										<View className="flex-row items-center">
-											<View className="h-3 w-3 rounded mr-2" style={{ backgroundColor: 'rgba(144, 238, 144, 0.4)' }} />
-											<Text className="text-xs" style={{ color: colors.text }}>Very Low (&lt;20%)</Text>
-										</View>
-									</View>
-								)}
-								
-								{heatmapType === 'bubble' && (
-									<View className="space-y-1">
-										<View className="flex-row items-center">
-											<View className="h-3 w-3 rounded-full mr-2" style={{ backgroundColor: '#DC2626' }} />
-											<Text className="text-xs" style={{ color: colors.text }}>Violent</Text>
-										</View>
-										<View className="flex-row items-center">
-											<View className="h-3 w-3 rounded-full mr-2" style={{ backgroundColor: '#F59E0B' }} />
-											<Text className="text-xs" style={{ color: colors.text }}>Property</Text>
-										</View>
-										<View className="flex-row items-center">
-											<View className="h-3 w-3 rounded-full mr-2" style={{ backgroundColor: '#7C3AED' }} />
-											<Text className="text-xs" style={{ color: colors.text }}>Drug</Text>
-										</View>
-										<View className="flex-row items-center">
-											<View className="h-3 w-3 rounded-full mr-2" style={{ backgroundColor: '#3B82F6' }} />
-											<Text className="text-xs" style={{ color: colors.text }}>Traffic</Text>
-										</View>
-										<View className="flex-row items-center">
-											<View className="h-3 w-3 rounded-full mr-2" style={{ backgroundColor: '#6B7280' }} />
-											<Text className="text-xs" style={{ color: colors.text }}>Other</Text>
-										</View>
-										<Text className="text-xs mt-1" style={{ color: colors.textSecondary }}>Size = count</Text>
-									</View>
+									</ScrollView>
 								)}
 							</View>
-						)}
+						</TouchableOpacity>
 					</>
 				)}
 
@@ -1378,58 +2026,56 @@ const styles = StyleSheet.create({
 		flex: 1,
 	},
 	markerContainer: {
-		width: 32,
-		height: 32,
-		borderRadius: 16,
-		alignItems: 'center',
-		justifyContent: 'center',
+		width: 24,
+		height: 24,
+		borderRadius: 12,
 		shadowColor: '#000',
 		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.3,
-		shadowRadius: 4,
+		shadowOpacity: 0.4,
+		shadowRadius: 3,
 		elevation: 5,
-	},
-	markerInner: {
-		width: 28,
-		height: 28,
-		borderRadius: 14,
-		alignItems: 'center',
-		justifyContent: 'center',
+		borderWidth: 2,
+		borderColor: '#FFF',
 	},
 	clusterContainer: {
-		width: 40,
-		height: 40,
-		borderRadius: 20,
+		width: 36,
+		height: 36,
+		borderRadius: 18,
 		alignItems: 'center',
 		justifyContent: 'center',
 		shadowColor: '#000',
 		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.3,
-		shadowRadius: 4,
+		shadowOpacity: 0.4,
+		shadowRadius: 3,
 		elevation: 5,
+		borderWidth: 2,
+		borderColor: '#FFF',
 	},
 	clusterText: {
 		color: '#FFF',
 		fontWeight: '700',
+		fontSize: 12,
 	},
 	reportMarkerContainer: {
-		width: 32,
-		height: 32,
-		borderRadius: 16,
-		alignItems: 'center',
-		justifyContent: 'center',
+		width: 24,
+		height: 24,
+		borderRadius: 12,
 		shadowColor: '#000',
 		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.3,
-		shadowRadius: 4,
+		shadowOpacity: 0.4,
+		shadowRadius: 3,
 		elevation: 5,
+		borderWidth: 2,
+		borderColor: '#FFF',
 	},
-	reportMarkerInner: {
-		width: 28,
-		height: 28,
-		borderRadius: 14,
-		alignItems: 'center',
-		justifyContent: 'center',
+	originMarker: {
+		width: 8,
+		height: 8,
+		borderRadius: 4,
+		backgroundColor: '#000',
+		borderWidth: 1,
+		borderColor: '#FFF',
+		opacity: 0.6,
 	},
 });
 
