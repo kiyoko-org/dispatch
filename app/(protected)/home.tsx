@@ -142,12 +142,19 @@ export default function Home() {
         showBackButton={false}
         logoutPressed={handleLogout}
         recentReports={recentReports}
+        showNotificationBell={true}
       />
 
       {/* Main Content */}
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Welcome Banner */}
-        <View style={{ paddingHorizontal: 24, paddingTop: 24, paddingBottom: 16, backgroundColor: currentColors.headerBg }}>
+        <View
+          style={{
+            paddingHorizontal: 24,
+            paddingTop: 24,
+            paddingBottom: 16,
+            backgroundColor: currentColors.headerBg,
+          }}>
           <View>
             <Text
               style={{

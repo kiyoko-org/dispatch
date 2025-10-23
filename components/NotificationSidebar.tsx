@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -35,6 +35,8 @@ export default function NotificationSidebar({
   const { colors } = useTheme();
   const activityPanelWidth = Math.min(400, Dimensions.get('window').width * 0.85);
   const activityAnim = useRef(new Animated.Value(activityPanelWidth)).current;
+  const [deletingIds, setDeletingIds] = useState<Set<string>>(new Set());
+  const timeoutRefs = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
   useEffect(() => {
     if (isOpen) {
@@ -51,6 +53,12 @@ export default function NotificationSidebar({
       }).start();
     }
   }, [isOpen, activityAnim, activityPanelWidth]);
+
+  useEffect(() => {
+    return () => {
+      timeoutRefs.current.forEach((timeout) => clearTimeout(timeout));
+    };
+  }, []);
 
   const closeActivity = () => {
     Animated.timing(activityAnim, {
@@ -82,13 +90,42 @@ export default function NotificationSidebar({
   };
 
   const deleteNotification = async (id: string) => {
+    setDeletingIds((prev) => new Set(prev).add(id));
+    const DELETE_TIMEOUT = 10000;
+
+    const timeoutId = setTimeout(() => {
+      setDeletingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+      timeoutRefs.current.delete(id);
+      console.error('Delete notification timeout after 10s');
+    }, DELETE_TIMEOUT);
+
+    timeoutRefs.current.set(id, timeoutId);
+
     try {
       const { error } = await supabase.from('notifications').delete().eq('id', id);
+      if (timeoutRefs.current.has(id)) {
+        clearTimeout(timeoutRefs.current.get(id));
+        timeoutRefs.current.delete(id);
+      }
       if (error) {
         console.error('Error deleting notification:', error);
       }
+      setDeletingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     } catch (error) {
       console.error('Error deleting notification:', error);
+      setDeletingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
     }
   };
 
@@ -194,6 +231,7 @@ export default function NotificationSidebar({
                   notification={notification}
                   formatTimeAgo={formatTimeAgo}
                   onDelete={deleteNotification}
+                  isDeleting={deletingIds.has(notification.id)}
                 />
               ))
             ) : (

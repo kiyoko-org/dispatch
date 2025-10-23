@@ -39,6 +39,7 @@ interface HeaderWithSidebarProps {
   reportsLoading?: boolean;
   onRefreshReports?: () => void;
   showSyncIndicator?: boolean;
+  showNotificationBell?: boolean;
 }
 
 export default function HeaderWithSidebar({
@@ -50,6 +51,7 @@ export default function HeaderWithSidebar({
   reportsLoading = false,
   onRefreshReports,
   showSyncIndicator = false,
+  showNotificationBell = false,
 }: HeaderWithSidebarProps) {
   const router = useRouter();
   const { colors } = useTheme();
@@ -313,19 +315,21 @@ export default function HeaderWithSidebar({
           )}
 
           {/* Activity Bell Icon - Top Right */}
-          <TouchableOpacity
-            onPress={toggleActivity}
-            className="h-10 w-10 items-center justify-center rounded-full"
-            style={{ backgroundColor: colors.surfaceVariant }}
-            activeOpacity={0.7}>
-            <Bell size={20} color={colors.text} />
-            {localNotifCount < userNotifications.length && (
-              <View
-                className="absolute right-1 top-1 h-2 w-2 rounded-full"
-                style={{ backgroundColor: colors.error }}
-              />
-            )}
-          </TouchableOpacity>
+          {showNotificationBell && (
+            <TouchableOpacity
+              onPress={toggleActivity}
+              className="h-10 w-10 items-center justify-center rounded-full"
+              style={{ backgroundColor: colors.surfaceVariant }}
+              activeOpacity={0.7}>
+              <Bell size={20} color={colors.text} />
+              {localNotifCount < userNotifications.length && (
+                <View
+                  className="absolute right-1 top-1 h-2 w-2 rounded-full"
+                  style={{ backgroundColor: colors.error }}
+                />
+              )}
+            </TouchableOpacity>
+          )}
         </View>
       </Animated.View>
 

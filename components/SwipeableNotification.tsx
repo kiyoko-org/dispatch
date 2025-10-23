@@ -1,5 +1,5 @@
 import { useRef, useMemo } from 'react';
-import { View, Animated, PanResponder, Text } from 'react-native';
+import { View, Animated, PanResponder, Text, ActivityIndicator } from 'react-native';
 import { Bell, Trash2 } from 'lucide-react-native';
 import { useTheme } from './ThemeContext';
 
@@ -7,12 +7,14 @@ interface SwipeableNotificationProps {
   notification: any;
   formatTimeAgo: (dateString: string) => string;
   onDelete: (id: string) => void;
+  isDeleting?: boolean;
 }
 
 export default function SwipeableNotification({
   notification,
   formatTimeAgo,
   onDelete,
+  isDeleting = false,
 }: SwipeableNotificationProps) {
   const { colors } = useTheme();
   const translateX = useRef(new Animated.Value(0)).current;
@@ -20,15 +22,19 @@ export default function SwipeableNotification({
   const panResponder = useMemo(
     () =>
       PanResponder.create({
-        onMoveShouldSetPanResponder: (evt, gestureState) => {
-          return Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && gestureState.dx < 0;
+        onMoveShouldSetPanResponder: (_evt, gestureState) => {
+          return (
+            Math.abs(gestureState.dx) > Math.abs(gestureState.dy) &&
+            gestureState.dx < 0 &&
+            !isDeleting
+          );
         },
-        onPanResponderMove: (evt, gestureState) => {
+        onPanResponderMove: (_evt, gestureState) => {
           if (gestureState.dx < 0) {
             translateX.setValue(gestureState.dx);
           }
         },
-        onPanResponderRelease: (evt, gestureState) => {
+        onPanResponderRelease: (_evt, gestureState) => {
           if (gestureState.dx < -100) {
             onDelete(notification.id);
           } else {
@@ -39,11 +45,11 @@ export default function SwipeableNotification({
           }
         },
       }),
-    [onDelete, notification.id]
+    [onDelete, notification.id, isDeleting]
   );
 
   return (
-    <View style={{ position: 'relative' }}>
+    <View style={{ position: 'relative', opacity: isDeleting ? 0.6 : 1 }}>
       {/* Delete Background */}
       <Animated.View
         style={{
@@ -74,8 +80,9 @@ export default function SwipeableNotification({
           backgroundColor: colors.surface,
           padding: 16,
           transform: [{ translateX }],
+          opacity: isDeleting ? 0.7 : 1,
         }}
-        {...panResponder.panHandlers}>
+        {...(isDeleting ? {} : panResponder.panHandlers)}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <View
             style={{
@@ -87,7 +94,11 @@ export default function SwipeableNotification({
               borderRadius: 8,
               backgroundColor: colors.surfaceVariant,
             }}>
-            <Bell size={20} color={colors.primary} />
+            {isDeleting ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Bell size={20} color={colors.primary} />
+            )}
           </View>
           <View style={{ flex: 1 }}>
             <Text
