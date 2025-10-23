@@ -281,7 +281,9 @@ export default function Login() {
 
     setForgotPasswordLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(forgotPasswordEmail);
+      const { error } = await supabase.auth.resetPasswordForEmail(forgotPasswordEmail, {
+        redirectTo: 'https://kiyoko-org.github.io/dispatch-confirm/reset-password',
+      });
 
       if (error) {
         Alert.alert('Error', error.message || 'Failed to send password reset email');
