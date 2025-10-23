@@ -141,7 +141,11 @@ export function UserDataProvider({ children }: UserDataProviderProps) {
               ? communityContacts
               : emergencyContacts;
 
-        if (existingContacts.some((c) => c.phoneNumber === phoneNumber)) {
+        if (
+          existingContacts.some(
+            (c) => c.phoneNumber === phoneNumber && c.name === (name || undefined)
+          )
+        ) {
           return false;
         }
 
@@ -236,6 +240,10 @@ export function UserDataProvider({ children }: UserDataProviderProps) {
   const addHotline = useCallback(
     async (hotline: Omit<Hotline, 'id'>): Promise<boolean> => {
       try {
+        if (hotlines.some((h) => h.number === hotline.number && h.name === hotline.name)) {
+          return false;
+        }
+
         const newHotline: Hotline = {
           ...hotline,
           id: Date.now().toString(),
