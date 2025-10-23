@@ -66,7 +66,7 @@ export default function NotificationSidebar({ isOpen, onToggle }: NotificationSi
 			>
 				{userNotifications.map(notification => {
 					return (
-						<NotificationItem title={notification.title || ""} body={notification.body} />
+						<NotificationItem {...notification} />
 					)
 				})}
 			</Animated.View>
