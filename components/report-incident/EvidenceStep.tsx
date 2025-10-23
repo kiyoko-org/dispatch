@@ -57,7 +57,7 @@ export default function EvidenceStep({
       for (const file of uploadedFiles) {
         if (FileUtils.isImageFile(file.type) && !signedUrls[file.id]) {
           try {
-						console.log('Generating signed URL for', file.path);
+            console.log('Generating signed URL for', file.path);
             const signedUrl = await storageService.getSignedUrl(file.path, 3600);
             newSignedUrls[file.id] = signedUrl;
           } catch (error) {
@@ -85,7 +85,7 @@ export default function EvidenceStep({
             {
               stopRecording: true,
               maxSize: 25 * 1024 * 1024, // 25MB for audio
-              allowedTypes: ['application/octet-stream'],
+              allowedTypes: FileUtils.getAllowedTypesForCategory('audio'),
             },
             (progress) => {
               console.log('Upload progress:', progress);
@@ -223,21 +223,27 @@ export default function EvidenceStep({
     } else if (FileUtils.isAudioFile(file.type)) {
       // Show music icon for audio files
       return (
-        <View className="mr-3 h-12 w-12 items-center justify-center rounded-lg" style={{ backgroundColor: colors.primary + '30' }}>
+        <View
+          className="mr-3 h-12 w-12 items-center justify-center rounded-lg"
+          style={{ backgroundColor: colors.primary + '30' }}>
           <Music size={24} color={colors.primary} />
         </View>
       );
     } else if (FileUtils.isDocumentFile(file.type)) {
       // Show document icon for documents
       return (
-        <View className="mr-3 h-12 w-12 items-center justify-center rounded-lg" style={{ backgroundColor: colors.success + '30' }}>
+        <View
+          className="mr-3 h-12 w-12 items-center justify-center rounded-lg"
+          style={{ backgroundColor: colors.success + '30' }}>
           <FileText size={24} color={colors.success} />
         </View>
       );
     } else {
       // Show generic file icon for other file types
       return (
-        <View className="mr-3 h-12 w-12 items-center justify-center rounded-lg" style={{ backgroundColor: colors.surfaceVariant }}>
+        <View
+          className="mr-3 h-12 w-12 items-center justify-center rounded-lg"
+          style={{ backgroundColor: colors.surfaceVariant }}>
           <File size={24} color={colors.text} />
         </View>
       );
@@ -247,10 +253,14 @@ export default function EvidenceStep({
   return (
     <Card className="mb-5">
       <View className="mb-4 flex-row items-center">
-        <View className="mr-3 h-8 w-8 items-center justify-center rounded-lg" style={{ backgroundColor: colors.surfaceVariant }}>
+        <View
+          className="mr-3 h-8 w-8 items-center justify-center rounded-lg"
+          style={{ backgroundColor: colors.surfaceVariant }}>
           <Mic size={20} color={colors.text} />
         </View>
-        <Text className="text-xl font-bold" style={{ color: colors.text }}>Voice Statement & Evidence</Text>
+        <Text className="text-xl font-bold" style={{ color: colors.text }}>
+          Voice Statement & Evidence
+        </Text>
       </View>
 
       <View className="space-y-5">

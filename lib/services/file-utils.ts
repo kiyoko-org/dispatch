@@ -174,7 +174,7 @@ export class FileUtils {
   /**
    * Get allowed file types for a specific category
    */
-  static getAllowedTypesForCategory(category: 'images' | 'documents' | 'all'): string[] {
+  static getAllowedTypesForCategory(category: 'images' | 'documents' | 'audio' | 'all'): string[] {
     const groups = this.getFileTypeGroups();
 
     switch (category) {
@@ -182,6 +182,8 @@ export class FileUtils {
         return groups.images;
       case 'documents':
         return [...groups.documents, ...groups.spreadsheets, ...groups.presentations];
+      case 'audio':
+        return groups.audio;
       case 'all':
       default:
         return [
