@@ -852,8 +852,10 @@ const withTimeout = async<T>(
 														borderWidth: 1,
 														borderColor: colors.border,
 														minWidth: 100,
+														opacity: isIdLocked ? 0.6 : 1,
 													}}
-													onPress={() => setShowSuffixDropdown(!showSuffixDropdown)}>
+													onPress={() => setShowSuffixDropdown(!showSuffixDropdown)}
+													disabled={isIdLocked}>
 													<Text
 														className="text-base"
 														style={{ color: suffix ? colors.text : colors.textSecondary }}>
