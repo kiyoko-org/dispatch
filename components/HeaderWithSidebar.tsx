@@ -56,7 +56,7 @@ export default function HeaderWithSidebar({
   const router = useRouter();
   const { colors } = useTheme();
   const { session } = useAuthContext();
-  const { notifications, loading: notificationsLoading } = useNotifications();
+  const { notifications, loading: notificationsLoading, deleteNotification } = useNotifications();
 
   const userNotifications = notifications
     .filter((notif) => notif.user_id === session?.user?.id)
@@ -511,6 +511,7 @@ export default function HeaderWithSidebar({
         isOpen={isActivityOpen}
         onToggle={toggleActivity}
         userId={session?.user?.id || ''}
+        deleteNotification={deleteNotification}
       />
     </>
   );

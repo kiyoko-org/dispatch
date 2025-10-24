@@ -1,20 +1,31 @@
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useState, useCallback } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Animated, Dimensions } from 'react-native';
 import { Bell } from 'lucide-react-native';
 import { useTheme } from './ThemeContext';
-import NotificationItem from './NotificationItem';
 import { Notification } from './NotificationItem';
+import SwipeableNotification from './SwipeableNotification';
 
 interface NotificationSidebarProps {
 	isOpen: boolean;
 	userNotifications: Notification[]
 	onToggle: () => void;
+	deleteNotification: (id: string) => Promise<{ data: any[] | null; error: any }>;
+	loading?: boolean;
+	reportsLoading?: boolean;
+	onRefreshReports?: () => void;
+	userId?: string;
 }
 
-export default function NotificationSidebar({ userNotifications, isOpen, onToggle }: NotificationSidebarProps) {
+export default function NotificationSidebar({
+	userNotifications,
+	isOpen,
+	onToggle,
+	deleteNotification,
+}: NotificationSidebarProps) {
 	const { colors } = useTheme();
 	const activityPanelWidth = Math.min(400, Dimensions.get('window').width * 0.85);
 	const activityAnim = useRef(new Animated.Value(activityPanelWidth)).current;
+	const [deletingIds, setDeletingIds] = useState<string[]>([]);
 
 	useEffect(() => {
 		if (isOpen) {
@@ -39,6 +50,20 @@ export default function NotificationSidebar({ userNotifications, isOpen, onToggl
 			useNativeDriver: true,
 		}).start(() => onToggle());
 	};
+
+	const handleDelete = useCallback(
+		async (id: string) => {
+			setDeletingIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+			const { error } = await deleteNotification(id);
+
+			if (error) {
+				console.error('Error deleting notification:', error);
+			}
+
+			setDeletingIds((prev) => prev.filter((notificationId) => notificationId !== id));
+		},
+		[deleteNotification]
+	);
 
 	return (
 		<>
@@ -76,7 +101,12 @@ export default function NotificationSidebar({ userNotifications, isOpen, onToggl
 				</View>
 				{userNotifications.map(notification => {
 					return (
-						<NotificationItem key={notification.id} {...notification} />
+						<SwipeableNotification
+							key={notification.id}
+							notification={notification}
+							onDelete={handleDelete}
+							isDeleting={deletingIds.includes(notification.id)}
+						/>
 					)
 				})}
 			</Animated.View>

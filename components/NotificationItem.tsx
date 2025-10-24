@@ -12,7 +12,7 @@ const MS_IN_DAY = 24 * MS_IN_HOUR;
 const MS_IN_MONTH = 30 * MS_IN_DAY;
 const MS_IN_YEAR = 365 * MS_IN_DAY;
 
-function formatTimeAgo(createdAt?: string | null) {
+export function formatTimeAgo(createdAt?: string | null) {
 	if (!createdAt) return '';
 
 	const createdDate = new Date(createdAt);

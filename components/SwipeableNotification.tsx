@@ -2,22 +2,22 @@ import { useRef, useMemo } from 'react';
 import { View, Animated, PanResponder, Text, ActivityIndicator } from 'react-native';
 import { Bell, Trash2 } from 'lucide-react-native';
 import { useTheme } from './ThemeContext';
+import { Notification, formatTimeAgo } from './NotificationItem';
 
 interface SwipeableNotificationProps {
-  notification: any;
-  formatTimeAgo: (dateString: string) => string;
-  onDelete: (id: string) => void;
+  notification: Notification;
+  onDelete: (id: string) => void | Promise<void>;
   isDeleting?: boolean;
 }
 
 export default function SwipeableNotification({
   notification,
-  formatTimeAgo,
   onDelete,
   isDeleting = false,
 }: SwipeableNotificationProps) {
   const { colors } = useTheme();
   const translateX = useRef(new Animated.Value(0)).current;
+  const timeAgo = useMemo(() => formatTimeAgo(notification.created_at), [notification.created_at]);
 
   const panResponder = useMemo(
     () =>
@@ -49,7 +49,7 @@ export default function SwipeableNotification({
   );
 
   return (
-    <View style={{ position: 'relative', opacity: isDeleting ? 0.6 : 1 }}>
+    <View style={{ position: 'relative', opacity: isDeleting ? 0.6 : 1, marginBottom: 12 }}>
       {/* Delete Background */}
       <Animated.View
         style={{
@@ -57,13 +57,15 @@ export default function SwipeableNotification({
           top: 0,
           right: 0,
           bottom: 0,
-          width: 80,
+          left: 0,
           backgroundColor: colors.error,
           justifyContent: 'center',
-          alignItems: 'center',
+          alignItems: 'flex-end',
           borderRadius: 8,
+          paddingRight: 16,
+          pointerEvents: 'none',
           opacity: translateX.interpolate({
-            inputRange: [-80, 0],
+            inputRange: [-100, 0],
             outputRange: [1, 0],
             extrapolate: 'clamp',
           }),
@@ -115,7 +117,7 @@ export default function SwipeableNotification({
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             <Text style={{ fontSize: 12, color: colors.textSecondary, marginRight: 8 }}>
-              {notification.created_at ? formatTimeAgo(notification.created_at) : 'Recently'}
+              {timeAgo || 'Recently'}
             </Text>
           </View>
         </View>
