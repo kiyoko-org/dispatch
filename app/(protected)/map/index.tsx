@@ -97,6 +97,7 @@ export default function MapPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const [isClusteringInProgress, setIsClusteringInProgress] = useState(false);
 
   // Calculate center of Tuguegarao City
   const initialRegion = {
@@ -109,6 +110,7 @@ export default function MapPage() {
   const [mapRegion, setMapRegion] = useState<Region | null>(initialRegion);
   const [activeClusterTab, setActiveClusterTab] = useState<'all' | CrimeCategory>('all');
   const mapRef = useRef<MapView>(null);
+  const clusteringTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Heatmap visualization types
   type HeatmapType = 'density' | 'choropleth' | 'graduated' | 'grid' | 'bubble';
@@ -523,6 +525,11 @@ export default function MapPage() {
 
   // Grid-based clustering by location AND category with spidering for overlaps
   const clusters = useMemo(() => {
+    setIsClusteringInProgress(true);
+    if (clusteringTimeoutRef.current) {
+      clearTimeout(clusteringTimeoutRef.current);
+    }
+
     if (!mapRegion)
       return [] as {
         lat: number;
@@ -607,11 +614,20 @@ export default function MapPage() {
       });
     }
 
+    clusteringTimeoutRef.current = setTimeout(() => {
+      setIsClusteringInProgress(false);
+    }, 300);
+
     return result;
   }, [filteredCrimes, mapRegion]);
 
   // Grid-based clustering for user reports
   const reportClusters = useMemo(() => {
+    setIsClusteringInProgress(true);
+    if (clusteringTimeoutRef.current) {
+      clearTimeout(clusteringTimeoutRef.current);
+    }
+
     if (!mapRegion)
       return [] as {
         lat: number;
@@ -694,6 +710,10 @@ export default function MapPage() {
         locationKey,
       });
     }
+
+    clusteringTimeoutRef.current = setTimeout(() => {
+      setIsClusteringInProgress(false);
+    }, 300);
 
     return result;
   }, [resolvedReports, mapRegion]);
@@ -1132,13 +1152,21 @@ export default function MapPage() {
                       key={`marker-${markerKey}`}
                       coordinate={{ latitude: cluster.lat, longitude: cluster.lon }}
                       onPress={() => {
+                        if (isClusteringInProgress) return;
                         setSelectedCrime(crime);
                         setSelectedCluster(null);
                         setSelectedReportId(null);
                         setSelectedReportCluster(null);
                       }}
-                      zIndex={3}>
-                      <View style={[styles.markerContainer, { backgroundColor: markerColor }]} />
+                      zIndex={3}
+                      pointerEvents={isClusteringInProgress ? 'none' : 'auto'}>
+                      <View
+                        style={[
+                          styles.markerContainer,
+                          { backgroundColor: markerColor },
+                          isClusteringInProgress && { opacity: 0.5 },
+                        ]}
+                      />
                     </Marker>
                   );
                 }
@@ -1149,14 +1177,21 @@ export default function MapPage() {
                     key={`marker-${markerKey}`}
                     coordinate={{ latitude: cluster.lat, longitude: cluster.lon }}
                     onPress={() => {
+                      if (isClusteringInProgress) return;
                       setSelectedCrime(null);
                       setSelectedCluster(cluster.items);
                       setSelectedReportId(null);
                       setSelectedReportCluster(null);
                       setActiveClusterTab('all');
                     }}
-                    zIndex={3}>
-                    <View style={[styles.clusterContainer, { backgroundColor: markerColor }]}>
+                    zIndex={3}
+                    pointerEvents={isClusteringInProgress ? 'none' : 'auto'}>
+                    <View
+                      style={[
+                        styles.clusterContainer,
+                        { backgroundColor: markerColor },
+                        isClusteringInProgress && { opacity: 0.5 },
+                      ]}>
                       <Text style={styles.clusterText}>{total}</Text>
                     </View>
                   </Marker>
@@ -1201,14 +1236,20 @@ export default function MapPage() {
                       key={`report-marker-${markerKey}`}
                       coordinate={safeCoordinate}
                       onPress={() => {
+                        if (isClusteringInProgress) return;
                         setSelectedCrime(null);
                         setSelectedCluster(null);
                         setSelectedReportId(report.id);
                         setSelectedReportCluster(null);
                       }}
-                      zIndex={3}>
+                      zIndex={3}
+                      pointerEvents={isClusteringInProgress ? 'none' : 'auto'}>
                       <View
-                        style={[styles.reportMarkerContainer, { backgroundColor: markerColor }]}
+                        style={[
+                          styles.reportMarkerContainer,
+                          { backgroundColor: markerColor },
+                          isClusteringInProgress && { opacity: 0.5 },
+                        ]}
                       />
                     </Marker>
                   );
@@ -1224,13 +1265,20 @@ export default function MapPage() {
                     key={`report-marker-${markerKey}`}
                     coordinate={safeCoordinate}
                     onPress={() => {
+                      if (isClusteringInProgress) return;
                       setSelectedCrime(null);
                       setSelectedCluster(null);
                       setSelectedReportId(null);
                       setSelectedReportCluster(cluster.items);
                     }}
-                    zIndex={3}>
-                    <View style={[styles.clusterContainer, { backgroundColor: markerColor }]}>
+                    zIndex={3}
+                    pointerEvents={isClusteringInProgress ? 'none' : 'auto'}>
+                    <View
+                      style={[
+                        styles.clusterContainer,
+                        { backgroundColor: markerColor },
+                        isClusteringInProgress && { opacity: 0.5 },
+                      ]}>
                       <Text style={styles.clusterText}>{total}</Text>
                     </View>
                   </Marker>
