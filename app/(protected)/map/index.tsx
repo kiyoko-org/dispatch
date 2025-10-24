@@ -463,9 +463,6 @@ export default function MapPage() {
         if (filterSubcategory) {
           const reportSubcategory = report.subCategoryName;
           const reportCategory = report.categoryName;
-          if (!reportSubcategory && !reportCategory) {
-            return false;
-          }
           return (
             (reportSubcategory && filterSubcategory.includes(reportSubcategory)) ||
             (reportCategory && filterSubcategory.includes(reportCategory))
@@ -475,19 +472,41 @@ export default function MapPage() {
         if (filterCategory !== 'all') {
           const reportSubcategory = report.subCategoryName;
           const reportCategory = report.categoryName;
-          if (!reportSubcategory && !reportCategory) {
-            return false;
-          }
 
           const categorySubcategories = dateFilteredCrimes
             .filter((crime) => getCrimeCategory(crime) === filterCategory)
             .map((crime) => crime.incidentType);
 
-          return categorySubcategories.some(
-            (subcategory) =>
-              (reportSubcategory && subcategory.includes(reportSubcategory)) ||
-              (reportCategory && subcategory.includes(reportCategory))
-          );
+          const reportMatchesCategory = (catName: string | null): boolean => {
+            if (!catName) return false;
+            const lowerCat = catName.toLowerCase();
+
+            if (filterCategory === 'violent' && lowerCat.includes('violent')) return true;
+            if (filterCategory === 'property' && lowerCat.includes('property')) return true;
+            if (filterCategory === 'drug' && lowerCat.includes('drug')) return true;
+            if (filterCategory === 'traffic' && lowerCat.includes('traffic')) return true;
+            if (filterCategory === 'operation' && lowerCat.includes('operation')) return true;
+
+            return categorySubcategories.some(
+              (subcategory) =>
+                subcategory.toLowerCase().includes(lowerCat) ||
+                lowerCat.includes(subcategory.toLowerCase())
+            );
+          };
+
+          if (reportSubcategory && reportMatchesCategory(reportSubcategory)) {
+            return true;
+          }
+
+          if (reportCategory && reportMatchesCategory(reportCategory)) {
+            return true;
+          }
+
+          if (!reportSubcategory && reportCategory && reportMatchesCategory(reportCategory)) {
+            return true;
+          }
+
+          return false;
         }
 
         return true;
