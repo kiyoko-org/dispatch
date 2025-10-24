@@ -9,7 +9,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import MapView, {
   Marker,
   Heatmap,
@@ -98,6 +98,10 @@ export default function MapPage() {
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [isClusteringInProgress, setIsClusteringInProgress] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastInteractionRef = useRef<number>(0);
+  const maxTransitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Calculate center of Tuguegarao City
   const initialRegion = {
@@ -111,6 +115,42 @@ export default function MapPage() {
   const [activeClusterTab, setActiveClusterTab] = useState<'all' | CrimeCategory>('all');
   const mapRef = useRef<MapView>(null);
   const clusteringTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Debounced state update function to prevent rapid switching
+  const debouncedStateUpdate = useCallback((updateFn: () => void, delay: number = 150) => {
+    const now = Date.now();
+    lastInteractionRef.current = now;
+    
+    if (transitionTimeoutRef.current) {
+      clearTimeout(transitionTimeoutRef.current);
+    }
+    if (maxTransitionTimeoutRef.current) {
+      clearTimeout(maxTransitionTimeoutRef.current);
+    }
+    
+    setIsTransitioning(true);
+    
+    // Maximum transition time to prevent infinite loading
+    maxTransitionTimeoutRef.current = setTimeout(() => {
+      setIsTransitioning(false);
+    }, 2000);
+    
+    transitionTimeoutRef.current = setTimeout(() => {
+      // Only execute if this is still the latest interaction
+      if (lastInteractionRef.current === now) {
+        try {
+          updateFn();
+        } catch (error) {
+          console.warn('Error in debounced state update:', error);
+        } finally {
+          setIsTransitioning(false);
+          if (maxTransitionTimeoutRef.current) {
+            clearTimeout(maxTransitionTimeoutRef.current);
+          }
+        }
+      }
+    }, delay);
+  }, []);
 
   // Heatmap visualization types
   type HeatmapType = 'density' | 'choropleth' | 'graduated' | 'grid' | 'bubble';
@@ -196,6 +236,21 @@ export default function MapPage() {
       setSelectedReportId(null);
     }
   }, [reportsWithCategories, selectedReportId]);
+
+  // Cleanup timeouts on unmount
+  useEffect(() => {
+    return () => {
+      if (clusteringTimeoutRef.current) {
+        clearTimeout(clusteringTimeoutRef.current);
+      }
+      if (transitionTimeoutRef.current) {
+        clearTimeout(transitionTimeoutRef.current);
+      }
+      if (maxTransitionTimeoutRef.current) {
+        clearTimeout(maxTransitionTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const selectedReportCategoryLabel =
     selectedReport?.categoryName ?? selectedReport?.incident_category ?? null;
@@ -749,6 +804,36 @@ export default function MapPage() {
     setSelectedReportCluster(null);
   };
 
+  // Safe state reset function with debouncing
+  const safeResetSelections = useCallback(() => {
+    debouncedStateUpdate(() => {
+      setSelectedCrime(null);
+      setSelectedCluster(null);
+      setSelectedReportId(null);
+      setSelectedReportCluster(null);
+    }, 50); // Shorter delay for reset
+  }, [debouncedStateUpdate]);
+
+  // State validation to prevent conflicting states
+  const validateState = useCallback(() => {
+    const hasCrime = selectedCrime !== null;
+    const hasCluster = selectedCluster !== null;
+    const hasReport = selectedReportId !== null;
+    const hasReportCluster = selectedReportCluster !== null;
+    
+    // If multiple states are active, reset to prevent conflicts
+    const activeStates = [hasCrime, hasCluster, hasReport, hasReportCluster].filter(Boolean).length;
+    if (activeStates > 1) {
+      console.warn('Multiple states active, resetting to prevent conflicts');
+      safeResetSelections();
+    }
+  }, [selectedCrime, selectedCluster, selectedReportId, selectedReportCluster, safeResetSelections]);
+
+  // Validate state on changes
+  useEffect(() => {
+    validateState();
+  }, [validateState]);
+
   // Kernel Density Estimation (KDE) - Using cluster centroids for alignment with markers
   // This ensures heatmap centers align with visible markers on the map
   const heatmapPoints = useMemo(() => {
@@ -1185,11 +1270,13 @@ export default function MapPage() {
                       key={`marker-${markerKey}`}
                       coordinate={{ latitude: cluster.lat, longitude: cluster.lon }}
                       onPress={() => {
-                        if (isClusteringInProgress) return;
-                        setSelectedCrime(crime);
-                        setSelectedCluster(null);
-                        setSelectedReportId(null);
-                        setSelectedReportCluster(null);
+                        if (isClusteringInProgress || isTransitioning) return;
+                        debouncedStateUpdate(() => {
+                          setSelectedCrime(crime);
+                          setSelectedCluster(null);
+                          setSelectedReportId(null);
+                          setSelectedReportCluster(null);
+                        });
                       }}
                       zIndex={3}
                       pointerEvents={isClusteringInProgress ? 'none' : 'auto'}>
@@ -1197,7 +1284,7 @@ export default function MapPage() {
                         style={[
                           styles.markerContainer,
                           { backgroundColor: markerColor },
-                          isClusteringInProgress && { opacity: 0.5 },
+                          (isClusteringInProgress || isTransitioning) && { opacity: 0.5 },
                         ]}
                       />
                     </Marker>
@@ -1210,12 +1297,14 @@ export default function MapPage() {
                     key={`marker-${markerKey}`}
                     coordinate={{ latitude: cluster.lat, longitude: cluster.lon }}
                     onPress={() => {
-                      if (isClusteringInProgress) return;
-                      setSelectedCrime(null);
-                      setSelectedCluster(cluster.items);
-                      setSelectedReportId(null);
-                      setSelectedReportCluster(null);
-                      setActiveClusterTab('all');
+                      if (isClusteringInProgress || isTransitioning) return;
+                      debouncedStateUpdate(() => {
+                        setSelectedCrime(null);
+                        setSelectedCluster(cluster.items);
+                        setSelectedReportId(null);
+                        setSelectedReportCluster(null);
+                        setActiveClusterTab('all');
+                      });
                     }}
                     zIndex={3}
                     pointerEvents={isClusteringInProgress ? 'none' : 'auto'}>
@@ -1281,26 +1370,24 @@ export default function MapPage() {
                       <Marker
                         key={`report-marker-${markerKey}`}
                         coordinate={safeCoordinate}
-                        onPress={() => {
-                          if (isClusteringInProgress) return;
-                          try {
-                            setSelectedCrime(null);
-                            setSelectedCluster(null);
-                            setSelectedReportId(report.id);
-                            setSelectedReportCluster(null);
-                          } catch (error) {
-                            console.warn('Error handling marker press:', error);
-                          }
-                        }}
+                      onPress={() => {
+                        if (isClusteringInProgress || isTransitioning) return;
+                        debouncedStateUpdate(() => {
+                          setSelectedCrime(null);
+                          setSelectedCluster(null);
+                          setSelectedReportId(report.id);
+                          setSelectedReportCluster(null);
+                        });
+                      }}
                         zIndex={3}
                         pointerEvents={isClusteringInProgress ? 'none' : 'auto'}>
-                        <View
-                          style={[
-                            styles.reportMarkerContainer,
-                            { backgroundColor: markerColor },
-                            isClusteringInProgress && { opacity: 0.5 },
-                          ]}
-                        />
+                      <View
+                        style={[
+                          styles.reportMarkerContainer,
+                          { backgroundColor: markerColor },
+                          (isClusteringInProgress || isTransitioning) && { opacity: 0.5 },
+                        ]}
+                      />
                       </Marker>
                     );
                   } catch (error) {
@@ -1331,15 +1418,13 @@ export default function MapPage() {
                       key={`report-marker-${markerKey}`}
                       coordinate={safeCoordinate}
                       onPress={() => {
-                        if (isClusteringInProgress) return;
-                        try {
+                        if (isClusteringInProgress || isTransitioning) return;
+                        debouncedStateUpdate(() => {
                           setSelectedCrime(null);
                           setSelectedCluster(null);
                           setSelectedReportId(null);
                           setSelectedReportCluster(cluster.items);
-                        } catch (error) {
-                          console.warn('Error handling cluster marker press:', error);
-                        }
+                        });
                       }}
                       zIndex={3}
                       pointerEvents={isClusteringInProgress ? 'none' : 'auto'}>
@@ -1347,7 +1432,7 @@ export default function MapPage() {
                         style={[
                           styles.clusterContainer,
                           { backgroundColor: markerColor },
-                          isClusteringInProgress && { opacity: 0.5 },
+                          (isClusteringInProgress || isTransitioning) && { opacity: 0.5 },
                         ]}>
                         <Text style={styles.clusterText}>{total}</Text>
                       </View>
@@ -3239,6 +3324,20 @@ export default function MapPage() {
               <AlertTriangle size={20} color="#FFF" />
               <Text className="ml-2 text-base font-bold text-white">Report Incident</Text>
             </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Transition Overlay */}
+        {isTransitioning && (
+          <View
+            className="absolute inset-0 items-center justify-center"
+            style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}
+            pointerEvents="none">
+            <View
+              className="rounded-lg px-4 py-2"
+              style={{ backgroundColor: colors.card }}>
+              <Text style={{ color: colors.text }}>Loading...</Text>
+            </View>
           </View>
         )}
       </View>
