@@ -4,7 +4,7 @@ import { useTheme } from './ThemeContext';
 import { Database } from '@kiyoko-org/dispatch-lib/database.types';
 
 
-type Notification = Database["public"]["Tables"]["notifications"]["Row"];
+export type Notification = Database["public"]["Tables"]["notifications"]["Row"];
 
 const MS_IN_MINUTE = 60 * 1000;
 const MS_IN_HOUR = 60 * MS_IN_MINUTE;

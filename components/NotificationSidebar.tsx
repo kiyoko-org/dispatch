@@ -2,23 +2,19 @@ import { useRef, useEffect } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Animated, Dimensions } from 'react-native';
 import { Bell } from 'lucide-react-native';
 import { useTheme } from './ThemeContext';
-import { useNotifications } from '@kiyoko-org/dispatch-lib';
-import { useAuth } from 'hooks/useAuth';
 import NotificationItem from './NotificationItem';
+import { Notification } from './NotificationItem';
 
 interface NotificationSidebarProps {
 	isOpen: boolean;
+	userNotifications: Notification[]
 	onToggle: () => void;
 }
 
-export default function NotificationSidebar({ isOpen, onToggle }: NotificationSidebarProps) {
+export default function NotificationSidebar({ userNotifications, isOpen, onToggle }: NotificationSidebarProps) {
 	const { colors } = useTheme();
 	const activityPanelWidth = Math.min(400, Dimensions.get('window').width * 0.85);
 	const activityAnim = useRef(new Animated.Value(activityPanelWidth)).current;
-
-	const { notifications } = useNotifications()
-	const { session } = useAuth()
-	const userNotifications = notifications.filter(it => it.user_id === session?.user.id)
 
 	useEffect(() => {
 		if (isOpen) {
