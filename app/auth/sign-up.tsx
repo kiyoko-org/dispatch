@@ -208,6 +208,7 @@ export default function RootLayout() {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [emailCheckVisible, setEmailCheckVisible] = useState(false);
+  const [idCheckVisible, setIdCheckVisible] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -263,6 +264,7 @@ export default function RootLayout() {
     if (isNaN(y) || isNaN(m) || m < 1 || m > 12) {
       return 31; // Default to 31 if invalid
     }
+
     return new Date(y, m, 0).getDate();
   };
 
@@ -462,6 +464,54 @@ export default function RootLayout() {
         );
       } finally {
         setEmailCheckVisible(false);
+      }
+
+      return;
+    }
+
+    if (currentStep === 2) {
+      if (!client) {
+        const message = isInitialized
+          ? 'Unable to verify this ID right now. Please try again in a moment.'
+          : 'We are still getting things ready. Please try again in a moment.';
+        Alert.alert('Hold on', message);
+        return;
+      }
+
+      if (!idData?.data.pcn) {
+        Alert.alert(
+          'Missing ID details',
+          'We could not read your ID number from the scan. Please rescan your ID.'
+        );
+        return;
+      }
+
+      setIdCheckVisible(true);
+
+      try {
+        const { exists, error: idCheckError } = await client.idExists(idData.data.pcn);
+
+        if (idCheckError) {
+          throw new Error(idCheckError);
+        }
+
+        if (exists) {
+          Alert.alert(
+            'ID already registered',
+            'This PhilSys Card Number is already linked to another account. If you believe this is an error, please contact support.'
+          );
+          return;
+        }
+
+        setCurrentStep((prev) => Math.min(prev + 1, 3));
+      } catch (error) {
+        console.error('ID availability check failed', error);
+        Alert.alert(
+          'Unable to verify ID',
+          'We could not confirm your ID number just now. Please try again.'
+        );
+      } finally {
+        setIdCheckVisible(false);
       }
 
       return;
@@ -1810,6 +1860,27 @@ export default function RootLayout() {
               className="mt-2 text-center text-sm"
               style={{ color: colors.textSecondary }}>
               Hang tight - we are making sure this email is not already registered.
+            </Text>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ID Availability Dialog */}
+      <Modal visible={idCheckVisible} transparent animationType="fade" onRequestClose={() => {}}>
+        <View className="flex-1 items-center justify-center bg-black/25 p-6">
+          <View
+            className="w-full max-w-sm items-center rounded-xl p-6"
+            style={{
+              backgroundColor: colors.surface,
+              borderWidth: 1,
+              borderColor: colors.border,
+            }}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text className="mt-4 text-base font-semibold" style={{ color: colors.text }}>
+              Checking ID number
+            </Text>
+            <Text className="mt-2 text-center text-sm" style={{ color: colors.textSecondary }}>
+              Hang tight - we are making sure this PhilSys Card Number has not been registered.
             </Text>
           </View>
         </View>
