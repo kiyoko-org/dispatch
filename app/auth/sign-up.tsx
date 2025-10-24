@@ -33,7 +33,7 @@ const signUpSchema = z
     firstName: z
       .string()
       .trim()
-      .min(3, 'First name must be at least 3 characters')
+      .min(2, 'First name must be at least 2 characters')
       .max(20, 'First name must be at most 20 characters')
       .refine(
         (val) => !hasDangerousCharacters(val),
@@ -43,8 +43,8 @@ const signUpSchema = z
     middleName: z
       .string()
       .trim()
-      .refine((val) => val === '' || (val.length >= 3 && val.length <= 20), {
-        message: 'Middle name must be 3-20 characters long',
+      .refine((val) => val === '' || (val.length >= 2 && val.length <= 20), {
+        message: 'Middle name must be 2-20 characters long',
       })
       .refine(
         (val) => val === '' || !hasDangerousCharacters(val),
@@ -56,7 +56,7 @@ const signUpSchema = z
     lastName: z
       .string()
       .trim()
-      .min(3, 'Last name must be at least 3 characters')
+      .min(2, 'Last name must be at least 2 characters')
       .max(20, 'Last name must be at most 20 characters')
       .refine(
         (val) => !hasDangerousCharacters(val),
@@ -162,7 +162,7 @@ const signUpSchema = z
   .refine(
     (data) => {
       if (!data.noMiddleName) {
-        return data.middleName.trim().length >= 3 && data.middleName.trim().length <= 20;
+        return data.middleName.trim().length >= 2 && data.middleName.trim().length <= 20;
       }
       return true;
     },
@@ -601,7 +601,7 @@ export default function RootLayout() {
                   )}
                   {!validationErrors.firstName && firstName.trim() === '' && (
                     <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
-                      First name must be 3-20 characters long
+                      First name must be 2-20 characters long
                     </Text>
                   )}
                 </View>
@@ -650,7 +650,7 @@ export default function RootLayout() {
                   )}
                   {!validationErrors.middleName && !noMiddleName && middleName.trim() === '' && (
                     <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
-                      Middle name must be 3-20 characters long (optional)
+                      Middle name must be 2-20 characters long (optional)
                     </Text>
                   )}
                   <TouchableOpacity
@@ -734,7 +734,7 @@ export default function RootLayout() {
                   )}
                   {!validationErrors.lastName && lastName.trim() === '' && (
                     <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
-                      Last name must be 3-20 characters long
+                      Last name must be 2-20 characters long
                     </Text>
                   )}
 
