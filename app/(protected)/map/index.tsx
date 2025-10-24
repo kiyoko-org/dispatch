@@ -162,6 +162,16 @@ export default function MapPage() {
   }, [reports, categoryMap]);
 
   const resolvedReports = useMemo(() => {
+    const startBoundary = filterStartDate ? new Date(filterStartDate) : null;
+    const endBoundary = filterEndDate ? new Date(filterEndDate) : null;
+
+    if (startBoundary) {
+      startBoundary.setHours(0, 0, 0, 0);
+    }
+    if (endBoundary) {
+      endBoundary.setHours(23, 59, 59, 999);
+    }
+
     return reportsWithCategories.filter(
       (report): report is ReportWithCategory & { latitude: number; longitude: number } => {
         const hasCoordinates =
@@ -170,10 +180,31 @@ export default function MapPage() {
           Number.isFinite(report.latitude) &&
           Number.isFinite(report.longitude);
 
-        return hasCoordinates && report.status === 'resolved';
+        if (!hasCoordinates || report.status !== 'resolved') {
+          return false;
+        }
+
+        if (!startBoundary && !endBoundary) {
+          return true;
+        }
+
+        const reportDate = report.created_at ? new Date(report.created_at) : null;
+        if (!reportDate || Number.isNaN(reportDate.getTime())) {
+          return false;
+        }
+
+        if (startBoundary && reportDate < startBoundary) {
+          return false;
+        }
+
+        if (endBoundary && reportDate > endBoundary) {
+          return false;
+        }
+
+        return true;
       }
     );
-  }, [reportsWithCategories]);
+  }, [reportsWithCategories, filterStartDate, filterEndDate]);
 
   const selectedReport = useMemo(() => {
     if (selectedReportId === null) {
@@ -582,9 +613,7 @@ export default function MapPage() {
 
       // Calculate centroid
       const validItems = items.filter(
-        (report) =>
-          Number.isFinite(report.latitude) &&
-          Number.isFinite(report.longitude)
+        (report) => Number.isFinite(report.latitude) && Number.isFinite(report.longitude)
       );
       if (validItems.length === 0) {
         continue;
@@ -1095,10 +1124,7 @@ export default function MapPage() {
                 // Single report
                 if (total === 1) {
                   const report = cluster.items[0];
-                  if (
-                    !Number.isFinite(report.latitude) ||
-                    !Number.isFinite(report.longitude)
-                  ) {
+                  if (!Number.isFinite(report.latitude) || !Number.isFinite(report.longitude)) {
                     return null;
                   }
                   return (
