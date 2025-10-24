@@ -287,7 +287,7 @@ export default function EmergencyScreen() {
       console.warn('Failed to get location:', error);
     }
 
-    const emergencyNumber = '9602955055';
+    const emergencyNumber = '09552675012';
     const callType = determineCallType(emergencyNumber);
 
     Alert.alert(
