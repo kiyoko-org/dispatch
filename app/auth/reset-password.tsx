@@ -44,15 +44,31 @@ export default function ResetPassword() {
 
     if (value.trim() === '') {
       setPasswordError('');
+      if (confirmPassword.trim()) {
+        setConfirmPasswordError(confirmPassword === value ? '' : 'Passwords do not match');
+      }
       return;
     }
 
     if (value.length < 8) {
       setPasswordError('Password must be at least 8 characters long');
-      return;
+    } else if (value.length > 64) {
+      setPasswordError('Password must not exceed 64 characters');
+    } else if (!/[A-Z]/.test(value)) {
+      setPasswordError('Password must contain at least one uppercase letter');
+    } else if (!/[a-z]/.test(value)) {
+      setPasswordError('Password must contain at least one lowercase letter');
+    } else if (!/[0-9]/.test(value)) {
+      setPasswordError('Password must contain at least one number');
+    } else if (!/[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?]/.test(value)) {
+      setPasswordError('Password must contain at least one special character');
+    } else {
+      setPasswordError('');
     }
 
-    setPasswordError('');
+    if (confirmPassword.trim()) {
+      setConfirmPasswordError(confirmPassword === value ? '' : 'Passwords do not match');
+    }
   }
 
   function validateConfirmPassword(value: string) {
@@ -82,6 +98,21 @@ export default function ResetPassword() {
       hasError = true;
     } else if (password.length < 8) {
       setPasswordError('Password must be at least 8 characters long');
+      hasError = true;
+    } else if (password.length > 64) {
+      setPasswordError('Password must not exceed 64 characters');
+      hasError = true;
+    } else if (!/[A-Z]/.test(password)) {
+      setPasswordError('Password must contain at least one uppercase letter');
+      hasError = true;
+    } else if (!/[a-z]/.test(password)) {
+      setPasswordError('Password must contain at least one lowercase letter');
+      hasError = true;
+    } else if (!/[0-9]/.test(password)) {
+      setPasswordError('Password must contain at least one number');
+      hasError = true;
+    } else if (!/[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?]/.test(password)) {
+      setPasswordError('Password must contain at least one special character');
       hasError = true;
     }
 
@@ -198,7 +229,11 @@ export default function ResetPassword() {
             <Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
               {passwordError}
             </Text>
-          ) : null}
+          ) : (
+            <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
+              8-64 characters with uppercase, lowercase, number, and special character
+            </Text>
+          )}
         </View>
 
         <View className="mb-6">
