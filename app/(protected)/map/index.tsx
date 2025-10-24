@@ -462,15 +462,20 @@ export default function MapPage() {
 
         if (filterSubcategory) {
           const reportSubcategory = report.subCategoryName;
-          if (!reportSubcategory) {
+          const reportCategory = report.categoryName;
+          if (!reportSubcategory && !reportCategory) {
             return false;
           }
-          return filterSubcategory.includes(reportSubcategory);
+          return (
+            (reportSubcategory && filterSubcategory.includes(reportSubcategory)) ||
+            (reportCategory && filterSubcategory.includes(reportCategory))
+          );
         }
 
         if (filterCategory !== 'all') {
           const reportSubcategory = report.subCategoryName;
-          if (!reportSubcategory) {
+          const reportCategory = report.categoryName;
+          if (!reportSubcategory && !reportCategory) {
             return false;
           }
 
@@ -478,8 +483,10 @@ export default function MapPage() {
             .filter((crime) => getCrimeCategory(crime) === filterCategory)
             .map((crime) => crime.incidentType);
 
-          return categorySubcategories.some((subcategory) =>
-            subcategory.includes(reportSubcategory)
+          return categorySubcategories.some(
+            (subcategory) =>
+              (reportSubcategory && subcategory.includes(reportSubcategory)) ||
+              (reportCategory && subcategory.includes(reportCategory))
           );
         }
 
