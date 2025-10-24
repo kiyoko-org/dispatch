@@ -1169,20 +1169,37 @@ export default function MapPage() {
                 const total = cluster.items.length;
                 const markerColor = '#FF6B35';
                 const markerKey = cluster.locationKey;
-                if (!Number.isFinite(cluster.lat) || !Number.isFinite(cluster.lon)) {
+
+                if (
+                  !Number.isFinite(cluster.lat) ||
+                  !Number.isFinite(cluster.lon) ||
+                  cluster.lat === 0 ||
+                  cluster.lon === 0 ||
+                  total === 0
+                ) {
                   return null;
                 }
 
-                // Single report
                 if (total === 1) {
                   const report = cluster.items[0];
-                  if (!Number.isFinite(report.latitude) || !Number.isFinite(report.longitude)) {
+                  if (
+                    !Number.isFinite(report.latitude) ||
+                    !Number.isFinite(report.longitude) ||
+                    report.latitude === 0 ||
+                    report.longitude === 0
+                  ) {
                     return null;
                   }
+
+                  const safeCoordinate = {
+                    latitude: Number(cluster.lat),
+                    longitude: Number(cluster.lon),
+                  };
+
                   return (
                     <Marker
                       key={`report-marker-${markerKey}`}
-                      coordinate={{ latitude: cluster.lat, longitude: cluster.lon }}
+                      coordinate={safeCoordinate}
                       onPress={() => {
                         setSelectedCrime(null);
                         setSelectedCluster(null);
@@ -1197,11 +1214,15 @@ export default function MapPage() {
                   );
                 }
 
-                // Multiple reports - show cluster with count
+                const safeCoordinate = {
+                  latitude: Number(cluster.lat),
+                  longitude: Number(cluster.lon),
+                };
+
                 return (
                   <Marker
                     key={`report-marker-${markerKey}`}
-                    coordinate={{ latitude: cluster.lat, longitude: cluster.lon }}
+                    coordinate={safeCoordinate}
                     onPress={() => {
                       setSelectedCrime(null);
                       setSelectedCluster(null);
