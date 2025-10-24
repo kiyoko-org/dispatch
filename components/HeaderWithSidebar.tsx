@@ -495,9 +495,6 @@ export default function HeaderWithSidebar({
               <Text className="text-sm font-medium" style={{ color: colors.text }}>
                 {userName || 'User'}
               </Text>
-              <Text className="text-xs" style={{ color: colors.textSecondary }}>
-                Trust Score: 87%
-              </Text>
             </View>
           </View>
         </View>
