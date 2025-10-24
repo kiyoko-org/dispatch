@@ -21,6 +21,7 @@ import MapView, {
 import { useRealtimeReports, useCategories } from '@kiyoko-org/dispatch-lib';
 import type { Database } from '@kiyoko-org/dispatch-lib/database.types';
 import HeaderWithSidebar from 'components/HeaderWithSidebar';
+import DatePicker from 'components/DatePicker';
 import { useTheme } from 'components/ThemeContext';
 import Papa from 'papaparse';
 import { dbscan, kMeans, gridBinning, regionAggregation, Point, Cluster } from 'lib/clustering';
@@ -94,6 +95,8 @@ export default function MapPage() {
   const [filterEndDate, setFilterEndDate] = useState<Date | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Set<CrimeCategory>>(new Set());
   const [showFilters, setShowFilters] = useState(false);
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
 
   // Calculate center of Tuguegarao City
   const initialRegion = {
@@ -198,6 +201,67 @@ export default function MapPage() {
   useEffect(() => {
     loadCrimeData();
   }, []);
+
+  const formatDateForPicker = (date: Date | null): string | undefined => {
+    if (!date) {
+      return undefined;
+    }
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const year = String(date.getFullYear());
+    return `${month}/${day}/${year}`;
+  };
+
+  const parsePickerDate = (value: string): Date | null => {
+    const [month, day, year] = value.split('/').map((part) => Number(part));
+    if (!month || !day || !year) {
+      return null;
+    }
+
+    const parsed = new Date(year, month - 1, day);
+    parsed.setHours(0, 0, 0, 0);
+
+    if (
+      parsed.getMonth() !== month - 1 ||
+      parsed.getDate() !== day ||
+      parsed.getFullYear() !== year ||
+      Number.isNaN(parsed.getTime())
+    ) {
+      return null;
+    }
+
+    return parsed;
+  };
+
+  const handleSelectStartDate = (value: string) => {
+    const parsed = parsePickerDate(value);
+    if (!parsed) {
+      return;
+    }
+
+    setFilterStartDate(parsed);
+    setFilterEndDate((prev) => {
+      if (prev && parsed > prev) {
+        return parsed;
+      }
+      return prev;
+    });
+  };
+
+  const handleSelectEndDate = (value: string) => {
+    const parsed = parsePickerDate(value);
+    if (!parsed) {
+      return;
+    }
+
+    setFilterEndDate(parsed);
+    setFilterStartDate((prev) => {
+      if (prev && prev > parsed) {
+        return parsed;
+      }
+      return prev;
+    });
+  };
 
   const loadCrimeData = async () => {
     try {
@@ -1522,21 +1586,15 @@ export default function MapPage() {
                     <TouchableOpacity
                       className="flex-1 rounded-lg p-3"
                       style={{ backgroundColor: colors.background }}
-                      onPress={() => {
-                        // Simple date input - you can enhance with a date picker
-                        const input = prompt('Enter start date (YYYY-MM-DD):');
-                        if (input) {
-                          const date = new Date(input);
-                          if (!isNaN(date.getTime())) {
-                            setFilterStartDate(date);
-                          }
-                        }
-                      }}>
-                      <Text style={{ color: colors.text }}>
-                        {filterStartDate
-                          ? filterStartDate.toLocaleDateString()
-                          : 'Select start date'}
-                      </Text>
+                      onPress={() => setShowStartDatePicker(true)}>
+                      <View className="flex-row items-center justify-between">
+                        <Text style={{ color: colors.text }}>
+                          {filterStartDate
+                            ? filterStartDate.toLocaleDateString()
+                            : 'Select start date'}
+                        </Text>
+                        <Calendar size={18} color={colors.textSecondary} />
+                      </View>
                     </TouchableOpacity>
                     {filterStartDate && (
                       <TouchableOpacity
@@ -1556,19 +1614,13 @@ export default function MapPage() {
                     <TouchableOpacity
                       className="flex-1 rounded-lg p-3"
                       style={{ backgroundColor: colors.background }}
-                      onPress={() => {
-                        // Simple date input - you can enhance with a date picker
-                        const input = prompt('Enter end date (YYYY-MM-DD):');
-                        if (input) {
-                          const date = new Date(input);
-                          if (!isNaN(date.getTime())) {
-                            setFilterEndDate(date);
-                          }
-                        }
-                      }}>
-                      <Text style={{ color: colors.text }}>
-                        {filterEndDate ? filterEndDate.toLocaleDateString() : 'Select end date'}
-                      </Text>
+                      onPress={() => setShowEndDatePicker(true)}>
+                      <View className="flex-row items-center justify-between">
+                        <Text style={{ color: colors.text }}>
+                          {filterEndDate ? filterEndDate.toLocaleDateString() : 'Select end date'}
+                        </Text>
+                        <Calendar size={18} color={colors.textSecondary} />
+                      </View>
                     </TouchableOpacity>
                     {filterEndDate && (
                       <TouchableOpacity className="ml-2 p-2" onPress={() => setFilterEndDate(null)}>
@@ -2876,6 +2928,20 @@ export default function MapPage() {
           </View>
         )}
       </View>
+
+      <DatePicker
+        isVisible={showStartDatePicker}
+        onClose={() => setShowStartDatePicker(false)}
+        initialDate={formatDateForPicker(filterStartDate)}
+        onSelectDate={handleSelectStartDate}
+      />
+
+      <DatePicker
+        isVisible={showEndDatePicker}
+        onClose={() => setShowEndDatePicker(false)}
+        initialDate={formatDateForPicker(filterEndDate)}
+        onSelectDate={handleSelectEndDate}
+      />
     </View>
   );
 }
