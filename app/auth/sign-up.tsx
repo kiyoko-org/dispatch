@@ -200,6 +200,28 @@ const signUpSchema = z
     }
   );
 
+const withTimeout = async <T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  timeoutMessage: string
+): Promise<T> => {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      reject(new Error(timeoutMessage));
+    }, timeoutMs);
+  });
+
+  try {
+    const result = await Promise.race([promise, timeoutPromise]);
+    return result as T;
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+  }
+};
+
 export default function RootLayout() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
@@ -441,7 +463,11 @@ export default function RootLayout() {
       setEmailCheckVisible(true);
 
       try {
-        const { exists, error: emailCheckError } = await client.emailExists(email.trim());
+        const { exists, error: emailCheckError } = await withTimeout(
+          client.emailExists(email.trim()),
+          10_000,
+          'Email check timed out'
+        );
 
         if (emailCheckError) {
           throw new Error(emailCheckError);
@@ -458,10 +484,12 @@ export default function RootLayout() {
         setCurrentStep((prev) => Math.min(prev + 1, 3));
       } catch (error) {
         console.error('Email availability check failed', error);
-        Alert.alert(
-          'Unable to verify email',
-          'We could not confirm your email address just now. Please try again.'
-        );
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const userMessage =
+          errorMessage === 'Email check timed out'
+            ? 'The email check is taking longer than expected. Please try again.'
+            : 'We could not confirm your email address just now. Please try again.';
+        Alert.alert('Unable to verify email', userMessage);
       } finally {
         setEmailCheckVisible(false);
       }
@@ -489,7 +517,11 @@ export default function RootLayout() {
       setIdCheckVisible(true);
 
       try {
-        const { exists, error: idCheckError } = await client.idExists(idData.data.pcn);
+        const { exists, error: idCheckError } = await withTimeout(
+          client.idExists(idData.data.pcn),
+          10_000,
+          'ID check timed out'
+        );
 
         if (idCheckError) {
           throw new Error(idCheckError);
@@ -506,10 +538,12 @@ export default function RootLayout() {
         setCurrentStep((prev) => Math.min(prev + 1, 3));
       } catch (error) {
         console.error('ID availability check failed', error);
-        Alert.alert(
-          'Unable to verify ID',
-          'We could not confirm your ID number just now. Please try again.'
-        );
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const userMessage =
+          errorMessage === 'ID check timed out'
+            ? 'The ID check is taking longer than expected. Please try again.'
+            : 'We could not confirm your ID number just now. Please try again.';
+        Alert.alert('Unable to verify ID', userMessage);
       } finally {
         setIdCheckVisible(false);
       }
