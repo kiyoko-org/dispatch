@@ -34,6 +34,7 @@ export default function NotificationSidebar({
 	const activityPanelWidth = Math.min(400, Dimensions.get('window').width * 0.85);
 	const activityAnim = useRef(new Animated.Value(activityPanelWidth)).current;
 	const [deletingIds, setDeletingIds] = useState<string[]>([]);
+	const [clearingAll, setClearingAll] = useState(false);
 
 	useEffect(() => {
 		if (isOpen) {
@@ -73,6 +74,34 @@ export default function NotificationSidebar({
 		[deleteNotification]
 	);
 
+	const handleClearAll = useCallback(async () => {
+		if (!userNotifications.length || clearingAll) {
+			return;
+		}
+
+		const notificationIds = userNotifications.map(({ id }) => id);
+		setClearingAll(true);
+		setDeletingIds((prev) => {
+			const updated = new Set(prev);
+			notificationIds.forEach((id) => updated.add(id));
+			return Array.from(updated);
+		});
+
+		try {
+			await Promise.all(
+				notificationIds.map(async (id) => {
+					const { error } = await deleteNotification(id);
+					if (error) {
+						console.error('Error deleting notification:', error);
+					}
+				})
+			);
+		} finally {
+			setDeletingIds((prev) => prev.filter((id) => !notificationIds.includes(id)));
+			setClearingAll(false);
+		}
+	}, [userNotifications, deleteNotification, clearingAll]);
+
 	return (
 		<>
 			{isOpen && (
@@ -106,6 +135,24 @@ export default function NotificationSidebar({
 						}}>
 						Notifications
 					</Text>
+					{userNotifications.length > 0 && (
+						<TouchableOpacity
+							onPress={handleClearAll}
+							disabled={clearingAll}
+							style={[
+								styles.clearButton,
+								{
+									borderColor: colors.border,
+									backgroundColor: colors.surfaceVariant,
+									opacity: clearingAll ? 0.6 : 1,
+								},
+							]}
+						>
+							<Text style={[styles.clearButtonText, { color: colors.primary }]}>
+								{clearingAll ? 'Clearing...' : 'Clear All'}
+							</Text>
+						</TouchableOpacity>
+					)}
 				</View>
 				<ScrollView
 					contentContainerStyle={styles.notificationList}
@@ -151,5 +198,15 @@ const styles = StyleSheet.create({
 	notificationList: {
 		gap: 12,
 		paddingBottom: 32,
+	},
+	clearButton: {
+		paddingHorizontal: 12,
+		paddingVertical: 6,
+		borderRadius: 999,
+		borderWidth: 1,
+	},
+	clearButtonText: {
+		fontSize: 14,
+		fontWeight: '500',
 	},
 });
