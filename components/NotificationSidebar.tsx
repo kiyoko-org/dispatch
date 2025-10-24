@@ -1,5 +1,13 @@
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, Animated, Dimensions } from 'react-native';
+import {
+	StyleSheet,
+	Text,
+	View,
+	TouchableOpacity,
+	Animated,
+	Dimensions,
+	ScrollView,
+} from 'react-native';
 import { Bell } from 'lucide-react-native';
 import { useTheme } from './ThemeContext';
 import { Notification } from './NotificationItem';
@@ -99,16 +107,21 @@ export default function NotificationSidebar({
 						Notifications
 					</Text>
 				</View>
-				{userNotifications.map(notification => {
-					return (
-						<SwipeableNotification
-							key={notification.id}
-							notification={notification}
-							onDelete={handleDelete}
-							isDeleting={deletingIds.includes(notification.id)}
-						/>
-					)
-				})}
+				<ScrollView
+					contentContainerStyle={styles.notificationList}
+					showsVerticalScrollIndicator={false}
+				>
+					{userNotifications.map(notification => {
+						return (
+							<SwipeableNotification
+								key={notification.id}
+								notification={notification}
+								onDelete={handleDelete}
+								isDeleting={deletingIds.includes(notification.id)}
+							/>
+						);
+					})}
+				</ScrollView>
 			</Animated.View>
 		</>
 	);
@@ -134,5 +147,9 @@ const styles = StyleSheet.create({
 		shadowOpacity: 0.25,
 		shadowRadius: 10,
 		elevation: 20,
+	},
+	notificationList: {
+		gap: 12,
+		paddingBottom: 32,
 	},
 });
