@@ -230,7 +230,6 @@ export default function RootLayout() {
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [emailCheckVisible, setEmailCheckVisible] = useState(false);
-  const [idCheckVisible, setIdCheckVisible] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -497,60 +496,6 @@ export default function RootLayout() {
       return;
     }
 
-    if (currentStep === 2) {
-      if (!client) {
-        const message = isInitialized
-          ? 'Unable to verify this ID right now. Please try again in a moment.'
-          : 'We are still getting things ready. Please try again in a moment.';
-        Alert.alert('Hold on', message);
-        return;
-      }
-
-      if (!idData?.data.pcn) {
-        Alert.alert(
-          'Missing ID details',
-          'We could not read your ID number from the scan. Please rescan your ID.'
-        );
-        return;
-      }
-
-      setIdCheckVisible(true);
-
-      try {
-        const { exists, error: idCheckError } = await withTimeout(
-          client.idExists(idData.data.pcn),
-          10_000,
-          'ID check timed out'
-        );
-
-        if (idCheckError) {
-          throw new Error(idCheckError);
-        }
-
-        if (exists) {
-          Alert.alert(
-            'ID already registered',
-            'This PhilSys Card Number is already linked to another account. If you believe this is an error, please contact support.'
-          );
-          return;
-        }
-
-        setCurrentStep((prev) => Math.min(prev + 1, 3));
-      } catch (error) {
-        console.error('ID availability check failed', error);
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        const userMessage =
-          errorMessage === 'ID check timed out'
-            ? 'The ID check is taking longer than expected. Please try again.'
-            : 'We could not confirm your ID number just now. Please try again.';
-        Alert.alert('Unable to verify ID', userMessage);
-      } finally {
-        setIdCheckVisible(false);
-      }
-
-      return;
-    }
-
     if (currentStep < 3) {
       setCurrentStep((prev) => Math.min(prev + 1, 3));
     }
@@ -586,73 +531,121 @@ export default function RootLayout() {
     }
   };
 
-  const handleBarcodeScanned = ({ data }: { data: string }) => {
-    // prevent multiple triggers
+  const handleBarcodeScanned = async ({ data }: { data: string }) => {
     if (isScanning) return;
     setIsScanning(true);
-
-    // close camera modal
     setCameraModalVisible(false);
-
-    // save scanned data and start verifying
     setScannedQr(data);
     setVerifying(true);
 
-    verifyNationalIdQR(data)
-      .then((result) => {
-        if (result.isVerified && result.data) {
-          // Validate QR data against form data
-          const validationError = validateQRData(result.data);
+    const resetScanState = () => {
+      setScannedQr(null);
+      setIsScanning(false);
+    };
 
-          if (validationError) {
-            setVerified(false);
-            setIdData(null);
-            Alert.alert('Verification failed', `Data mismatch:\n${validationError}`, [
-              {
-                text: 'OK',
-                onPress: () => {
-                  setScannedQr(null);
-                  setIsScanning(false);
-                },
-              },
-            ]);
-          } else {
-            setVerified(true);
-            setIdData(result.data);
-            Alert.alert('Verification successful', 'Your ID has been verified.');
-          }
-        } else {
-          // failed: reset states so the user can rescan
-          setVerified(false);
-          setIdData(null);
-          Alert.alert('Verification failed', 'Unable to verify the scanned QR. Please try again.', [
-            {
-              text: 'OK',
-              onPress: () => {
-                setScannedQr(null);
-                setIsScanning(false);
-              },
-            },
-          ]);
-        }
-      })
-      .catch((err) => {
-        console.error('Verification error', err);
+    try {
+      const result = await verifyNationalIdQR(data);
+
+      if (!result.isVerified || !result.data) {
         setVerified(false);
         setIdData(null);
-        Alert.alert('Verification error', 'An error occurred while verifying. Please try again.', [
+        Alert.alert('Verification failed', 'Unable to verify the scanned QR. Please try again.', [
           {
             text: 'OK',
-            onPress: () => {
-              setScannedQr(null);
-              setIsScanning(false);
-            },
+            onPress: resetScanState,
           },
         ]);
-      })
-      .finally(() => {
-        setVerifying(false);
-      });
+        return;
+      }
+
+      const validationError = validateQRData(result.data);
+      if (validationError) {
+        setVerified(false);
+        setIdData(null);
+        Alert.alert('Verification failed', `Data mismatch:\n${validationError}`, [
+          {
+            text: 'OK',
+            onPress: resetScanState,
+          },
+        ]);
+        return;
+      }
+
+      if (!client) {
+        const message = isInitialized
+          ? 'Unable to verify this ID right now. Please try again in a moment.'
+          : 'We are still getting things ready. Please try again in a moment.';
+        setVerified(false);
+        setIdData(null);
+        Alert.alert('Hold on', message, [
+          {
+            text: 'OK',
+            onPress: resetScanState,
+          },
+        ]);
+        return;
+      }
+
+      try {
+        const { exists, error: idCheckError } = await withTimeout(
+          client.idExists(result.data.data.pcn),
+          10_000,
+          'ID check timed out'
+        );
+
+        if (idCheckError) {
+          throw new Error(idCheckError);
+        }
+
+        if (exists) {
+          setVerified(false);
+          setIdData(null);
+          Alert.alert(
+            'ID already registered',
+            'This PhilSys Card Number is already linked to another account. If you believe this is an error, please contact support.',
+            [
+              {
+                text: 'OK',
+                onPress: resetScanState,
+              },
+            ]
+          );
+          return;
+        }
+      } catch (error) {
+        console.error('ID availability check failed', error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const userMessage =
+          errorMessage === 'ID check timed out'
+            ? 'The ID check is taking longer than expected. Please try again.'
+            : 'We could not confirm your ID number just now. Please try again.';
+        setVerified(false);
+        setIdData(null);
+        Alert.alert('Unable to verify ID', userMessage, [
+          {
+            text: 'OK',
+            onPress: resetScanState,
+          },
+        ]);
+        return;
+      }
+
+      setVerified(true);
+      setIdData(result.data);
+      Alert.alert('Verification successful', 'Your ID has been verified.');
+    } catch (err) {
+      console.error('Verification error', err);
+      setVerified(false);
+      setIdData(null);
+      Alert.alert('Verification error', 'An error occurred while verifying. Please try again.', [
+        {
+          text: 'OK',
+          onPress: resetScanState,
+        },
+      ]);
+    } finally {
+      setVerifying(false);
+    }
   };
 
   return (
@@ -1894,27 +1887,6 @@ export default function RootLayout() {
               className="mt-2 text-center text-sm"
               style={{ color: colors.textSecondary }}>
               Hang tight - we are making sure this email is not already registered.
-            </Text>
-          </View>
-        </View>
-      </Modal>
-
-      {/* ID Availability Dialog */}
-      <Modal visible={idCheckVisible} transparent animationType="fade" onRequestClose={() => {}}>
-        <View className="flex-1 items-center justify-center bg-black/25 p-6">
-          <View
-            className="w-full max-w-sm items-center rounded-xl p-6"
-            style={{
-              backgroundColor: colors.surface,
-              borderWidth: 1,
-              borderColor: colors.border,
-            }}>
-            <ActivityIndicator size="large" color={colors.primary} />
-            <Text className="mt-4 text-base font-semibold" style={{ color: colors.text }}>
-              Checking ID number
-            </Text>
-            <Text className="mt-2 text-center text-sm" style={{ color: colors.textSecondary }}>
-              Hang tight - we are making sure this PhilSys Card Number has not been registered.
             </Text>
           </View>
         </View>
