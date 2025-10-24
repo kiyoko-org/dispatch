@@ -10,7 +10,7 @@ import {
   Bell,
 } from 'lucide-react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import HeaderWithSidebar from '../../components/HeaderWithSidebar';
 import { useAuthContext } from 'components/AuthProvider';
 import { useTheme } from 'components/ThemeContext';
@@ -35,6 +35,38 @@ export default function Home() {
 
   const recentReports = allReports.slice(0, 5);
   const reportCount = userReports.length;
+  const averageResponseTimeMinutes = useMemo(() => {
+    const responseTimes = allReports
+      .map((report) => {
+        const { arrived_at } = report as { arrived_at?: string | null };
+        if (!arrived_at || !report.created_at) {
+          return null;
+        }
+
+        const createdAtTime = new Date(report.created_at).getTime();
+        const arrivedAtTime = new Date(arrived_at).getTime();
+
+        if (Number.isNaN(createdAtTime) || Number.isNaN(arrivedAtTime)) {
+          return null;
+        }
+
+        const diffInMinutes = (arrivedAtTime - createdAtTime) / (1000 * 60);
+        return diffInMinutes >= 0 ? diffInMinutes : null;
+      })
+      .filter((value): value is number => value !== null);
+
+    if (!responseTimes.length) {
+      return null;
+    }
+
+    const total = responseTimes.reduce((sum, value) => sum + value, 0);
+    return total / responseTimes.length;
+  }, [allReports]);
+
+  const averageResponseDisplay =
+    averageResponseTimeMinutes !== null
+      ? `${Math.max(Math.round(averageResponseTimeMinutes), 0)}min`
+      : '0min';
 
   // Get current theme colors
   const getCurrentColors = () => {
@@ -435,7 +467,7 @@ export default function Home() {
                   <Zap size={20} color={currentColors.cardIcon} />
                 </View>
                 <Text style={{ fontSize: 20, fontWeight: 'bold', color: currentColors.cardText }}>
-                  0min
+                  {averageResponseDisplay}
                 </Text>
                 <Text
                   style={{
