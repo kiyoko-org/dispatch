@@ -523,6 +523,11 @@ const withTimeout = async<T>(
 
   // Request permission and open camera modal
   const openCameraForQr = async () => {
+    if (isIdLocked) {
+      Alert.alert('ID already verified', 'Your national ID has already been verified.');
+      return;
+    }
+
     try {
       if (permission && !permission.granted) {
         const {granted} = await requestPermission();
@@ -1519,7 +1524,9 @@ const withTimeout = async<T>(
 											style={{
 												backgroundColor: colors.surfaceVariant,
 												borderColor: colors.border,
+												opacity: verifying || isIdLocked ? 0.6 : 1,
 											}}
+											disabled={verifying || isIdLocked}
 											onPress={openCameraForQr}>
 											<View className="items-center">
 												<View
