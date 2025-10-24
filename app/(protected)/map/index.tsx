@@ -2666,12 +2666,14 @@ export default function MapPage() {
             </View>
 
             {/* Comprehensive Legend */}
-            <TouchableOpacity
+            <View
               className="absolute right-4 top-32 rounded-xl shadow-lg"
-              style={{ backgroundColor: colors.card, maxWidth: width - 100 }}
-              onPress={() => setLegendExpanded(!legendExpanded)}
-              activeOpacity={0.8}>
-              <View className="px-3 py-2">
+              style={{ backgroundColor: colors.card, maxWidth: width - 100 }}>
+              {/* Clickable Header */}
+              <TouchableOpacity
+                className="px-3 py-2"
+                onPress={() => setLegendExpanded(!legendExpanded)}
+                activeOpacity={0.8}>
                 <View className="mb-1 flex-row items-center justify-between">
                   <Text
                     className="text-xs font-bold uppercase"
@@ -2691,9 +2693,11 @@ export default function MapPage() {
                   {heatmapType === 'grid' && '🔲 Grid-Based Heatmap'}
                   {heatmapType === 'bubble' && '🎯 Bubble Map (Categories)'}
                 </Text>
+              </TouchableOpacity>
 
-                {legendExpanded && (
-                  <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+              {/* Scrollable Content */}
+              {legendExpanded && (
+                <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
                     {/* Heatmap Visualization Legend */}
                     {showHeatmap && (
                       <>
@@ -3139,10 +3143,9 @@ export default function MapPage() {
                           '• Each bubble = crime category cluster\n• Size = number of incidents\n• Color = crime type'}
                       </Text>
                     </View>
-                  </ScrollView>
-                )}
-              </View>
-            </TouchableOpacity>
+                </ScrollView>
+              )}
+            </View>
           </>
         )}
 
