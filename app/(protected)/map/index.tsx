@@ -161,51 +161,6 @@ export default function MapPage() {
     });
   }, [reports, categoryMap]);
 
-  const resolvedReports = useMemo(() => {
-    const startBoundary = filterStartDate ? new Date(filterStartDate) : null;
-    const endBoundary = filterEndDate ? new Date(filterEndDate) : null;
-
-    if (startBoundary) {
-      startBoundary.setHours(0, 0, 0, 0);
-    }
-    if (endBoundary) {
-      endBoundary.setHours(23, 59, 59, 999);
-    }
-
-    return reportsWithCategories.filter(
-      (report): report is ReportWithCategory & { latitude: number; longitude: number } => {
-        const hasCoordinates =
-          typeof report.latitude === 'number' &&
-          typeof report.longitude === 'number' &&
-          Number.isFinite(report.latitude) &&
-          Number.isFinite(report.longitude);
-
-        if (!hasCoordinates || report.status !== 'resolved') {
-          return false;
-        }
-
-        if (!startBoundary && !endBoundary) {
-          return true;
-        }
-
-        const reportDate = report.created_at ? new Date(report.created_at) : null;
-        if (!reportDate || Number.isNaN(reportDate.getTime())) {
-          return false;
-        }
-
-        if (startBoundary && reportDate < startBoundary) {
-          return false;
-        }
-
-        if (endBoundary && reportDate > endBoundary) {
-          return false;
-        }
-
-        return true;
-      }
-    );
-  }, [reportsWithCategories, filterStartDate, filterEndDate]);
-
   const selectedReport = useMemo(() => {
     if (selectedReportId === null) {
       return null;
@@ -468,6 +423,77 @@ export default function MapPage() {
 
     return filtered;
   }, [dateFilteredCrimes, filterCategory, filterSubcategory]);
+
+  const resolvedReports = useMemo(() => {
+    const startBoundary = filterStartDate ? new Date(filterStartDate) : null;
+    const endBoundary = filterEndDate ? new Date(filterEndDate) : null;
+
+    if (startBoundary) {
+      startBoundary.setHours(0, 0, 0, 0);
+    }
+    if (endBoundary) {
+      endBoundary.setHours(23, 59, 59, 999);
+    }
+
+    return reportsWithCategories.filter(
+      (report): report is ReportWithCategory & { latitude: number; longitude: number } => {
+        const hasCoordinates =
+          typeof report.latitude === 'number' &&
+          typeof report.longitude === 'number' &&
+          Number.isFinite(report.latitude) &&
+          Number.isFinite(report.longitude);
+
+        if (!hasCoordinates || report.status !== 'resolved') {
+          return false;
+        }
+
+        const reportDate = report.created_at ? new Date(report.created_at) : null;
+        if (reportDate && !Number.isNaN(reportDate.getTime())) {
+          if (startBoundary && reportDate < startBoundary) {
+            return false;
+          }
+
+          if (endBoundary && reportDate > endBoundary) {
+            return false;
+          }
+        } else if (startBoundary || endBoundary) {
+          return false;
+        }
+
+        if (filterSubcategory) {
+          const reportSubcategory = report.subCategoryName;
+          if (!reportSubcategory) {
+            return false;
+          }
+          return filterSubcategory.includes(reportSubcategory);
+        }
+
+        if (filterCategory !== 'all') {
+          const reportSubcategory = report.subCategoryName;
+          if (!reportSubcategory) {
+            return false;
+          }
+
+          const categorySubcategories = dateFilteredCrimes
+            .filter((crime) => getCrimeCategory(crime) === filterCategory)
+            .map((crime) => crime.incidentType);
+
+          return categorySubcategories.some((subcategory) =>
+            subcategory.includes(reportSubcategory)
+          );
+        }
+
+        return true;
+      }
+    );
+  }, [
+    reportsWithCategories,
+    filterStartDate,
+    filterEndDate,
+    filterCategory,
+    filterSubcategory,
+    dateFilteredCrimes,
+  ]);
 
   // Grid-based clustering by location AND category with spidering for overlaps
   const clusters = useMemo(() => {
