@@ -20,6 +20,7 @@ import { registerForFCMToken } from 'hooks/useFCMToken';
 import { verifyNationalIdQR, type NationalIdData } from 'lib/id';
 import { useTheme } from 'components/ThemeContext';
 import Dropdown from 'components/Dropdown';
+import { useDispatchClient } from 'components/DispatchProvider';
 import { z } from 'zod';
 import { useBarangays } from '@kiyoko-org/dispatch-lib';
 import { getProvinces, getMunicipalities, getBarangays } from 'lib/locations';
@@ -203,8 +204,10 @@ export default function RootLayout() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
   useBarangays();
+  const { client, isInitialized } = useDispatchClient();
   const [currentStep, setCurrentStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [emailCheckVisible, setEmailCheckVisible] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -423,9 +426,49 @@ export default function RootLayout() {
     }
   };
 
-  const nextStep = () => {
+  const nextStep = async () => {
+    if (currentStep === 1) {
+      if (!client) {
+        const message = isInitialized
+          ? 'Unable to verify this email right now. Please try again in a moment.'
+          : 'We are still getting things ready. Please try again in a moment.';
+        Alert.alert('Hold on', message);
+        return;
+      }
+
+      setEmailCheckVisible(true);
+
+      try {
+        const { exists, error: emailCheckError } = await client.emailExists(email.trim());
+
+        if (emailCheckError) {
+          throw new Error(emailCheckError);
+        }
+
+        if (exists) {
+          Alert.alert(
+            'Email already in use',
+            'An account with this email already exists. Please use a different email address.'
+          );
+          return;
+        }
+
+        setCurrentStep((prev) => Math.min(prev + 1, 3));
+      } catch (error) {
+        console.error('Email availability check failed', error);
+        Alert.alert(
+          'Unable to verify email',
+          'We could not confirm your email address just now. Please try again.'
+        );
+      } finally {
+        setEmailCheckVisible(false);
+      }
+
+      return;
+    }
+
     if (currentStep < 3) {
-      setCurrentStep(currentStep + 1);
+      setCurrentStep((prev) => Math.min(prev + 1, 3));
     }
   };
 
@@ -1748,6 +1791,29 @@ export default function RootLayout() {
           )}
         </View>
       </ScrollView>
+
+      {/* Email Availability Dialog */}
+      <Modal visible={emailCheckVisible} transparent animationType="fade" onRequestClose={() => {}}>
+        <View className="flex-1 items-center justify-center bg-black/25 p-6">
+          <View
+            className="w-full max-w-sm items-center rounded-xl p-6"
+            style={{
+              backgroundColor: colors.surface,
+              borderWidth: 1,
+              borderColor: colors.border,
+            }}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text className="mt-4 text-base font-semibold" style={{ color: colors.text }}>
+              Checking email
+            </Text>
+            <Text
+              className="mt-2 text-center text-sm"
+              style={{ color: colors.textSecondary }}>
+              Hang tight - we are making sure this email is not already registered.
+            </Text>
+          </View>
+        </View>
+      </Modal>
 
       {/* Permanent Address Dropdowns */}
       <Dropdown
