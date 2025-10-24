@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, TouchableOpacity, Modal } from 'react-native';
+import { View, Text, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react-native';
 
 interface DatePickerProps {
@@ -27,6 +27,7 @@ export default function DatePicker({
   const [selectedDate, setSelectedDate] = useState<Date | null>(
     initialDate ? parseInitialDate() : null
   );
+  const [showYearPicker, setShowYearPicker] = useState(false);
 
   const months = [
     'January',
@@ -98,6 +99,44 @@ export default function DatePicker({
       onSelectDate(`${month}/${day}/${year}`);
     }
     onClose();
+  };
+
+  const handleYearSelect = (year: number) => {
+    setCurrentDate((prev) => {
+      const newDate = new Date(prev);
+      newDate.setFullYear(year);
+      return newDate;
+    });
+    setShowYearPicker(false);
+  };
+
+  const renderYearPicker = () => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+
+    for (let year = currentYear; year >= 1900; year--) {
+      const isSelected = currentDate.getFullYear() === year;
+      const isCurrentYear = new Date().getFullYear() === year;
+
+      years.push(
+        <TouchableOpacity
+          key={year}
+          onPress={() => handleYearSelect(year)}
+          className={`m-1 h-14 w-[30%] items-center justify-center rounded-lg ${
+            isSelected ? 'bg-blue-600' : isCurrentYear ? 'bg-blue-100' : 'bg-gray-50'
+          }`}
+          activeOpacity={0.7}>
+          <Text
+            className={`text-base font-medium ${
+              isSelected ? 'text-white' : isCurrentYear ? 'text-blue-600' : 'text-slate-900'
+            }`}>
+            {year}
+          </Text>
+        </TouchableOpacity>
+      );
+    }
+
+    return years;
   };
 
   const renderCalendarGrid = () => {
@@ -181,34 +220,53 @@ export default function DatePicker({
             <TouchableOpacity
               onPress={() => navigateMonth('prev')}
               className="h-10 w-10 items-center justify-center rounded-lg bg-gray-100"
-              activeOpacity={0.7}>
+              activeOpacity={0.7}
+              disabled={showYearPicker}>
               <ChevronLeft size={20} color="#64748B" />
             </TouchableOpacity>
 
-            <Text className="text-lg font-semibold text-slate-900">
-              {months[currentDate.getMonth()]} {currentDate.getFullYear()}
-            </Text>
+            <TouchableOpacity
+              onPress={() => setShowYearPicker(!showYearPicker)}
+              activeOpacity={0.7}>
+              <Text className="text-lg font-semibold text-slate-900">
+                {months[currentDate.getMonth()]} {currentDate.getFullYear()}
+              </Text>
+            </TouchableOpacity>
 
             <TouchableOpacity
               onPress={() => navigateMonth('next')}
-              disabled={isNextMonthDisabled()}
+              disabled={isNextMonthDisabled() || showYearPicker}
               className={`h-10 w-10 items-center justify-center rounded-lg ${
-                isNextMonthDisabled() ? 'bg-gray-200' : 'bg-gray-100'
+                isNextMonthDisabled() || showYearPicker ? 'bg-gray-200' : 'bg-gray-100'
               }`}
               activeOpacity={0.7}>
-              <ChevronRight size={20} color={isNextMonthDisabled() ? '#CBD5E1' : '#64748B'} />
+              <ChevronRight
+                size={20}
+                color={isNextMonthDisabled() || showYearPicker ? '#CBD5E1' : '#64748B'}
+              />
             </TouchableOpacity>
           </View>
 
-          <View className="mb-2 flex-row justify-between">
-            {dayLabels.map((label) => (
-              <View key={label} className="h-8 w-12 items-center justify-center">
-                <Text className="text-sm font-medium text-gray-500">{label}</Text>
+          {showYearPicker ? (
+            <ScrollView
+              className="mb-6"
+              style={{ maxHeight: 300 }}
+              showsVerticalScrollIndicator={false}>
+              <View className="flex-row flex-wrap justify-between">{renderYearPicker()}</View>
+            </ScrollView>
+          ) : (
+            <>
+              <View className="mb-2 flex-row justify-between">
+                {dayLabels.map((label) => (
+                  <View key={label} className="h-8 w-12 items-center justify-center">
+                    <Text className="text-sm font-medium text-gray-500">{label}</Text>
+                  </View>
+                ))}
               </View>
-            ))}
-          </View>
 
-          <View className="mb-6 flex-row flex-wrap">{renderCalendarGrid()}</View>
+              <View className="mb-6 flex-row flex-wrap">{renderCalendarGrid()}</View>
+            </>
+          )}
 
           <View className="flex-row space-x-3">
             <TouchableOpacity

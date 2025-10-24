@@ -44,7 +44,7 @@ import {
   Map as MapIcon,
 } from 'lucide-react-native';
 
-const { width } = Dimensions.get('window');
+const { width, height: windowHeight } = Dimensions.get('window');
 
 interface CrimeData {
   municipal: string;
@@ -120,6 +120,7 @@ export default function MapPage() {
 
   // Show legend expanded/collapsed
   const [legendExpanded, setLegendExpanded] = useState(false);
+  const legendContentMaxHeight = Math.min(windowHeight * 0.5, 400);
 
   // Reports integration
   const { reports } = useRealtimeReports();
@@ -161,15 +162,17 @@ export default function MapPage() {
   }, [reports, categoryMap]);
 
   const resolvedReports = useMemo(() => {
-    return reportsWithCategories.filter((report) => {
-      const hasCoordinates =
-        typeof report.latitude === 'number' &&
-        typeof report.longitude === 'number' &&
-        !Number.isNaN(report.latitude) &&
-        !Number.isNaN(report.longitude);
+    return reportsWithCategories.filter(
+      (report): report is ReportWithCategory & { latitude: number; longitude: number } => {
+        const hasCoordinates =
+          typeof report.latitude === 'number' &&
+          typeof report.longitude === 'number' &&
+          Number.isFinite(report.latitude) &&
+          Number.isFinite(report.longitude);
 
-      return hasCoordinates && report.status === 'resolved';
-    });
+        return hasCoordinates && report.status === 'resolved';
+      }
+    );
   }, [reportsWithCategories]);
 
   const selectedReport = useMemo(() => {
@@ -366,7 +369,7 @@ export default function MapPage() {
 
   // Get subcategories (unique incident types) for each category
   const getSubcategories = (category: CrimeCategory): string[] => {
-    const subcategories = crimes
+    const subcategories = dateFilteredCrimes
       .filter((crime) => getCrimeCategory(crime) === category)
       .map((crime) => crime.incidentType)
       .filter((value, index, self) => self.indexOf(value) === index) // unique
@@ -386,8 +389,41 @@ export default function MapPage() {
   };
 
   // Filter crimes based on selected category, subcategory, and date range
+  const dateFilteredCrimes = useMemo(() => {
+    if (!filterStartDate && !filterEndDate) {
+      return crimes;
+    }
+
+    const startBoundary = filterStartDate ? new Date(filterStartDate) : null;
+    const endBoundary = filterEndDate ? new Date(filterEndDate) : null;
+
+    if (startBoundary) {
+      startBoundary.setHours(0, 0, 0, 0);
+    }
+    if (endBoundary) {
+      endBoundary.setHours(23, 59, 59, 999);
+    }
+
+    return crimes.filter((crime) => {
+      const crimeDate = new Date(crime.dateCommitted);
+      if (Number.isNaN(crimeDate.getTime())) {
+        return false;
+      }
+
+      if (startBoundary && crimeDate < startBoundary) {
+        return false;
+      }
+
+      if (endBoundary && crimeDate > endBoundary) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [crimes, filterStartDate, filterEndDate]);
+
   const filteredCrimes = useMemo(() => {
-    let filtered = crimes;
+    let filtered = dateFilteredCrimes;
 
     // Filter by category if selected
     if (filterCategory !== 'all') {
@@ -399,23 +435,8 @@ export default function MapPage() {
       filtered = filtered.filter((crime) => crime.incidentType === filterSubcategory);
     }
 
-    // Filter by date range if selected
-    if (filterStartDate || filterEndDate) {
-      filtered = filtered.filter((crime) => {
-        const crimeDate = new Date(crime.dateCommitted);
-        if (filterStartDate && crimeDate < filterStartDate) return false;
-        if (filterEndDate) {
-          // Set end date to end of day
-          const endOfDay = new Date(filterEndDate);
-          endOfDay.setHours(23, 59, 59, 999);
-          if (crimeDate > endOfDay) return false;
-        }
-        return true;
-      });
-    }
-
     return filtered;
-  }, [crimes, filterCategory, filterSubcategory, filterStartDate, filterEndDate]);
+  }, [dateFilteredCrimes, filterCategory, filterSubcategory]);
 
   // Grid-based clustering by location AND category with spidering for overlaps
   const clusters = useMemo(() => {
@@ -535,7 +556,13 @@ export default function MapPage() {
     // Group reports by location only
     const grid: Record<string, ReportWithCategory[]> = {};
     for (const report of resolvedReports) {
-      const key = cellKey(report.latitude, report.longitude);
+      const lat = report.latitude;
+      const lon = report.longitude;
+      if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+        continue;
+      }
+
+      const key = cellKey(lat, lon);
       if (!grid[key]) grid[key] = [];
       grid[key].push(report);
     }
@@ -554,14 +581,26 @@ export default function MapPage() {
       const items = grid[key];
 
       // Calculate centroid
+      const validItems = items.filter(
+        (report) =>
+          Number.isFinite(report.latitude) &&
+          Number.isFinite(report.longitude)
+      );
+      if (validItems.length === 0) {
+        continue;
+      }
+
       let sumLat = 0;
       let sumLon = 0;
-      for (const report of items) {
+      for (const report of validItems) {
         sumLat += report.latitude;
         sumLon += report.longitude;
       }
-      const centroidLat = sumLat / items.length;
-      const centroidLon = sumLon / items.length;
+      const centroidLat = sumLat / validItems.length;
+      const centroidLon = sumLon / validItems.length;
+      if (!Number.isFinite(centroidLat) || !Number.isFinite(centroidLon)) {
+        continue;
+      }
 
       const locationKey = `${centroidLat.toFixed(6)},${centroidLon.toFixed(6)}`;
 
@@ -570,7 +609,7 @@ export default function MapPage() {
         lon: centroidLon,
         originalLat: centroidLat,
         originalLon: centroidLon,
-        items,
+        items: validItems,
         locationKey,
       });
     }
@@ -646,13 +685,13 @@ export default function MapPage() {
 
   // Get crime statistics
   const crimeStats = {
-    total: crimes.length,
-    violent: crimes.filter((c) => getCrimeCategory(c) === 'violent').length,
-    property: crimes.filter((c) => getCrimeCategory(c) === 'property').length,
-    drug: crimes.filter((c) => getCrimeCategory(c) === 'drug').length,
-    traffic: crimes.filter((c) => getCrimeCategory(c) === 'traffic').length,
-    operation: crimes.filter((c) => getCrimeCategory(c) === 'operation').length,
-    other: crimes.filter((c) => getCrimeCategory(c) === 'other').length,
+    total: dateFilteredCrimes.length,
+    violent: dateFilteredCrimes.filter((c) => getCrimeCategory(c) === 'violent').length,
+    property: dateFilteredCrimes.filter((c) => getCrimeCategory(c) === 'property').length,
+    drug: dateFilteredCrimes.filter((c) => getCrimeCategory(c) === 'drug').length,
+    traffic: dateFilteredCrimes.filter((c) => getCrimeCategory(c) === 'traffic').length,
+    operation: dateFilteredCrimes.filter((c) => getCrimeCategory(c) === 'operation').length,
+    other: dateFilteredCrimes.filter((c) => getCrimeCategory(c) === 'other').length,
   };
 
   // Choropleth: Aggregation by region (barangay) - Proper clustering algorithm
@@ -1049,10 +1088,19 @@ export default function MapPage() {
                 const total = cluster.items.length;
                 const markerColor = '#FF6B35';
                 const markerKey = cluster.locationKey;
+                if (!Number.isFinite(cluster.lat) || !Number.isFinite(cluster.lon)) {
+                  return null;
+                }
 
                 // Single report
                 if (total === 1) {
                   const report = cluster.items[0];
+                  if (
+                    !Number.isFinite(report.latitude) ||
+                    !Number.isFinite(report.longitude)
+                  ) {
+                    return null;
+                  }
                   return (
                     <Marker
                       key={`report-marker-${markerKey}`}
@@ -1187,7 +1235,7 @@ export default function MapPage() {
                             fontWeight: filterSubcategory === subcategory ? 'bold' : 'normal',
                           }}>
                           • {subcategory} (
-                          {crimes.filter((c) => c.incidentType === subcategory).length})
+                          {dateFilteredCrimes.filter((c) => c.incidentType === subcategory).length})
                         </Text>
                       </TouchableOpacity>
                     ))}
@@ -1251,7 +1299,7 @@ export default function MapPage() {
                             fontWeight: filterSubcategory === subcategory ? 'bold' : 'normal',
                           }}>
                           • {subcategory} (
-                          {crimes.filter((c) => c.incidentType === subcategory).length})
+                          {dateFilteredCrimes.filter((c) => c.incidentType === subcategory).length})
                         </Text>
                       </TouchableOpacity>
                     ))}
@@ -1314,7 +1362,7 @@ export default function MapPage() {
                             fontWeight: filterSubcategory === subcategory ? 'bold' : 'normal',
                           }}>
                           • {subcategory} (
-                          {crimes.filter((c) => c.incidentType === subcategory).length})
+                          {dateFilteredCrimes.filter((c) => c.incidentType === subcategory).length})
                         </Text>
                       </TouchableOpacity>
                     ))}
@@ -1377,7 +1425,7 @@ export default function MapPage() {
                             fontWeight: filterSubcategory === subcategory ? 'bold' : 'normal',
                           }}>
                           • {subcategory} (
-                          {crimes.filter((c) => c.incidentType === subcategory).length})
+                          {dateFilteredCrimes.filter((c) => c.incidentType === subcategory).length})
                         </Text>
                       </TouchableOpacity>
                     ))}
@@ -1441,7 +1489,7 @@ export default function MapPage() {
                             fontWeight: filterSubcategory === subcategory ? 'bold' : 'normal',
                           }}>
                           • {subcategory} (
-                          {crimes.filter((c) => c.incidentType === subcategory).length})
+                          {dateFilteredCrimes.filter((c) => c.incidentType === subcategory).length})
                         </Text>
                       </TouchableOpacity>
                     ))}
@@ -1504,7 +1552,7 @@ export default function MapPage() {
                             fontWeight: filterSubcategory === subcategory ? 'bold' : 'normal',
                           }}>
                           • {subcategory} (
-                          {crimes.filter((c) => c.incidentType === subcategory).length})
+                          {dateFilteredCrimes.filter((c) => c.incidentType === subcategory).length})
                         </Text>
                       </TouchableOpacity>
                     ))}
