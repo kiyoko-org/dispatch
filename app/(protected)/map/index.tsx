@@ -2698,6 +2698,7 @@ export default function MapPage() {
               {/* Scrollable Content */}
               {legendExpanded && (
                 <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+                  <View className="px-3 pb-2">
                     {/* Heatmap Visualization Legend */}
                     {showHeatmap && (
                       <>
@@ -3143,6 +3144,7 @@ export default function MapPage() {
                           '• Each bubble = crime category cluster\n• Size = number of incidents\n• Color = crime type'}
                       </Text>
                     </View>
+                  </View>
                 </ScrollView>
               )}
             </View>
