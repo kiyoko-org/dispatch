@@ -11,7 +11,8 @@ import {
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState, useRef } from 'react';
 import MapView, { Marker, Heatmap, PROVIDER_GOOGLE, Circle, Region, Polyline } from 'react-native-maps';
-import { useReports } from '@kiyoko-org/dispatch-lib';
+import { useRealtimeReports, useCategories } from '@kiyoko-org/dispatch-lib';
+import type { Database } from '@kiyoko-org/dispatch-lib/database.types';
 import HeaderWithSidebar from 'components/HeaderWithSidebar';
 import { useTheme } from 'components/ThemeContext';
 import Papa from 'papaparse';
@@ -59,6 +60,13 @@ interface CrimeTypeConfig {
 	label: string;
 }
 
+type DispatchReport = Database['public']['Tables']['reports']['Row'];
+type DispatchCategory = Database['public']['Tables']['categories']['Row'];
+type ReportWithCategory = DispatchReport & {
+	categoryName: string | null;
+	subCategoryName: string | null;
+};
+
 export default function MapPage() {
 	const router = useRouter();
 	const { colors, isDark } = useTheme();
@@ -66,7 +74,7 @@ export default function MapPage() {
 	const [loading, setLoading] = useState(true);
 	const [selectedCrime, setSelectedCrime] = useState<CrimeData | null>(null);
 	const [selectedCluster, setSelectedCluster] = useState<CrimeData[] | null>(null);
-	const [selectedReport, setSelectedReport] = useState<any | null>(null);
+	const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
 	const [showHeatmap, setShowHeatmap] = useState(true);
 	const [showMarkers, setShowMarkers] = useState(true);
 	const [showReports, setShowReports] = useState(true);
@@ -101,15 +109,84 @@ export default function MapPage() {
 	const [legendExpanded, setLegendExpanded] = useState(false);
 
 	// Reports integration
-	const { reports, fetchReports } = useReports();
+	const { reports } = useRealtimeReports();
+	const { categories } = useCategories();
+
+	const categoryMap = useMemo(() => {
+		return categories.reduce((map, category) => {
+			map.set(category.id, category);
+			return map;
+		}, new Map<number, DispatchCategory>());
+	}, [categories]);
+
+	const reportsWithCategories = useMemo<ReportWithCategory[]>(() => {
+		return reports.map((report) => {
+			const category = report.category_id !== null && report.category_id !== undefined
+				? categoryMap.get(report.category_id)
+				: undefined;
+
+			let subCategoryName: string | null = null;
+			const rawSubCategory = report.sub_category as unknown;
+			if (
+				category?.sub_categories &&
+				Array.isArray(category.sub_categories) &&
+				typeof rawSubCategory === 'number' &&
+				rawSubCategory >= 0
+			) {
+				subCategoryName = category.sub_categories[rawSubCategory] ?? null;
+			} else if (typeof rawSubCategory === 'string' && rawSubCategory.length > 0) {
+				subCategoryName = rawSubCategory;
+			}
+
+			return {
+				...report,
+				categoryName: category?.name ?? null,
+				subCategoryName,
+			};
+		});
+	}, [reports, categoryMap]);
+
+	const resolvedReports = useMemo(() => {
+		return reportsWithCategories.filter((report) => {
+			const hasCoordinates =
+				typeof report.latitude === 'number' &&
+				typeof report.longitude === 'number' &&
+				!Number.isNaN(report.latitude) &&
+				!Number.isNaN(report.longitude);
+
+			return hasCoordinates && report.status === 'resolved';
+		});
+	}, [reportsWithCategories]);
+
+	const selectedReport = useMemo(() => {
+		if (selectedReportId === null) {
+			return null;
+		}
+
+		return reportsWithCategories.find((report) => report.id === selectedReportId) ?? null;
+	}, [reportsWithCategories, selectedReportId]);
+
+	useEffect(() => {
+		if (selectedReportId === null) {
+			return;
+		}
+
+		const exists = reportsWithCategories.some((report) => report.id === selectedReportId);
+		if (!exists) {
+			setSelectedReportId(null);
+		}
+	}, [reportsWithCategories, selectedReportId]);
+
+	const selectedReportCategoryLabel =
+		selectedReport?.categoryName ?? selectedReport?.incident_category ?? null;
+	const selectedReportSubcategoryLabel =
+		selectedReport?.subCategoryName ?? selectedReport?.incident_subcategory ?? null;
+	const selectedReportTitle =
+		selectedReport?.incident_title ?? selectedReportCategoryLabel ?? 'Incident Report';
 
 	useEffect(() => {
 		loadCrimeData();
 	}, []);
-
-	useEffect(() => {
-		fetchReports?.();
-	}, [fetchReports]);
 
 	const loadCrimeData = async () => {
 		try {
@@ -340,6 +417,7 @@ export default function MapPage() {
 		// Reset selections
 		setSelectedCrime(null);
 		setSelectedCluster(null);
+		setSelectedReportId(null);
 	};
 
 	// Kernel Density Estimation (KDE) - Using cluster centroids for alignment with markers
@@ -757,7 +835,7 @@ export default function MapPage() {
 										onPress={() => { 
 											setSelectedCrime(crime); 
 											setSelectedCluster(null);
-											setSelectedReport(null);
+											setSelectedReportId(null);
 										}}
 										zIndex={3}
 									>
@@ -775,7 +853,7 @@ export default function MapPage() {
 										// Show cluster details
 										setSelectedCrime(null);
 										setSelectedCluster(cluster.items);
-										setSelectedReport(null);
+										setSelectedReportId(null);
 										setActiveClusterTab('all');
 									}}
 									zIndex={3}
@@ -788,11 +866,7 @@ export default function MapPage() {
 						})}
 
 					{/* Report Markers - Only show resolved reports */}
-					{showReports && reports.filter(report => 
-						report.latitude && 
-						report.longitude && 
-						report.status === 'resolved'
-					).map((report) => (
+					{showReports && resolvedReports.map((report) => (
 						<Marker
 							key={`report-${report.id}`}
 							coordinate={{
@@ -802,7 +876,7 @@ export default function MapPage() {
 							onPress={() => {
 								setSelectedCrime(null);
 								setSelectedCluster(null);
-								setSelectedReport(report);
+								setSelectedReportId(report.id);
 							}}
 						>
 							<View style={[styles.reportMarkerContainer, { backgroundColor: '#FF6B35' }]} />
@@ -1565,22 +1639,22 @@ export default function MapPage() {
 									</Text>
 								</View>
 								<Text className="text-lg font-bold" style={{ color: colors.text }}>
-									{selectedReport.incident_title || selectedReport.incident_category || 'Incident Report'}
+									{selectedReportTitle}
 								</Text>
 							</View>
-							<TouchableOpacity onPress={() => setSelectedReport(null)}>
+							<TouchableOpacity onPress={() => setSelectedReportId(null)}>
 								<XCircle size={24} color={colors.textSecondary} />
 							</TouchableOpacity>
 						</View>
 
 						<ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 400 }}>
 							<View className="space-y-2">
-								{selectedReport.incident_category && (
+								{selectedReportCategoryLabel && (
 									<View className="flex-row items-center">
 										<AlertTriangle size={16} color={colors.textSecondary} />
 										<Text className="ml-2 text-sm font-semibold" style={{ color: colors.text }}>
-											Category: {selectedReport.incident_category}
-											{selectedReport.incident_subcategory && ` - ${selectedReport.incident_subcategory}`}
+											Category: {selectedReportCategoryLabel}
+											{selectedReportSubcategoryLabel && ` - ${selectedReportSubcategoryLabel}`}
 										</Text>
 									</View>
 								)}
@@ -2318,4 +2392,3 @@ const darkMapStyle = [
 		stylers: [{ color: '#1f2835' }],
 	},
 ];
-
