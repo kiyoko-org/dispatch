@@ -13,7 +13,7 @@ import {
 import { Shield, Camera as CameraIcon, Check, ChevronDown, Eye, EyeOff } from 'lucide-react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from 'lib/supabase';
 import { createURL } from 'expo-linking';
 import { registerForFCMToken } from 'hooks/useFCMToken';
@@ -277,6 +277,15 @@ const withTimeout = async<T>(
 			const [verifying, setVerifying] = useState(false);
 			const [verified, setVerified] = useState(false);
 			const [idData, setIdData] = useState<NationalIdData | null>(null);
+			const isIdLocked = verified && !!idData;
+
+			useEffect(() => {
+				if (isIdLocked) {
+					setShowSuffixDropdown(false);
+					setShowBirthProvinceDropdown(false);
+					setShowBirthCityDropdown(false);
+				}
+			}, [isIdLocked]);
 
   // Helper function to get days in month (handles leap years)
   const getDaysInMonth = (year: string, month: string): number => {
@@ -697,7 +706,9 @@ const withTimeout = async<T>(
 													borderWidth: 1,
 													borderColor: validationErrors.firstName ? '#EF4444' : colors.border,
 													color: colors.text,
+													opacity: isIdLocked ? 0.6 : 1,
 												}}
+												editable={!isIdLocked}
 												value={firstName}
 												onChangeText={(text) => {
 													setFirstName(text);
@@ -744,7 +755,7 @@ const withTimeout = async<T>(
 													borderWidth: 1,
 													borderColor: validationErrors.middleName ? '#EF4444' : colors.border,
 													color: colors.text,
-													opacity: noMiddleName ? 0.5 : 1,
+													opacity: noMiddleName ? 0.5 : isIdLocked ? 0.6 : 1,
 												}}
 												value={middleName}
 												onChangeText={(text) => {
@@ -761,7 +772,7 @@ const withTimeout = async<T>(
 												}}
 												placeholder="Enter your middle name"
 												placeholderTextColor={colors.textSecondary}
-												editable={!noMiddleName}
+												editable={!noMiddleName && !isIdLocked}
 											/>
 											{validationErrors.middleName && !noMiddleName && (
 												<Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
@@ -778,7 +789,9 @@ const withTimeout = async<T>(
 												onPress={() => {
 													setNoMiddleName(!noMiddleName);
 													if (!noMiddleName) setMiddleName('');
-												}}>
+												}}
+												disabled={isIdLocked}
+												style={isIdLocked ? { opacity: 0.6 } : undefined}>
 												<View
 													className="mr-2 h-5 w-5 items-center justify-center rounded"
 													style={{
@@ -811,7 +824,9 @@ const withTimeout = async<T>(
 														borderWidth: 1,
 														borderColor: validationErrors.lastName ? '#EF4444' : colors.border,
 														color: colors.text,
+														opacity: isIdLocked ? 0.6 : 1,
 													}}
+													editable={!isIdLocked}
 													value={lastName}
 													onChangeText={(text) => {
 														setLastName(text);
@@ -913,7 +928,9 @@ const withTimeout = async<T>(
 															sex === 'Male' ? colors.primary + '20' : colors.surfaceVariant,
 														borderWidth: 1,
 														borderColor: sex === 'Male' ? colors.primary : colors.border,
+														opacity: isIdLocked ? 0.6 : 1,
 													}}
+													disabled={isIdLocked}
 													onPress={() => {
 														setSex('Male');
 														validateField('sex', 'Male');
@@ -949,7 +966,9 @@ const withTimeout = async<T>(
 															sex === 'Female' ? colors.primary + '20' : colors.surfaceVariant,
 														borderWidth: 1,
 														borderColor: sex === 'Female' ? colors.primary : colors.border,
+														opacity: isIdLocked ? 0.6 : 1,
 													}}
+													disabled={isIdLocked}
 													onPress={() => {
 														setSex('Female');
 														validateField('sex', 'Female');
@@ -1012,8 +1031,10 @@ const withTimeout = async<T>(
 															borderWidth: 1,
 															borderColor: validationErrors.birthYear ? '#EF4444' : colors.border,
 															color: colors.text,
+															opacity: isIdLocked ? 0.6 : 1,
 														}}
 														placeholder="YYYY"
+														editable={!isIdLocked}
 														value={birthYear}
 														onChangeText={(text) => {
 															// Only allow numbers
@@ -1088,8 +1109,10 @@ const withTimeout = async<T>(
 															borderWidth: 1,
 															borderColor: validationErrors.birthMonth ? '#EF4444' : colors.border,
 															color: colors.text,
+															opacity: isIdLocked ? 0.6 : 1,
 														}}
 														placeholder="MM"
+														editable={!isIdLocked}
 														value={birthMonth}
 														onChangeText={(text) => {
 															// Only allow numbers
@@ -1120,8 +1143,10 @@ const withTimeout = async<T>(
 															borderWidth: 1,
 															borderColor: validationErrors.birthDay ? '#EF4444' : colors.border,
 															color: colors.text,
+															opacity: isIdLocked ? 0.6 : 1,
 														}}
 														placeholder="DD"
+														editable={!isIdLocked}
 														value={birthDay}
 														onChangeText={(text) => {
 															// Only allow numbers
@@ -1297,8 +1322,10 @@ const withTimeout = async<T>(
 													backgroundColor: colors.surfaceVariant,
 													borderWidth: 1,
 													borderColor: validationErrors.birthProvince ? '#EF4444' : colors.border,
+													opacity: isIdLocked ? 0.6 : 1,
 												}}
-												onPress={() => setShowBirthProvinceDropdown(true)}>
+												onPress={() => setShowBirthProvinceDropdown(true)}
+												disabled={isIdLocked}>
 												<Text
 													style={{
 														color: birthProvince ? colors.text : colors.textSecondary,
@@ -1320,8 +1347,10 @@ const withTimeout = async<T>(
 													backgroundColor: colors.surfaceVariant,
 													borderWidth: 1,
 													borderColor: validationErrors.birthCity ? '#EF4444' : colors.border,
+													opacity: isIdLocked ? 0.6 : 1,
 												}}
-												onPress={() => setShowBirthCityDropdown(true)}>
+												onPress={() => setShowBirthCityDropdown(true)}
+												disabled={isIdLocked}>
 												<Text
 													style={{
 														color: birthCity ? colors.text : colors.textSecondary,
