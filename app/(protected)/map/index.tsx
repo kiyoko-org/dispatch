@@ -86,6 +86,7 @@ export default function MapPage() {
   const [selectedReportCluster, setSelectedReportCluster] = useState<ReportWithCategory[] | null>(
     null
   );
+
   const [showHeatmap, setShowHeatmap] = useState(true);
   const [showMarkers, setShowMarkers] = useState(true);
   const [showReports, setShowReports] = useState(true);
@@ -97,11 +98,6 @@ export default function MapPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
-  const [isClusteringInProgress, setIsClusteringInProgress] = useState(false);
-  const [isTransitioning, setIsTransitioning] = useState(false);
-  const transitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const lastInteractionRef = useRef<number>(0);
-  const maxTransitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Calculate center of Tuguegarao City
   const initialRegion = {
@@ -114,40 +110,14 @@ export default function MapPage() {
   const [mapRegion, setMapRegion] = useState<Region | null>(initialRegion);
   const [activeClusterTab, setActiveClusterTab] = useState<'all' | CrimeCategory>('all');
   const mapRef = useRef<MapView>(null);
-  const clusteringTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Debounced state update function to prevent rapid switching
+  // Debounced state update function
   const debouncedStateUpdate = useCallback((updateFn: () => void, delay: number = 150) => {
-    const now = Date.now();
-    lastInteractionRef.current = now;
-    
-    if (transitionTimeoutRef.current) {
-      clearTimeout(transitionTimeoutRef.current);
-    }
-    if (maxTransitionTimeoutRef.current) {
-      clearTimeout(maxTransitionTimeoutRef.current);
-    }
-    
-    setIsTransitioning(true);
-    
-    // Maximum transition time to prevent infinite loading
-    maxTransitionTimeoutRef.current = setTimeout(() => {
-      setIsTransitioning(false);
-    }, 2000);
-    
-    transitionTimeoutRef.current = setTimeout(() => {
-      // Only execute if this is still the latest interaction
-      if (lastInteractionRef.current === now) {
-        try {
-          updateFn();
-        } catch (error) {
-          console.warn('Error in debounced state update:', error);
-        } finally {
-          setIsTransitioning(false);
-          if (maxTransitionTimeoutRef.current) {
-            clearTimeout(maxTransitionTimeoutRef.current);
-          }
-        }
+    setTimeout(() => {
+      try {
+        updateFn();
+      } catch (error) {
+        console.warn('Error in debounced state update:', error);
       }
     }, delay);
   }, []);
@@ -239,17 +209,7 @@ export default function MapPage() {
 
   // Cleanup timeouts on unmount
   useEffect(() => {
-    return () => {
-      if (clusteringTimeoutRef.current) {
-        clearTimeout(clusteringTimeoutRef.current);
-      }
-      if (transitionTimeoutRef.current) {
-        clearTimeout(transitionTimeoutRef.current);
-      }
-      if (maxTransitionTimeoutRef.current) {
-        clearTimeout(maxTransitionTimeoutRef.current);
-      }
-    };
+    return () => {};
   }, []);
 
   const selectedReportCategoryLabel =
@@ -595,11 +555,6 @@ export default function MapPage() {
 
   // Grid-based clustering by location AND category with spidering for overlaps
   const clusters = useMemo(() => {
-    setIsClusteringInProgress(true);
-    if (clusteringTimeoutRef.current) {
-      clearTimeout(clusteringTimeoutRef.current);
-    }
-
     if (!mapRegion)
       return [] as {
         lat: number;
@@ -684,115 +639,10 @@ export default function MapPage() {
       });
     }
 
-    clusteringTimeoutRef.current = setTimeout(() => {
-      setIsClusteringInProgress(false);
-    }, 300);
-
     return result;
   }, [filteredCrimes, mapRegion]);
 
-  // Grid-based clustering for user reports
-  const reportClusters = useMemo(() => {
-    try {
-      setIsClusteringInProgress(true);
-      if (clusteringTimeoutRef.current) {
-        clearTimeout(clusteringTimeoutRef.current);
-      }
 
-      if (!mapRegion)
-        return [] as {
-          lat: number;
-          lon: number;
-          originalLat: number;
-          originalLon: number;
-          items: ReportWithCategory[];
-          locationKey: string;
-        }[];
-
-    // Use dynamic cell size based on zoom level, but with a larger minimum
-    // This prevents clusters from breaking apart on small map movements
-    const cellSizeLat = Math.max(mapRegion.latitudeDelta / 15, 0.001);
-    const cellSizeLon = Math.max(mapRegion.longitudeDelta / 15, 0.001);
-
-    // Key by location only to cluster at same location
-    const cellKey = (lat: number, lon: number) => {
-      const r = Math.floor((lat - mapRegion.latitude + mapRegion.latitudeDelta / 2) / cellSizeLat);
-      const c = Math.floor(
-        (lon - mapRegion.longitude + mapRegion.longitudeDelta / 2) / cellSizeLon
-      );
-      return `${r}:${c}`;
-    };
-
-    // Group reports by location only
-    const grid: Record<string, ReportWithCategory[]> = {};
-    for (const report of resolvedReports) {
-      const lat = report.latitude;
-      const lon = report.longitude;
-      if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
-        continue;
-      }
-
-      const key = cellKey(lat, lon);
-      if (!grid[key]) grid[key] = [];
-      grid[key].push(report);
-    }
-
-    // Create clusters - one per location
-    const result: {
-      lat: number;
-      lon: number;
-      originalLat: number;
-      originalLon: number;
-      items: ReportWithCategory[];
-      locationKey: string;
-    }[] = [];
-
-    for (const key in grid) {
-      const items = grid[key];
-
-      // Calculate centroid
-      const validItems = items.filter(
-        (report) => Number.isFinite(report.latitude) && Number.isFinite(report.longitude)
-      );
-      if (validItems.length === 0) {
-        continue;
-      }
-
-      let sumLat = 0;
-      let sumLon = 0;
-      for (const report of validItems) {
-        sumLat += report.latitude;
-        sumLon += report.longitude;
-      }
-      const centroidLat = sumLat / validItems.length;
-      const centroidLon = sumLon / validItems.length;
-      if (!Number.isFinite(centroidLat) || !Number.isFinite(centroidLon)) {
-        continue;
-      }
-
-      const locationKey = `${centroidLat.toFixed(6)},${centroidLon.toFixed(6)}`;
-
-      result.push({
-        lat: centroidLat,
-        lon: centroidLon,
-        originalLat: centroidLat,
-        originalLon: centroidLon,
-        items: validItems,
-        locationKey,
-      });
-    }
-
-    clusteringTimeoutRef.current = setTimeout(() => {
-      setIsClusteringInProgress(false);
-    }, 300);
-
-    return result;
-    } catch (error) {
-      console.warn('Error in report clustering:', error);
-      setIsClusteringInProgress(false);
-      return [];
-    }
-  }, [resolvedReports, mapRegion]);
 
   // Function to reset map to initial region
   const resetMapRegion = () => {
@@ -1270,7 +1120,6 @@ export default function MapPage() {
                       key={`marker-${markerKey}`}
                       coordinate={{ latitude: cluster.lat, longitude: cluster.lon }}
                       onPress={() => {
-                        if (isClusteringInProgress || isTransitioning) return;
                         debouncedStateUpdate(() => {
                           setSelectedCrime(crime);
                           setSelectedCluster(null);
@@ -1278,13 +1127,11 @@ export default function MapPage() {
                           setSelectedReportCluster(null);
                         });
                       }}
-                      zIndex={3}
-                      pointerEvents={isClusteringInProgress ? 'none' : 'auto'}>
+                      zIndex={3}>
                       <View
                         style={[
                           styles.markerContainer,
                           { backgroundColor: markerColor },
-                          (isClusteringInProgress || isTransitioning) && { opacity: 0.5 },
                         ]}
                       />
                     </Marker>
@@ -1297,7 +1144,6 @@ export default function MapPage() {
                     key={`marker-${markerKey}`}
                     coordinate={{ latitude: cluster.lat, longitude: cluster.lon }}
                     onPress={() => {
-                      if (isClusteringInProgress || isTransitioning) return;
                       debouncedStateUpdate(() => {
                         setSelectedCrime(null);
                         setSelectedCluster(cluster.items);
@@ -1306,13 +1152,11 @@ export default function MapPage() {
                         setActiveClusterTab('all');
                       });
                     }}
-                    zIndex={3}
-                    pointerEvents={isClusteringInProgress ? 'none' : 'auto'}>
+                    zIndex={3}>
                     <View
                       style={[
                         styles.clusterContainer,
                         { backgroundColor: markerColor },
-                        isClusteringInProgress && { opacity: 0.5 },
                       ]}>
                       <Text style={styles.clusterText}>{total}</Text>
                     </View>
@@ -1320,26 +1164,10 @@ export default function MapPage() {
                 );
               })}
 
-            {/* Report Markers - Clustered resolved reports */}
+            {/* Report Markers - Without clustering */}
             {showReports &&
-              reportClusters.map((cluster, idx) => {
+              resolvedReports.map((report) => {
                 try {
-                const total = cluster.items.length;
-                const markerColor = '#FF6B35';
-                const markerKey = cluster.locationKey;
-
-                if (
-                  !Number.isFinite(cluster.lat) ||
-                  !Number.isFinite(cluster.lon) ||
-                  cluster.lat === 0 ||
-                  cluster.lon === 0 ||
-                  total === 0
-                ) {
-                  return null;
-                }
-
-                if (total === 1) {
-                  const report = cluster.items[0];
                   if (
                     !Number.isFinite(report.latitude) ||
                     !Number.isFinite(report.longitude) ||
@@ -1361,17 +1189,14 @@ export default function MapPage() {
                     Math.abs(safeCoordinate.latitude) > 90 ||
                     Math.abs(safeCoordinate.longitude) > 180
                   ) {
-                    console.warn('Invalid report coordinates:', safeCoordinate);
                     return null;
                   }
 
-                  try {
-                    return (
-                      <Marker
-                        key={`report-marker-${markerKey}`}
-                        coordinate={safeCoordinate}
+                  return (
+                    <Marker
+                      key={`report-marker-${report.id}`}
+                      coordinate={safeCoordinate}
                       onPress={() => {
-                        if (isClusteringInProgress || isTransitioning) return;
                         debouncedStateUpdate(() => {
                           setSelectedCrime(null);
                           setSelectedCluster(null);
@@ -1379,74 +1204,21 @@ export default function MapPage() {
                           setSelectedReportCluster(null);
                         });
                       }}
-                        zIndex={3}
-                        pointerEvents={isClusteringInProgress ? 'none' : 'auto'}>
+                      zIndex={3}>
                       <View
                         style={[
                           styles.reportMarkerContainer,
-                          { backgroundColor: markerColor },
-                          (isClusteringInProgress || isTransitioning) && { opacity: 0.5 },
+                          { backgroundColor: '#FF6B35' },
                         ]}
                       />
-                      </Marker>
-                    );
-                  } catch (error) {
-                    console.warn('Error rendering single report marker:', error);
-                    return null;
-                  }
-                }
-
-                const safeCoordinate = {
-                  latitude: Number(cluster.lat),
-                  longitude: Number(cluster.lon),
-                };
-
-                // Additional validation to prevent Google Maps crashes
-                if (
-                  !Number.isFinite(safeCoordinate.latitude) ||
-                  !Number.isFinite(safeCoordinate.longitude) ||
-                  Math.abs(safeCoordinate.latitude) > 90 ||
-                  Math.abs(safeCoordinate.longitude) > 180
-                ) {
-                  console.warn('Invalid cluster coordinates:', safeCoordinate);
-                  return null;
-                }
-
-                try {
-                  return (
-                    <Marker
-                      key={`report-marker-${markerKey}`}
-                      coordinate={safeCoordinate}
-                      onPress={() => {
-                        if (isClusteringInProgress || isTransitioning) return;
-                        debouncedStateUpdate(() => {
-                          setSelectedCrime(null);
-                          setSelectedCluster(null);
-                          setSelectedReportId(null);
-                          setSelectedReportCluster(cluster.items);
-                        });
-                      }}
-                      zIndex={3}
-                      pointerEvents={isClusteringInProgress ? 'none' : 'auto'}>
-                      <View
-                        style={[
-                          styles.clusterContainer,
-                          { backgroundColor: markerColor },
-                          (isClusteringInProgress || isTransitioning) && { opacity: 0.5 },
-                        ]}>
-                        <Text style={styles.clusterText}>{total}</Text>
-                      </View>
                     </Marker>
                   );
                 } catch (error) {
-                  console.warn('Error rendering report cluster marker:', error);
-                  return null;
-                }
-                } catch (error) {
-                  console.warn('Error in report marker rendering:', error);
+                  console.warn('Error rendering report marker:', error);
                   return null;
                 }
               })}
+
           </MapView>
         )}
 
