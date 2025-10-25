@@ -2469,40 +2469,7 @@ export default function MapPage() {
             className="absolute bottom-24 left-4 right-4 rounded-xl p-4 shadow-2xl"
             style={{ backgroundColor: colors.card, maxHeight: '70%' }}>
             {/* Blocking overlay when clustering is in progress */}
-            {isClusteringInProgress && (
-              <View
-                style={{
-                  position: 'absolute',
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  backgroundColor: 'rgba(0, 0, 0, 0.3)',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  zIndex: 999,
-                  borderRadius: 12,
-                }}
-                pointerEvents="box-only">
-                <View
-                  style={{
-                    backgroundColor: colors.card,
-                    borderRadius: 16,
-                    padding: 24,
-                    alignItems: 'center',
-                    shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.3,
-                    shadowRadius: 8,
-                    elevation: 8,
-                  }}>
-                  <ActivityIndicator size="large" color={colors.primary} />
-                  <Text style={{ color: colors.text, marginTop: 12, fontWeight: '600' }}>
-                    Updating reports...
-                  </Text>
-                </View>
-              </View>
-            )}
+
 
             <View className="mb-3 flex-row items-start justify-between">
               <View style={{ flex: 1, marginRight: 12 }}>
@@ -3327,19 +3294,7 @@ export default function MapPage() {
           </View>
         )}
 
-        {/* Transition Overlay */}
-        {isTransitioning && (
-          <View
-            className="absolute inset-0 items-center justify-center"
-            style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}
-            pointerEvents="none">
-            <View
-              className="rounded-lg px-4 py-2"
-              style={{ backgroundColor: colors.card }}>
-              <Text style={{ color: colors.text }}>Loading...</Text>
-            </View>
-          </View>
-        )}
+
       </View>
 
       <DatePicker
