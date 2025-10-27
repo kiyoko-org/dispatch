@@ -24,6 +24,8 @@ import { geocodingService } from 'lib/services/geocoding';
 import { useTheme } from 'components/ThemeContext';
 import { useDispatchClient } from 'components/DispatchProvider';
 import { useReports } from '@kiyoko-org/dispatch-lib';
+import AppDialog from 'components/AppDialog';
+import { Check } from 'lucide-react-native';
 
 interface UIState {
   showCategoryDropdown: boolean;
@@ -98,6 +100,7 @@ export default function ReportIncidentIndex() {
 
   // Attachments state
   const [attachments, setAttachments] = useState<string[]>([]);
+  const [successDialogVisible, setSuccessDialogVisible] = useState(false);
 
   // Helper functions for updating state
   const updateFormData = (updates: Partial<ReportData>) => {
@@ -189,6 +192,11 @@ export default function ReportIncidentIndex() {
       incident_date: dateString,
       incident_time: timeString,
     });
+  };
+
+  const handleSuccessDialogConfirm = () => {
+    setSuccessDialogVisible(false);
+    router.replace('/(protected)/home');
   };
 
   // Function to handle using current location
@@ -492,6 +500,7 @@ export default function ReportIncidentIndex() {
 
     // Clear any previous errors
     updateUIState({ isSubmitting: true, validationErrors: {} });
+    setSuccessDialogVisible(false);
 
     try {
       // Transform data to dispatch-lib schema
@@ -513,16 +522,7 @@ export default function ReportIncidentIndex() {
         throw new Error(result.error.message || 'Failed to submit report');
       }
 
-      Alert.alert(
-        'Report Submitted Successfully!',
-        'Your incident report has been submitted successfully.',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.replace('/(protected)/home'),
-          },
-        ]
-      );
+      setSuccessDialogVisible(true);
     } catch (error) {
       console.error('Report submission error:', error);
 
@@ -673,6 +673,20 @@ export default function ReportIncidentIndex() {
           </Animated.View>
         </View>
       </ScrollView>
+      <AppDialog
+        visible={successDialogVisible}
+        title="Report Submitted Successfully!"
+        description="Your incident report has been submitted successfully."
+        tone="success"
+        icon={<Check size={28} color={colors.success} />}
+        dismissable={false}
+        actions={[
+          {
+            label: 'OK',
+            onPress: handleSuccessDialogConfirm,
+          },
+        ]}
+      />
     </KeyboardAvoidingView>
   );
 }
