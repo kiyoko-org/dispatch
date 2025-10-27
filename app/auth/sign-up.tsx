@@ -13,7 +13,7 @@ import {
 import { Shield, Camera as CameraIcon, Check, ChevronDown, Eye, EyeOff } from 'lucide-react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from 'lib/supabase';
 import { createURL } from 'expo-linking';
 import { registerForFCMToken } from 'hooks/useFCMToken';
@@ -253,6 +253,7 @@ const withTimeout = async<T>(
 			const [birthMonth, setBirthMonth] = useState('');
 			const [birthDay, setBirthDay] = useState('');
 			const [showDatePicker, setShowDatePicker] = useState(false);
+			const datePickerSelectionRef = useRef(false);
 			const [birthCity, setBirthCity] = useState('');
 			const [birthProvince, setBirthProvince] = useState('');
 
@@ -398,6 +399,17 @@ const withTimeout = async<T>(
 			const suffixOptions: string[] = ['Jr.', 'Sr.', 'I', 'II', 'III', 'IV', 'V'];
 
 			const [validationErrors, setValidationErrors] = useState<Record<string, string>>({ });
+
+			const handleDatePickerClose = () => {
+				setShowDatePicker(false);
+				if (!datePickerSelectionRef.current && (!birthYear || !birthMonth || !birthDay)) {
+					setValidationErrors((prev) => ({
+						...prev,
+						birthYear: 'This field is required',
+					}));
+				}
+				datePickerSelectionRef.current = false;
+			};
 
   const validateField = (fieldName: string, value: any) => {
     try {
@@ -1029,7 +1041,12 @@ const withTimeout = async<T>(
 															: colors.border,
 													opacity: isIdLocked ? 0.6 : 1,
 												}}
-												onPress={() => !isIdLocked && setShowDatePicker(true)}
+												onPress={() => {
+													if (!isIdLocked) {
+														datePickerSelectionRef.current = false;
+														setShowDatePicker(true);
+													}
+												}}
 												disabled={isIdLocked}>
 												<Text
 													style={{
@@ -1886,12 +1903,18 @@ const withTimeout = async<T>(
 
 					<DatePicker
 						isVisible={showDatePicker}
-						onClose={() => setShowDatePicker(false)}
+						onClose={handleDatePickerClose}
 						onSelectDate={(dateString: string) => {
+							datePickerSelectionRef.current = true;
 							const [month, day, year] = dateString.split('/');
 							setBirthMonth(month);
 							setBirthDay(day);
 							setBirthYear(year);
+							setValidationErrors((prev) => {
+								const { birthYear: _birthYearError, birthMonth: _birthMonthError, birthDay: _birthDayError, ...rest } =
+									prev;
+								return rest;
+							});
 						}}
 						initialDate={
 							birthYear && birthMonth && birthDay
