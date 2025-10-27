@@ -31,6 +31,7 @@ interface AppDialogProps {
 	dismissable?: boolean;
 	actions?: DialogAction[];
 	children?: ReactNode;
+	position?: 'bottom' | 'center';
 }
 
 const toneColorKeys: Record<Exclude<DialogTone, 'default'>, 'success' | 'error' | 'warning' | 'info'> = {
@@ -60,6 +61,7 @@ export default function AppDialog({
 	dismissable = true,
 	actions = [],
 	children,
+	position = 'bottom',
 }: AppDialogProps) {
 	const { colors, isDark } = useTheme();
 
@@ -113,7 +115,7 @@ export default function AppDialog({
 					<View className="flex-1" />
 				</TouchableWithoutFeedback>
 
-				<View className="px-6 pb-10 pt-12">
+				<View className={`px-6 pb-10 ${position === 'center' ? 'flex-1 justify-center' : 'pt-12'}`}>
 					<View
 						className="mx-auto w-full max-w-md rounded-2xl px-6 py-6"
 						style={{ backgroundColor: colors.card }}>
