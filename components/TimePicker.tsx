@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import { X } from 'lucide-react-native';
+import { useTheme } from './ThemeContext';
 
 interface TimePickerProps {
   isVisible: boolean;
@@ -35,6 +36,9 @@ export default function TimePicker({
   hourRange = { min: 1, max: 12 },
   selectedDate,
 }: TimePickerProps) {
+  const { colors, isDark } = useTheme();
+  const subtleSurface = isDark ? 'rgba(255, 255, 255, 0.08)' : colors.surfaceVariant;
+
   const [selectedHour, setSelectedHour] = useState(initialHour);
   const [selectedMinute, setSelectedMinute] = useState(initialMinute);
   const [selectedPeriod, setSelectedPeriod] = useState(initialPeriod);
@@ -136,15 +140,28 @@ export default function TimePicker({
     options: string[],
     selectedValue: string,
     onSelect: (value: string) => void,
-    title: string
+    title: string,
+    isLastColumn = false
   ) => {
     const isHourColumn = title === 'Hour';
     const isMinuteColumn = title === 'Minute';
     const isPeriodColumn = title === 'AM/PM';
     
     return (
-      <View className="flex-1 border-r border-gray-200 last:border-r-0">
-        <Text className="border-b border-gray-200 py-2 text-center text-sm font-medium text-slate-600">
+      <View
+        className="flex-1"
+        style={{
+          borderRightWidth: isLastColumn ? 0 : 1,
+          borderColor: colors.border,
+          backgroundColor: colors.surface,
+        }}>
+        <Text
+          className="py-2 text-center text-sm font-medium"
+          style={{
+            color: colors.textSecondary,
+            borderBottomWidth: 1,
+            borderColor: colors.border,
+          }}>
           {title}
         </Text>
         <ScrollView
@@ -169,22 +186,22 @@ export default function TimePicker({
                 key={option}
                 onPress={() => !isFuture && onSelect(option)}
                 disabled={isFuture}
-                className={`px-4 py-3 ${
-                  selectedValue === option 
-                    ? 'bg-slate-50' 
-                    : isFuture 
-                      ? 'bg-gray-100' 
-                      : ''
-                }`}
-                activeOpacity={0.7}>
+                className="px-4 py-3"
+                activeOpacity={0.7}
+                style={{
+                  backgroundColor: selectedValue === option ? colors.primary : isFuture ? subtleSurface : 'transparent',
+                }}>
                 <Text
-                  className={`text-center ${
-                    selectedValue === option 
-                      ? 'font-medium text-slate-900' 
-                      : isFuture
-                        ? 'text-gray-400'
-                        : 'text-slate-700'
-                  }`}>
+                  className="text-center"
+                  style={{
+                    fontWeight: selectedValue === option ? '600' : '400',
+                    color:
+                      selectedValue === option
+                        ? '#FFFFFF'
+                        : isFuture
+                          ? colors.textSecondary
+                          : colors.text,
+                  }}>
                   {option}
                 </Text>
               </TouchableOpacity>
@@ -201,47 +218,78 @@ export default function TimePicker({
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         className="flex-1">
         {/* Backdrop */}
-        <TouchableOpacity className="flex-1 bg-black/50" activeOpacity={1} onPress={onClose} />
+        <TouchableOpacity
+          className="flex-1"
+          activeOpacity={1}
+          onPress={onClose}
+          style={{ backgroundColor: colors.overlay }}
+        />
 
         {/* Centered Container */}
         <View className="absolute inset-0 flex items-center justify-center px-4">
           {/* Time Picker Content */}
-          <View className="w-full max-w-md rounded-lg bg-white shadow-lg">
+          <View
+            className="w-full max-w-md rounded-lg shadow-lg"
+            style={{ backgroundColor: colors.surface }}>
             {/* Header */}
-            <View className="flex-row items-center justify-between border-b border-gray-200 px-4 py-3">
-              <Text className="text-lg font-semibold text-slate-900">Select Time</Text>
+            <View
+              className="flex-row items-center justify-between px-4 py-3"
+              style={{
+                borderBottomWidth: 1,
+                borderColor: colors.border,
+              }}>
+              <Text
+                className="text-lg font-semibold"
+                style={{ color: colors.text }}>
+                Select Time
+              </Text>
               <TouchableOpacity onPress={onClose} className="p-1">
-                <X size={20} color="#64748B" />
+                <X size={20} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
             {/* Time Selection */}
             <View className="flex-row">
-              {renderTimeColumn(hourOptions, selectedHour, setSelectedHour, 'Hour')}
-              {renderTimeColumn(minuteOptions, selectedMinute, setSelectedMinute, 'Minute')}
+              {renderTimeColumn(hourOptions, selectedHour, setSelectedHour, 'Hour', false)}
+              {renderTimeColumn(minuteOptions, selectedMinute, setSelectedMinute, 'Minute', format === '24h')}
               {format === '12h' &&
-                renderTimeColumn(periodOptions, selectedPeriod, setSelectedPeriod, 'AM/PM')}
+                renderTimeColumn(periodOptions, selectedPeriod, setSelectedPeriod, 'AM/PM', true)}
             </View>
 
             {/* Footer */}
-            <View className="flex-row space-x-3 border-t border-gray-200 px-4 py-3">
+            <View
+              className="flex-row space-x-3 px-4 py-3"
+              style={{
+                borderTopWidth: 1,
+                borderColor: colors.border,
+              }}>
               <TouchableOpacity
                 onPress={onClose}
-                className="flex-1 rounded-lg border border-gray-300 px-4 py-3"
-                activeOpacity={0.8}>
-                <Text className="text-center font-medium text-slate-700">Cancel</Text>
+                className="flex-1 rounded-lg px-4 py-3"
+                activeOpacity={0.8}
+                style={{
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  backgroundColor: colors.surface,
+                }}>
+                <Text
+                  className="text-center font-medium"
+                  style={{ color: colors.text }}>
+                  Cancel
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleDone}
                 disabled={!isValidSelection}
-                className={`flex-1 rounded-lg px-4 py-3 ${
-                  isValidSelection ? 'bg-slate-700' : 'bg-gray-300'
-                }`}
-                activeOpacity={0.8}>
+                className="flex-1 rounded-lg px-4 py-3"
+                activeOpacity={0.8}
+                style={{
+                  backgroundColor: isValidSelection ? colors.primary : subtleSurface,
+                  opacity: isValidSelection ? 1 : 0.6,
+                }}>
                 <Text
-                  className={`text-center font-medium ${
-                    isValidSelection ? 'text-white' : 'text-gray-500'
-                  }`}>
+                  className="text-center font-medium"
+                  style={{ color: isValidSelection ? '#FFFFFF' : colors.textSecondary }}>
                   Done
                 </Text>
               </TouchableOpacity>
