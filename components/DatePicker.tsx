@@ -9,6 +9,8 @@ interface DatePickerProps {
   onSelectDate: (dateString: string) => void;
   initialDate?: string;
   isDateValid?: (date: Date) => boolean;
+  minYear?: number;
+  maxYear?: number;
 }
 
 export default function DatePicker({
@@ -17,17 +19,33 @@ export default function DatePicker({
   onSelectDate,
   initialDate,
   isDateValid,
+  minYear,
+  maxYear,
 }: DatePickerProps) {
   const { colors, isDark } = useTheme();
   const subtleSurface = isDark ? 'rgba(255, 255, 255, 0.08)' : colors.surfaceVariant;
   const disabledOpacity = 0.5;
 
+  const minYearValue = minYear ?? 1900;
+  const currentCalendarYear = new Date().getFullYear();
+  const maxYearValue = maxYear ?? currentCalendarYear;
+
+  const clampToYearRange = (date: Date) => {
+    const clamped = new Date(date);
+    if (clamped.getFullYear() < minYearValue) {
+      clamped.setFullYear(minYearValue);
+    } else if (clamped.getFullYear() > maxYearValue) {
+      clamped.setFullYear(maxYearValue);
+    }
+    return clamped;
+  };
+
   const parseInitialDate = () => {
     if (initialDate) {
       const [month, day, year] = initialDate.split('/').map(Number);
-      return new Date(year, month - 1, day);
+      return clampToYearRange(new Date(year, month - 1, day));
     }
-    return new Date();
+    return clampToYearRange(new Date());
   };
 
   const [currentDate, setCurrentDate] = useState(parseInitialDate());
@@ -122,12 +140,11 @@ export default function DatePicker({
   };
 
   const renderYearPicker = () => {
-    const currentYear = new Date().getFullYear();
     const years = [];
 
-    for (let year = currentYear; year >= 1900; year--) {
+    for (let year = maxYearValue; year >= minYearValue; year--) {
       const isSelected = currentDate.getFullYear() === year;
-      const isCurrentYear = new Date().getFullYear() === year;
+      const isCurrentYear = currentCalendarYear === year;
 
       const yearBackground = isSelected
         ? colors.primary

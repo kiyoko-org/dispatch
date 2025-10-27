@@ -254,6 +254,8 @@ const withTimeout = async<T>(
 			const [birthDay, setBirthDay] = useState('');
 			const [showDatePicker, setShowDatePicker] = useState(false);
 			const datePickerSelectionRef = useRef(false);
+			const minBirthYear = 1900;
+			const maxBirthYear = new Date().getFullYear() - 18;
 			const [birthCity, setBirthCity] = useState('');
 			const [birthProvince, setBirthProvince] = useState('');
 
@@ -1071,7 +1073,7 @@ const withTimeout = async<T>(
 												</Text>
 											) : (
 												<Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
-													Year: 1900-{new Date().getFullYear() - 18}
+													Year: {minBirthYear}-{maxBirthYear}
 												</Text>
 											)}
 										</View>
@@ -1922,7 +1924,7 @@ const withTimeout = async<T>(
 								: (() => {
 										const today = new Date();
 										const eighteenYearsAgo = new Date(today);
-										eighteenYearsAgo.setFullYear(today.getFullYear() - 18);
+										eighteenYearsAgo.setFullYear(maxBirthYear);
 										const month = (eighteenYearsAgo.getMonth() + 1).toString().padStart(2, '0');
 										const day = eighteenYearsAgo.getDate().toString().padStart(2, '0');
 										const year = eighteenYearsAgo.getFullYear().toString();
@@ -1933,9 +1935,11 @@ const withTimeout = async<T>(
 							const today = new Date();
 							today.setHours(0, 0, 0, 0);
 							const minBirthDate = new Date(today);
-							minBirthDate.setFullYear(today.getFullYear() - 18);
+							minBirthDate.setFullYear(maxBirthYear);
 							return date <= minBirthDate;
 						}}
+						minYear={minBirthYear}
+						maxYear={maxBirthYear}
 					/>
 				</View>
 				);
