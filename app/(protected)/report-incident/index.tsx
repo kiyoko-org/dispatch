@@ -513,11 +513,9 @@ export default function ReportIncidentIndex() {
         throw new Error(result.error.message || 'Failed to submit report');
       }
 
-      // Success - show report ID in the success message
-      const reportId = result.data?.[0]?.id;
       Alert.alert(
         'Report Submitted Successfully!',
-        `Your incident report has been submitted${reportId ? ` with ID: ${reportId}` : ''}. It will be reviewed by authorities within 24 hours.`,
+        'Your incident report has been submitted successfully.',
         [
           {
             text: 'OK',
