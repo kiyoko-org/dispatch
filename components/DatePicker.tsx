@@ -7,6 +7,7 @@ interface DatePickerProps {
   onClose: () => void;
   onSelectDate: (dateString: string) => void;
   initialDate?: string;
+  isDateValid?: (date: Date) => boolean;
 }
 
 export default function DatePicker({
@@ -14,6 +15,7 @@ export default function DatePicker({
   onClose,
   onSelectDate,
   initialDate,
+  isDateValid,
 }: DatePickerProps) {
   const parseInitialDate = () => {
     if (initialDate) {
@@ -88,6 +90,10 @@ export default function DatePicker({
       return;
     }
 
+    if (isDateValid && !isDateValid(selected)) {
+      return;
+    }
+
     setSelectedDate(selected);
   };
 
@@ -155,6 +161,7 @@ export default function DatePicker({
       dayDate.setHours(0, 0, 0, 0);
 
       const isFuture = dayDate > today;
+      const isInvalid = isDateValid && !isDateValid(dayDate);
 
       const isSelected =
         selectedDate &&
@@ -170,13 +177,13 @@ export default function DatePicker({
         <TouchableOpacity
           key={day}
           onPress={() => handleDateSelect(day)}
-          disabled={isFuture}
+          disabled={isFuture || isInvalid}
           className={`h-12 w-12 items-center justify-center rounded-lg ${
             isSelected
               ? 'bg-blue-600'
               : isToday
                 ? 'bg-blue-100'
-                : isFuture
+                : isFuture || isInvalid
                   ? 'bg-gray-100'
                   : 'bg-transparent'
           }`}
@@ -187,7 +194,7 @@ export default function DatePicker({
                 ? 'text-white'
                 : isToday
                   ? 'text-blue-600'
-                  : isFuture
+                  : isFuture || isInvalid
                     ? 'text-gray-400'
                     : 'text-slate-900'
             }`}>

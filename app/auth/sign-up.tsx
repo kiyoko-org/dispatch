@@ -20,6 +20,7 @@ import { registerForFCMToken } from 'hooks/useFCMToken';
 import { verifyNationalIdQR, type NationalIdData } from 'lib/id';
 import { useTheme } from 'components/ThemeContext';
 import Dropdown from 'components/Dropdown';
+import DatePicker from 'components/DatePicker';
 import { useDispatchClient } from 'components/DispatchProvider';
 import { z } from 'zod';
 import { useBarangays } from '@kiyoko-org/dispatch-lib';
@@ -251,6 +252,7 @@ const withTimeout = async<T>(
 			const [birthYear, setBirthYear] = useState('');
 			const [birthMonth, setBirthMonth] = useState('');
 			const [birthDay, setBirthDay] = useState('');
+			const [showDatePicker, setShowDatePicker] = useState(false);
 			const [birthCity, setBirthCity] = useState('');
 			const [birthProvince, setBirthProvince] = useState('');
 
@@ -286,17 +288,6 @@ const withTimeout = async<T>(
 					setShowBirthCityDropdown(false);
 				}
 			}, [isIdLocked]);
-
-  // Helper function to get days in month (handles leap years)
-  const getDaysInMonth = (year: string, month: string): number => {
-    const y = parseInt(year);
-			const m = parseInt(month);
-			if (isNaN(y) || isNaN(m) || m < 1 || m > 12) {
-      return 31; // Default to 31 if invalid
-    }
-
-			return new Date(y, m, 0).getDate();
-  };
 
   // Validate QR data against form data
   const validateQRData = (idData: NationalIdData): string | null => {
@@ -1025,166 +1016,37 @@ const withTimeout = async<T>(
 													(Must be 18 years or older)
 												</Text>
 											</View>
-											<View className="flex-row gap-3">
-												{/* Year */}
-												<View className="flex-1">
-													<Text className="mb-1 text-xs" style={{ color: colors.textSecondary }}>
-														Year
-													</Text>
-													<TextInput
-														className="rounded-xl px-4 py-4 text-base"
-														style={{
-															backgroundColor: colors.surfaceVariant,
-															borderWidth: 1,
-															borderColor: validationErrors.birthYear ? '#EF4444' : colors.border,
-															color: colors.text,
-															opacity: isIdLocked ? 0.6 : 1,
-														}}
-														placeholder="YYYY"
-														editable={!isIdLocked}
-														value={birthYear}
-														onChangeText={(text) => {
-															// Only allow numbers
-															const numericValue = text.replace(/[^0-9]/g, '');
-
-															if (numericValue.length === 0) {
-																setBirthYear('');
-																return;
-															}
-
-															const currentYear = new Date().getFullYear();
-															const maxYear = currentYear - 18; // e.g., 2007 in 2025
-
-															// Validate at each digit
-															if (numericValue.length === 1) {
-																// First digit must be 1 or 2 (for years 1900-2099)
-																// But since max is 2007, if they type 3-9, reject
-																if (numericValue === '1' || numericValue === '2') {
-																	setBirthYear(numericValue);
-																}
-															} else if (numericValue.length === 2) {
-																// 19xx or 20xx, but check if it could lead to valid year
-																// For 18xx: invalid (< 1900)
-																// For 19xx: valid
-																// For 20xx: need to check if it can be <= maxYear
-																if (
-																	numericValue === '19' ||
-																	(numericValue === '20' && maxYear >= 2000)
-																) {
-																	setBirthYear(numericValue);
-																} else if (
-																	numericValue.startsWith('19') ||
-																	(numericValue.startsWith('20') &&
-																		parseInt(numericValue.substring(2)) === 0)
-																) {
-																	setBirthYear(numericValue);
-																}
-															} else if (numericValue.length === 3) {
-																const year3 = parseInt(numericValue);
-																// Check if this 3-digit prefix could lead to a valid year
-																// For 190x-199x: always valid
-																// For 200x-207x: check against maxYear
-																if (
-																	(year3 >= 190 && year3 <= 199) ||
-																	(year3 >= 200 && year3 <= Math.floor(maxYear / 10))
-																) {
-																	setBirthYear(numericValue);
-																}
-															} else if (numericValue.length === 4) {
-																const year = parseInt(numericValue);
-																// Final validation: 1900 <= year <= maxYear
-																if (year >= 1900 && year <= maxYear) {
-																	setBirthYear(numericValue);
-																}
-															}
-														}}
-														placeholderTextColor={colors.textSecondary}
-														keyboardType="numeric"
-														maxLength={4}
-													/>
-												</View>
-
-												{/* Month */}
-												<View className="flex-1">
-													<Text className="mb-1 text-xs" style={{ color: colors.textSecondary }}>
-														Month
-													</Text>
-													<TextInput
-														className="rounded-xl px-4 py-4 text-base"
-														style={{
-															backgroundColor: colors.surfaceVariant,
-															borderWidth: 1,
-															borderColor: validationErrors.birthMonth ? '#EF4444' : colors.border,
-															color: colors.text,
-															opacity: isIdLocked ? 0.6 : 1,
-														}}
-														placeholder="MM"
-														editable={!isIdLocked}
-														value={birthMonth}
-														onChangeText={(text) => {
-															// Only allow numbers
-															const numericValue = text.replace(/[^0-9]/g, '');
-															if (numericValue.length <= 2) {
-																// Validate month range 1-12
-																const monthNum = parseInt(numericValue);
-																if (numericValue === '' || (monthNum >= 1 && monthNum <= 12)) {
-																	setBirthMonth(numericValue);
-																}
-															}
-														}}
-														placeholderTextColor={colors.textSecondary}
-														keyboardType="numeric"
-														maxLength={2}
-													/>
-												</View>
-
-												{/* Day */}
-												<View className="flex-1">
-													<Text className="mb-1 text-xs" style={{ color: colors.textSecondary }}>
-														Day
-													</Text>
-													<TextInput
-														className="rounded-xl px-4 py-4 text-base"
-														style={{
-															backgroundColor: colors.surfaceVariant,
-															borderWidth: 1,
-															borderColor: validationErrors.birthDay ? '#EF4444' : colors.border,
-															color: colors.text,
-															opacity: isIdLocked ? 0.6 : 1,
-														}}
-														placeholder="DD"
-														editable={!isIdLocked}
-														value={birthDay}
-														onChangeText={(text) => {
-															// Only allow numbers
-															const numericValue = text.replace(/[^0-9]/g, '');
-															if (numericValue.length <= 2) {
-																const dayNum = parseInt(numericValue);
-
-																// Get max days for current month/year
-																let maxDays = 31;
-																if (birthYear && birthMonth) {
-																	const year = parseInt(birthYear);
-																	const month = parseInt(birthMonth);
-																	if (!isNaN(year) && !isNaN(month) && month >= 1 && month <= 12) {
-																		maxDays = new Date(year, month, 0).getDate();
-																	}
-																}
-
-																if (numericValue === '' || (dayNum >= 1 && dayNum <= maxDays)) {
-																	setBirthDay(numericValue);
-																}
-															}
-														}}
-														placeholderTextColor={colors.textSecondary}
-														keyboardType="numeric"
-														maxLength={2}
-													/>
-												</View>
-											</View>
+											<TouchableOpacity
+												className="rounded-xl px-4 py-4"
+												style={{
+													backgroundColor: colors.surfaceVariant,
+													borderWidth: 1,
+													borderColor:
+														validationErrors.birthYear ||
+														validationErrors.birthMonth ||
+														validationErrors.birthDay
+															? '#EF4444'
+															: colors.border,
+													opacity: isIdLocked ? 0.6 : 1,
+												}}
+												onPress={() => !isIdLocked && setShowDatePicker(true)}
+												disabled={isIdLocked}>
+												<Text
+													style={{
+														color:
+															birthYear && birthMonth && birthDay
+																? colors.text
+																: colors.textSecondary,
+														fontSize: 16,
+													}}>
+													{birthYear && birthMonth && birthDay
+														? `${birthMonth.padStart(2, '0')}/${birthDay.padStart(2, '0')}/${birthYear}`
+														: 'Select a date'}
+												</Text>
+											</TouchableOpacity>
 											{validationErrors.birthYear ||
-												validationErrors.birthMonth ||
-												validationErrors.birthDay ? (
+											validationErrors.birthMonth ||
+											validationErrors.birthDay ? (
 												<Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
 													{validationErrors.birthYear ||
 														validationErrors.birthMonth ||
@@ -1193,9 +1055,6 @@ const withTimeout = async<T>(
 											) : (
 												<Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
 													Year: 1900-{new Date().getFullYear() - 18}
-													{birthYear &&
-														birthMonth &&
-														`, Days in ${['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][parseInt(birthMonth)]}: ${getDaysInMonth(birthYear, birthMonth)}`}
 												</Text>
 											)}
 										</View>
@@ -2023,6 +1882,37 @@ const withTimeout = async<T>(
 						title="Select Birth Province"
 						searchable
 						searchPlaceholder="Search province..."
+					/>
+
+					<DatePicker
+						isVisible={showDatePicker}
+						onClose={() => setShowDatePicker(false)}
+						onSelectDate={(dateString: string) => {
+							const [month, day, year] = dateString.split('/');
+							setBirthMonth(month);
+							setBirthDay(day);
+							setBirthYear(year);
+						}}
+						initialDate={
+							birthYear && birthMonth && birthDay
+								? `${birthMonth}/${birthDay}/${birthYear}`
+								: (() => {
+										const today = new Date();
+										const eighteenYearsAgo = new Date(today);
+										eighteenYearsAgo.setFullYear(today.getFullYear() - 18);
+										const month = (eighteenYearsAgo.getMonth() + 1).toString().padStart(2, '0');
+										const day = eighteenYearsAgo.getDate().toString().padStart(2, '0');
+										const year = eighteenYearsAgo.getFullYear().toString();
+										return `${month}/${day}/${year}`;
+									})()
+						}
+						isDateValid={(date: Date) => {
+							const today = new Date();
+							today.setHours(0, 0, 0, 0);
+							const minBirthDate = new Date(today);
+							minBirthDate.setFullYear(today.getFullYear() - 18);
+							return date <= minBirthDate;
+						}}
 					/>
 				</View>
 				);
