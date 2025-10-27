@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, Modal, ScrollView } from 'react-native';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react-native';
+import { useTheme } from './ThemeContext';
 
 interface DatePickerProps {
   isVisible: boolean;
@@ -17,6 +18,10 @@ export default function DatePicker({
   initialDate,
   isDateValid,
 }: DatePickerProps) {
+  const { colors, isDark } = useTheme();
+  const subtleSurface = isDark ? 'rgba(255, 255, 255, 0.08)' : colors.surfaceVariant;
+  const disabledOpacity = 0.5;
+
   const parseInitialDate = () => {
     if (initialDate) {
       const [month, day, year] = initialDate.split('/').map(Number);
@@ -124,18 +129,28 @@ export default function DatePicker({
       const isSelected = currentDate.getFullYear() === year;
       const isCurrentYear = new Date().getFullYear() === year;
 
+      const yearBackground = isSelected
+        ? colors.primary
+        : isCurrentYear
+          ? colors.primaryLight
+          : subtleSurface;
+
+      const yearTextColor = isSelected
+        ? '#FFFFFF'
+        : isCurrentYear
+          ? isDark
+            ? colors.text
+            : colors.primaryDark
+          : colors.text;
+
       years.push(
         <TouchableOpacity
           key={year}
           onPress={() => handleYearSelect(year)}
-          className={`m-1 h-14 w-[30%] items-center justify-center rounded-lg ${
-            isSelected ? 'bg-blue-600' : isCurrentYear ? 'bg-blue-100' : 'bg-gray-50'
-          }`}
-          activeOpacity={0.7}>
-          <Text
-            className={`text-base font-medium ${
-              isSelected ? 'text-white' : isCurrentYear ? 'text-blue-600' : 'text-slate-900'
-            }`}>
+          className="m-1 h-14 w-[30%] items-center justify-center rounded-lg"
+          activeOpacity={0.7}
+          style={{ backgroundColor: yearBackground }}>
+          <Text className="text-base font-medium" style={{ color: yearTextColor }}>
             {year}
           </Text>
         </TouchableOpacity>
@@ -173,31 +188,33 @@ export default function DatePicker({
         new Date().toDateString() ===
         new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toDateString();
 
+      const dayBackgroundColor = isSelected
+        ? colors.primary
+        : isToday
+          ? colors.primaryLight
+          : isFuture || isInvalid
+            ? subtleSurface
+            : 'transparent';
+
+      const dayTextColor = isSelected
+        ? '#FFFFFF'
+        : isToday
+          ? isDark
+            ? colors.text
+            : colors.primaryDark
+          : isFuture || isInvalid
+            ? colors.textSecondary
+            : colors.text;
+
       days.push(
         <TouchableOpacity
           key={day}
           onPress={() => handleDateSelect(day)}
           disabled={isFuture || isInvalid}
-          className={`h-12 w-12 items-center justify-center rounded-lg ${
-            isSelected
-              ? 'bg-blue-600'
-              : isToday
-                ? 'bg-blue-100'
-                : isFuture || isInvalid
-                  ? 'bg-gray-100'
-                  : 'bg-transparent'
-          }`}
-          activeOpacity={0.7}>
-          <Text
-            className={`text-base font-medium ${
-              isSelected
-                ? 'text-white'
-                : isToday
-                  ? 'text-blue-600'
-                  : isFuture || isInvalid
-                    ? 'text-gray-400'
-                    : 'text-slate-900'
-            }`}>
+          className="h-12 w-12 items-center justify-center rounded-lg"
+          activeOpacity={0.7}
+          style={{ backgroundColor: dayBackgroundColor }}>
+          <Text className="text-base font-medium" style={{ color: dayTextColor }}>
             {day}
           </Text>
         </TouchableOpacity>
@@ -211,31 +228,40 @@ export default function DatePicker({
 
   return (
     <Modal visible={isVisible} transparent animationType="fade" onRequestClose={onClose}>
-      <View className="flex-1 items-center justify-center bg-black/50 p-4">
-        <View className="w-full max-w-sm rounded-xl bg-white p-6">
+      <View
+        className="flex-1 items-center justify-center p-4"
+        style={{ backgroundColor: colors.overlay }}>
+        <View className="w-full max-w-sm rounded-xl p-6" style={{ backgroundColor: colors.surface }}>
           <View className="mb-6 flex-row items-center justify-between">
-            <Text className="text-xl font-bold text-slate-900">Select Date</Text>
+            <Text className="text-xl font-bold" style={{ color: colors.text }}>
+              Select Date
+            </Text>
             <TouchableOpacity
               onPress={onClose}
-              className="h-8 w-8 items-center justify-center rounded-lg bg-gray-100"
-              activeOpacity={0.7}>
-              <X size={18} color="#64748B" />
+              className="h-8 w-8 items-center justify-center rounded-lg"
+              activeOpacity={0.7}
+              style={{ backgroundColor: subtleSurface }}>
+              <X size={18} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
           <View className="mb-4 flex-row items-center justify-between">
             <TouchableOpacity
               onPress={() => navigateMonth('prev')}
-              className="h-10 w-10 items-center justify-center rounded-lg bg-gray-100"
+              className="h-10 w-10 items-center justify-center rounded-lg"
               activeOpacity={0.7}
-              disabled={showYearPicker}>
-              <ChevronLeft size={20} color="#64748B" />
+              disabled={showYearPicker}
+              style={{
+                backgroundColor: subtleSurface,
+                opacity: showYearPicker ? disabledOpacity : 1,
+              }}>
+              <ChevronLeft size={20} color={colors.textSecondary} />
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={() => setShowYearPicker(!showYearPicker)}
               activeOpacity={0.7}>
-              <Text className="text-lg font-semibold text-slate-900">
+              <Text className="text-lg font-semibold" style={{ color: colors.text }}>
                 {months[currentDate.getMonth()]} {currentDate.getFullYear()}
               </Text>
             </TouchableOpacity>
@@ -243,14 +269,13 @@ export default function DatePicker({
             <TouchableOpacity
               onPress={() => navigateMonth('next')}
               disabled={isNextMonthDisabled() || showYearPicker}
-              className={`h-10 w-10 items-center justify-center rounded-lg ${
-                isNextMonthDisabled() || showYearPicker ? 'bg-gray-200' : 'bg-gray-100'
-              }`}
-              activeOpacity={0.7}>
-              <ChevronRight
-                size={20}
-                color={isNextMonthDisabled() || showYearPicker ? '#CBD5E1' : '#64748B'}
-              />
+              className="h-10 w-10 items-center justify-center rounded-lg"
+              activeOpacity={0.7}
+              style={{
+                backgroundColor: subtleSurface,
+                opacity: isNextMonthDisabled() || showYearPicker ? disabledOpacity : 1,
+              }}>
+              <ChevronRight size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
@@ -266,7 +291,9 @@ export default function DatePicker({
               <View className="mb-2 flex-row justify-between">
                 {dayLabels.map((label) => (
                   <View key={label} className="h-8 w-12 items-center justify-center">
-                    <Text className="text-sm font-medium text-gray-500">{label}</Text>
+                    <Text className="text-sm font-medium" style={{ color: colors.textSecondary }}>
+                      {label}
+                    </Text>
                   </View>
                 ))}
               </View>
@@ -278,22 +305,32 @@ export default function DatePicker({
           <View className="flex-row space-x-3">
             <TouchableOpacity
               onPress={onClose}
-              className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-3"
-              activeOpacity={0.7}>
-              <Text className="text-center text-base font-medium text-slate-700">Cancel</Text>
+              className="flex-1 rounded-lg px-4 py-3"
+              activeOpacity={0.7}
+              style={{
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.surface,
+              }}>
+              <Text
+                className="text-center text-base font-medium"
+                style={{ color: colors.text }}>
+                Cancel
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
               onPress={handleConfirm}
-              className={`flex-1 rounded-lg px-4 py-3 ${
-                selectedDate ? 'bg-blue-600' : 'bg-gray-300'
-              }`}
               activeOpacity={0.7}
-              disabled={!selectedDate}>
+              disabled={!selectedDate}
+              className="flex-1 rounded-lg px-4 py-3"
+              style={{
+                backgroundColor: selectedDate ? colors.primary : subtleSurface,
+                opacity: selectedDate ? 1 : disabledOpacity,
+              }}>
               <Text
-                className={`text-center text-base font-medium ${
-                  selectedDate ? 'text-white' : 'text-gray-500'
-                }`}>
+                className="text-center text-base font-medium"
+                style={{ color: selectedDate ? '#FFFFFF' : colors.textSecondary }}>
                 Confirm
               </Text>
             </TouchableOpacity>
