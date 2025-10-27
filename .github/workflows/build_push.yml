@@ -37,6 +37,13 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Get commit info for artifact name
+        run: |
+           COMMIT_MESSAGE=$(git log -1 --pretty=%B | head -1 | tr ' ' '-' | tr '/' '-' | tr '\n' '-' | sed 's/^-*//;s/-*$//')
+           COMMIT_HASH=$(git rev-parse --short=8 HEAD)
+           BRANCH=${{ github.ref_name }}
+           echo "ARTIFACT_NAME=${COMMIT_MESSAGE}-${COMMIT_HASH}-${BRANCH}" >> $GITHUB_ENV
+
       - name: Install dependencies
         run: bun install
 
@@ -62,5 +69,5 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: android-apk
+          name: ${{ env.ARTIFACT_NAME }}
           path: android/app/build/outputs/apk/release/*.apk
