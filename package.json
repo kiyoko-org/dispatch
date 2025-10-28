@@ -51,6 +51,7 @@
     "react-native-svg": "^15.12.1",
     "react-native-volume-manager": "^2.0.8",
     "react-native-web": "^0.20.0",
+    "rn-qr-generator": "^1.4.5",
     "zod": "^4.1.12"
   },
   "devDependencies": {
