@@ -719,7 +719,13 @@ export default function ReportIncidentIndex() {
                 </Text>
                 <Text className="text-sm font-semibold" style={{ color: colors.text }}>
                   {formData.incident_date && formData.incident_time
-                    ? `${new Date(formData.incident_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at ${formData.incident_time}`
+                    ? (() => {
+                        // Parse MM/DD/YYYY format
+                        const [month, day, year] = formData.incident_date.split('/');
+                        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                        const monthName = date.toLocaleDateString('en-US', { month: 'short' });
+                        return `${monthName} ${day} at ${formData.incident_time}`;
+                      })()
                     : 'Select date & time'}
                 </Text>
               </View>
@@ -736,13 +742,7 @@ export default function ReportIncidentIndex() {
                 </Text>
               )}
               <TouchableOpacity
-                onPress={() => {
-                  if (uiState.locationFetchFailed) {
-                    updateUIState({ showLocationDialog: true });
-                  } else {
-                    handleUseCurrentLocation();
-                  }
-                }}
+                onPress={() => updateUIState({ showLocationDialog: true })}
                 disabled={uiState.isGettingLocation}
                 activeOpacity={0.7}>
                 {uiState.isGettingLocation ? (
