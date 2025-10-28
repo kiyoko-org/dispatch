@@ -865,8 +865,12 @@ export default function ReportIncidentIndex() {
               </View>
             </TouchableOpacity>
 
-            {/* Location Icon */}
-            <View className="flex-row items-center">
+            {/* Location */}
+            <TouchableOpacity
+              onPress={() => updateUIState({ showLocationDialog: true })}
+              disabled={uiState.isGettingLocation}
+              className="flex-row items-center"
+              activeOpacity={0.7}>
               {formData.street_address && !uiState.locationFetchFailed && (
                 <Text
                   className="mr-2 max-w-[150px] text-xs"
@@ -875,26 +879,21 @@ export default function ReportIncidentIndex() {
                   {formData.street_address}
                 </Text>
               )}
-              <TouchableOpacity
-                onPress={() => updateUIState({ showLocationDialog: true })}
-                disabled={uiState.isGettingLocation}
-                activeOpacity={0.7}>
-                {uiState.isGettingLocation ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                ) : (
-                  <MapPin
-                    size={24}
-                    color={
-                      uiState.locationFetchFailed
-                        ? colors.error
-                        : formData.street_address
-                          ? colors.success
-                          : colors.textSecondary
-                    }
-                  />
-                )}
-              </TouchableOpacity>
-            </View>
+              {uiState.isGettingLocation ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <MapPin
+                  size={24}
+                  color={
+                    uiState.locationFetchFailed
+                      ? colors.error
+                      : formData.street_address
+                        ? colors.success
+                        : colors.textSecondary
+                  }
+                />
+              )}
+            </TouchableOpacity>
           </View>
 
           {/* Incident Title */}
