@@ -1121,7 +1121,7 @@ export default function ReportIncidentIndex() {
         }}>
         <View className="flex-row space-x-4">
           <TouchableOpacity
-            onPress={() => router.replace('/(protected)/home')}
+            onPress={() => router.back()}
             className="flex-1 items-center rounded-xl px-6 py-4"
             activeOpacity={0.8}
             style={{
