@@ -1057,7 +1057,7 @@ export default function ReportIncidentIndex() {
 
             {/* Uploaded Files */}
             {uploadedFiles.length > 0 ? (
-              <View className="space-y-2">
+              <View className="flex gap-2 space-y-2">
                 {uploadedFiles.map((file, index) => (
                   <View
                     key={index}
