@@ -878,7 +878,10 @@ export default function ReportIncidentIndex() {
                         const [month, day, year] = formData.incident_date.split('/');
                         const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
                         const monthName = date.toLocaleDateString('en-US', { month: 'short' });
-                        return `${monthName} ${day} at ${formData.incident_time}`;
+                        const dayOfMonth = date.getDate();
+                        const includeYear = date.getFullYear() !== new Date().getFullYear();
+                        const yearSuffix = includeYear ? `, ${date.getFullYear()}` : '';
+                        return `${monthName} ${dayOfMonth}${yearSuffix} at ${formData.incident_time}`;
                       })()
                     : 'Select date & time'}
                 </Text>
