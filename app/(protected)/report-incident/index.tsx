@@ -1,8 +1,8 @@
 import HeaderWithSidebar from 'components/HeaderWithSidebar';
-import BasicInfoStep from 'components/report-incident/BasicInfoStep';
-import LocationStep from 'components/report-incident/LocationStep';
-import EvidenceStep from 'components/report-incident/EvidenceStep';
-import ReviewStep from 'components/report-incident/ReviewStep';
+import AddressSearch from 'components/AddressSearch';
+import Dropdown from 'components/Dropdown';
+import DatePicker from 'components/DatePicker';
+import TimePicker from 'components/TimePicker';
 
 import {
   Text,
@@ -10,10 +10,13 @@ import {
   TouchableOpacity,
   Alert,
   ScrollView,
-  Animated,
   Platform,
   KeyboardAvoidingView,
   StatusBar,
+  TextInput,
+  Modal,
+  ActivityIndicator,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
@@ -24,33 +27,61 @@ import { useTheme } from 'components/ThemeContext';
 import { useDispatchClient } from 'components/DispatchProvider';
 import { useReports } from '@kiyoko-org/dispatch-lib';
 import AppDialog from 'components/AppDialog';
-import { Check } from 'lucide-react-native';
+import { 
+  Check, 
+  MapPin, 
+  ChevronDown, 
+  Calendar, 
+  Clock,
+  Plus,
+  X,
+  Mic,
+  Camera,
+  Upload,
+  FileText,
+  Music,
+  File
+} from 'lucide-react-native';
+import {
+  UploadManager,
+  FileUploadResult,
+  FileUploadProgress,
+  SupabaseStorageService,
+  ExpoFilePickerService,
+} from 'lib/services';
+import { FileUtils } from 'lib/services/file-utils';
+import { AudioRecorder } from 'expo-audio';
+import { UploadProgress } from 'components/ui/UploadProgress';
+import { SearchResult } from 'lib/types/search';
 
 interface UIState {
   showCategoryDropdown: boolean;
   showSubcategoryDropdown: boolean;
-  showTimePicker: boolean;
-  showDatePicker: boolean;
-  selectedHour: string;
-  selectedMinute: string;
-  selectedPeriod: string;
+  showDateTimeDialog: boolean;
+  showLocationDialog: boolean;
+  showEvidenceModal: boolean;
   isRecording: boolean;
-  currentStep: number;
   isSubmitting: boolean;
   isGettingLocation: boolean;
+  locationFetchFailed: boolean;
   validationErrors: Record<string, string>;
 }
+
+// Initialize services
+const storageService = new SupabaseStorageService();
+const filePickerService = new ExpoFilePickerService();
+const uploadManager = new UploadManager(storageService, filePickerService);
 
 export default function ReportIncidentIndex() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const { categories, categoriesLoading, categoriesError } = useDispatchClient();
   const { addReport } = useReports();
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
-  const dropdownAnim = useRef(new Animated.Value(0)).current;
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [recorder, setRecorder] = useState<AudioRecorder | null>(null);
+  const [recordingDuration, setRecordingDuration] = useState(0);
 
-  // Consolidated form data state - replaces 28 individual useState calls
+  // Consolidated form data state
   const [formData, setFormData] = useState<ReportData>({
     // Basic Information
     incident_category: '',
@@ -60,26 +91,22 @@ export default function ReportIncidentIndex() {
     incident_time: '',
     what_happened: '',
 
-    // Location Information
+    // Location Information (hidden but still used)
     street_address: '',
     nearby_landmark: '',
-
-
   });
 
-  // UI state - separate from form data
+  // UI state
   const [uiState, setUIState] = useState<UIState>({
     showCategoryDropdown: false,
     showSubcategoryDropdown: false,
-    showTimePicker: false,
-    showDatePicker: false,
-    selectedHour: '',
-    selectedMinute: '',
-    selectedPeriod: '',
+    showDateTimeDialog: false,
+    showLocationDialog: false,
+    showEvidenceModal: false,
     isRecording: false,
-    currentStep: 1,
     isSubmitting: false,
     isGettingLocation: false,
+    locationFetchFailed: false,
     validationErrors: {},
   });
 
@@ -91,7 +118,14 @@ export default function ReportIncidentIndex() {
 
   // Attachments state
   const [attachments, setAttachments] = useState<string[]>([]);
+  const [uploadedFiles, setUploadedFiles] = useState<FileUploadResult[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<FileUploadProgress | null>(null);
+  const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [successDialogVisible, setSuccessDialogVisible] = useState(false);
+  const [showAddressSearch, setShowAddressSearch] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
 
   // Helper functions for updating state
   const updateFormData = (updates: Partial<ReportData>) => {
@@ -101,6 +135,62 @@ export default function ReportIncidentIndex() {
   const updateUIState = (updates: Partial<UIState>) => {
     setUIState((prev) => ({ ...prev, ...updates }));
   };
+
+  // Auto-populate current date and time on mount
+  useEffect(() => {
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const year = now.getFullYear();
+    const dateString = `${month}/${day}/${year}`;
+
+    let hours = now.getHours();
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const period = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12 || 12;
+    const timeString = `${hours}:${minutes} ${period}`;
+
+    updateFormData({
+      incident_date: dateString,
+      incident_time: timeString,
+    });
+  }, []);
+
+  // Try to get current location on mount
+  useEffect(() => {
+    handleUseCurrentLocation(true);
+  }, []);
+
+  // Cleanup recording interval on unmount
+  useEffect(() => {
+    return () => {
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+    };
+  }, []);
+
+  // Generate signed URLs for images
+  useEffect(() => {
+    const generateSignedUrls = async () => {
+      const newSignedUrls: Record<string, string> = {};
+      for (const file of uploadedFiles) {
+        if (FileUtils.isImageFile(file.type) && !signedUrls[file.id]) {
+          try {
+            const signedUrl = await storageService.getSignedUrl(file.path, 3600);
+            newSignedUrls[file.id] = signedUrl;
+          } catch (error) {
+            console.error('Failed to get signed URL for', file.path, error);
+            newSignedUrls[file.id] = file.url;
+          }
+        }
+      }
+      if (Object.keys(newSignedUrls).length > 0) {
+        setSignedUrls((prev) => ({ ...prev, ...newSignedUrls }));
+      }
+    };
+    generateSignedUrls();
+  }, [uploadedFiles]);
 
   // Helper function to transform ReportData to dispatch-lib schema
   const transformToDispatchLibSchema = (data: ReportData, attachments: string[]) => {
@@ -177,6 +267,7 @@ export default function ReportIncidentIndex() {
       incident_date: dateString,
       incident_time: timeString,
     });
+    updateUIState({ showDateTimeDialog: false });
   };
 
   const handleSuccessDialogConfirm = () => {
@@ -185,20 +276,22 @@ export default function ReportIncidentIndex() {
   };
 
   // Function to handle using current location
-  const handleUseCurrentLocation = async () => {
+  const handleUseCurrentLocation = async (silent = false) => {
     try {
-      updateUIState({ isGettingLocation: true });
+      updateUIState({ isGettingLocation: true, locationFetchFailed: false });
 
       // Request location permissions
       const { status } = await Location.requestForegroundPermissionsAsync();
 
       if (status !== 'granted') {
-        Alert.alert(
-          'Location Permission Denied',
-          'Permission to access location was denied. Please enable location services to use this feature.',
-          [{ text: 'OK' }]
-        );
-        updateUIState({ isGettingLocation: false });
+        updateUIState({ isGettingLocation: false, locationFetchFailed: true });
+        if (!silent) {
+          Alert.alert(
+            'Location Permission Denied',
+            'Permission to access location was denied. Please enable location services to use this feature.',
+            [{ text: 'OK' }]
+          );
+        }
         return;
       }
 
@@ -234,9 +327,12 @@ export default function ReportIncidentIndex() {
           const isTuguegarao = /tuguegarao/i.test(cityCheck);
 
           if (!isTuguegarao) {
-            Alert.alert('Area Not Supported', 'Your area is not supported by Dispatch just yet.', [
-              { text: 'OK' },
-            ]);
+            updateUIState({ locationFetchFailed: true });
+            if (!silent) {
+              Alert.alert('Area Not Supported', 'Your area is not supported by Dispatch just yet.', [
+                { text: 'OK' },
+              ]);
+            }
             return;
           }
 
@@ -249,11 +345,18 @@ export default function ReportIncidentIndex() {
             street_address: streetAddress,
             nearby_landmark: place.name || '',
           });
+          updateUIState({ locationFetchFailed: false, showLocationDialog: false });
+          if (!silent) {
+            Alert.alert('Location Updated', 'Your current location has been set successfully.', [
+              { text: 'OK' },
+            ]);
+          }
         } else {
           // Fallback to coordinates if reverse geocoding fails
           updateFormData({
             street_address: `Lat: ${location.coords.latitude.toFixed(6)}, Lng: ${location.coords.longitude.toFixed(6)}`,
           });
+          updateUIState({ locationFetchFailed: false, showLocationDialog: false });
         }
       } catch (geocodeError) {
         console.error('Geocoding error:', geocodeError);
@@ -261,18 +364,18 @@ export default function ReportIncidentIndex() {
         updateFormData({
           street_address: `Lat: ${location.coords.latitude.toFixed(6)}, Lng: ${location.coords.longitude.toFixed(6)}`,
         });
+        updateUIState({ locationFetchFailed: false, showLocationDialog: false });
       }
-
-      Alert.alert('Location Updated', 'Your current location has been set successfully.', [
-        { text: 'OK' },
-      ]);
     } catch (error) {
       console.error('Error getting location:', error);
-      Alert.alert(
-        'Location Error',
-        'Unable to retrieve your current location. Please check your GPS settings and try again.',
-        [{ text: 'OK' }]
-      );
+      updateUIState({ locationFetchFailed: true });
+      if (!silent) {
+        Alert.alert(
+          'Location Error',
+          'Unable to retrieve your current location. Please check your GPS settings and try again.',
+          [{ text: 'OK' }]
+        );
+      }
     } finally {
       updateUIState({ isGettingLocation: false });
     }
@@ -321,112 +424,187 @@ export default function ReportIncidentIndex() {
       errors.what_happened = 'Description must be 2000 characters or less';
     }
 
-    // Numeric validations
-
     return errors;
   };
 
-  // Function to handle dropdown opening - closes others automatically
-  const openDropdown = (
-    dropdownType: 'category' | 'subcategory' | 'time' | 'date'
-  ) => {
-    if (dropdownType === 'category') {
-      const newState = !uiState.showCategoryDropdown;
-      updateUIState({
-        showCategoryDropdown: newState,
-        showSubcategoryDropdown: false,
-        showTimePicker: false,
-        showDatePicker: false,
-      });
+  // Evidence upload handlers
+  const handleVoiceRecording = async () => {
+    if (uiState.isRecording) {
+      // Stop recording
+      if (recorder) {
+        try {
+          setIsUploading(true);
+          const result = await uploadManager.uploadRecordedAudio(
+            recorder,
+            {
+              stopRecording: true,
+              maxSize: 25 * 1024 * 1024,
+              allowedTypes: FileUtils.getAllowedTypesForCategory('audio'),
+            },
+            (progress) => {
+              setUploadProgress(progress);
+            }
+          );
 
-      Animated.timing(dropdownAnim, {
-        toValue: newState ? 1 : 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
-    } else if (dropdownType === 'subcategory') {
-      const newState = !uiState.showSubcategoryDropdown;
-      updateUIState({
-        showSubcategoryDropdown: newState,
-        showCategoryDropdown: false,
-        showTimePicker: false,
-        showDatePicker: false,
-      });
+          if (result) {
+            const newFiles = [...uploadedFiles, result];
+            setUploadedFiles(newFiles);
+            setAttachments(newFiles.map((f) => f.path));
+          }
+        } catch (error) {
+          console.error('Error uploading recorded audio:', error);
+          Alert.alert('Upload Failed', 'Failed to upload recorded audio. Please try again.');
+        } finally {
+          setIsUploading(false);
+          setUploadProgress(null);
+          setRecorder(null);
+        }
+      }
 
-      Animated.timing(dropdownAnim, {
-        toValue: newState ? 1 : 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
-    } else if (dropdownType === 'time') {
-      const newState = !uiState.showTimePicker;
-      updateUIState({
-        showTimePicker: newState,
-        showCategoryDropdown: false,
-        showSubcategoryDropdown: false,
-        showDatePicker: false,
-      });
-
-      Animated.timing(dropdownAnim, {
-        toValue: newState ? 1 : 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
-    } else if (dropdownType === 'date') {
-      const newState = !uiState.showDatePicker;
-      updateUIState({
-        showDatePicker: newState,
-        showCategoryDropdown: false,
-        showSubcategoryDropdown: false,
-        showTimePicker: false,
-      });
-
-      Animated.timing(dropdownAnim, {
-        toValue: newState ? 1 : 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+        recordingIntervalRef.current = null;
+      }
+      setRecordingDuration(0);
+      updateUIState({ isRecording: false, showEvidenceModal: false });
+    } else {
+      try {
+        const newRecorder = await filePickerService.startRecording();
+        if (newRecorder) {
+          setRecorder(newRecorder);
+          updateUIState({ isRecording: true });
+          setRecordingDuration(0);
+          recordingIntervalRef.current = setInterval(() => {
+            setRecordingDuration((prev) => prev + 1);
+          }, 1000);
+        }
+      } catch (error) {
+        console.error('Error starting recording:', error);
+        Alert.alert('Recording Failed', 'Failed to start audio recording. Please try again.');
+      }
     }
+  };
+
+  const handleFileUpload = async (type: 'image' | 'photo' | 'document') => {
+    try {
+      setIsUploading(true);
+      let result: FileUploadResult | null = null;
+
+      if (type === 'image') {
+        result = await uploadManager.pickAndUploadImage(
+          {
+            maxSize: 10 * 1024 * 1024,
+            allowedTypes: FileUtils.getAllowedTypesForCategory('images'),
+          },
+          (progress) => setUploadProgress(progress)
+        );
+      } else if (type === 'photo') {
+        result = await uploadManager.takePhotoAndUpload(
+          {
+            maxSize: 10 * 1024 * 1024,
+            allowedTypes: FileUtils.getAllowedTypesForCategory('images'),
+          },
+          (progress) => setUploadProgress(progress)
+        );
+      } else if (type === 'document') {
+        result = await uploadManager.pickDocumentAndUpload(
+          {
+            maxSize: 25 * 1024 * 1024,
+            allowedTypes: FileUtils.getAllowedTypesForCategory('documents'),
+            type: FileUtils.getAllowedTypesForCategory('documents'),
+          },
+          (progress) => setUploadProgress(progress)
+        );
+      }
+
+      if (result) {
+        const newFiles = [...uploadedFiles, result];
+        setUploadedFiles(newFiles);
+        setAttachments(newFiles.map((f) => f.path));
+        updateUIState({ showEvidenceModal: false });
+      }
+    } catch (error) {
+      console.error('Upload failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      Alert.alert('Upload Failed', `Failed to upload file: ${errorMessage}. Please try again.`);
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(null);
+    }
+  };
+
+  const removeFile = (index: number) => {
+    const newFiles = uploadedFiles.filter((_, i) => i !== index);
+    setUploadedFiles(newFiles);
+    setAttachments(newFiles.map((f) => f.path));
+  };
+
+  const renderFilePreview = (file: FileUploadResult) => {
+    if (FileUtils.isImageFile(file.type)) {
+      const imageUrl = signedUrls[file.id] || file.url;
+      return (
+        <View className="mr-3 h-12 w-12 overflow-hidden rounded-lg">
+          <Image source={{ uri: imageUrl }} style={{ width: 48, height: 48 }} resizeMode="cover" />
+        </View>
+      );
+    } else if (FileUtils.isAudioFile(file.type)) {
+      return (
+        <View
+          className="mr-3 h-12 w-12 items-center justify-center rounded-lg"
+          style={{ backgroundColor: colors.primary + '30' }}>
+          <Music size={24} color={colors.primary} />
+        </View>
+      );
+    } else if (FileUtils.isDocumentFile(file.type)) {
+      return (
+        <View
+          className="mr-3 h-12 w-12 items-center justify-center rounded-lg"
+          style={{ backgroundColor: colors.success + '30' }}>
+          <FileText size={24} color={colors.success} />
+        </View>
+      );
+    } else {
+      return (
+        <View
+          className="mr-3 h-12 w-12 items-center justify-center rounded-lg"
+          style={{ backgroundColor: colors.surfaceVariant }}>
+          <File size={24} color={colors.text} />
+        </View>
+      );
+    }
+  };
+
+  // Handle address search selection
+  const handleAddressSelect = (address: SearchResult) => {
+    updateFormData({
+      street_address: address.display_name || address.name || '',
+      nearby_landmark: address.name || '',
+    });
+    setCurrentLocation({
+      latitude: address.lat,
+      longitude: address.lon,
+    });
+    setShowAddressSearch(false);
+    updateUIState({ showLocationDialog: false, locationFetchFailed: false });
   };
 
   // Transform categories from database to match component expectations
   const incidentCategories: { name: string; severity: string }[] = categories
     .map((category) => ({
       name: category.name,
-      severity: 'Medium', // Default severity since database doesn't have severity field
+      severity: 'Medium',
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
-
-
 
   // Create subcategories mapping from categories data
   const subcategories: Record<string, string[]> = {};
   categories.forEach((category) => {
     if (category.sub_categories && category.sub_categories.length > 0) {
-      subcategories[category.name] = [...category.sub_categories, 'Other'].sort();
+      subcategories[category.name] = ['Other', ...category.sub_categories].sort();
     } else {
       subcategories[category.name] = ['Other'];
     }
   });
-
-  const hourOptions: string[] = [];
-  const minuteOptions: string[] = [];
-  const periodOptions: string[] = [];
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 600,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
 
   const handleSubmitReport = async () => {
     // Check if categories are loaded
@@ -524,92 +702,528 @@ export default function ReportIncidentIndex() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 32 }}
+        contentContainerStyle={{ paddingBottom: 100 }}
         className="flex-1">
-        <View className="px-4 pt-2">
-          <Animated.View
-            style={{
-              opacity: fadeAnim,
-              transform: [{ translateY: slideAnim }],
-            }}>
-            {/* Step 1: Basic Incident Information */}
-            <BasicInfoStep
-              formData={{
-                incident_category: formData.incident_category,
-                incident_subcategory: formData.incident_subcategory,
-                incident_title: formData.incident_title,
-                incident_date: formData.incident_date,
-                incident_time: formData.incident_time,
-                what_happened: formData.what_happened,
-              }}
-              onUpdateFormData={updateFormData}
-              onOpenDropdown={openDropdown}
-              incidentCategories={incidentCategories}
-              subcategories={subcategories}
-              showCategoryDropdown={uiState.showCategoryDropdown}
-              showSubcategoryDropdown={uiState.showSubcategoryDropdown}
-              showTimePicker={uiState.showTimePicker}
-              showDatePicker={uiState.showDatePicker}
-              onCloseDropdown={(type) => {
-                if (type === 'category') updateUIState({ showCategoryDropdown: false });
-                else if (type === 'subcategory') updateUIState({ showSubcategoryDropdown: false });
-                else if (type === 'time') updateUIState({ showTimePicker: false });
-                else if (type === 'date') updateUIState({ showDatePicker: false });
-              }}
-              selectedHour={uiState.selectedHour}
-              selectedMinute={uiState.selectedMinute}
-              selectedPeriod={uiState.selectedPeriod}
-              validationErrors={uiState.validationErrors}
-              onUseCurrentDateTime={handleUseCurrentDateTime}
-              categoriesLoading={categoriesLoading}
-              categoriesError={categoriesError}
-            />
+        <View className="px-4 pt-4">
+          {/* Date/Time and Location Header */}
+          <View className="mb-6 flex-row items-center justify-between">
+            {/* Date/Time */}
+            <TouchableOpacity
+              onPress={() => updateUIState({ showDateTimeDialog: true })}
+              className="flex-row items-center"
+              activeOpacity={0.7}>
+              <Calendar size={20} color={colors.textSecondary} className="mr-2" />
+              <View>
+                <Text className="text-xs font-medium" style={{ color: colors.textSecondary }}>
+                  WHEN
+                </Text>
+                <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                  {formData.incident_date && formData.incident_time
+                    ? `${new Date(formData.incident_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at ${formData.incident_time}`
+                    : 'Select date & time'}
+                </Text>
+              </View>
+            </TouchableOpacity>
 
-            {/* Step 2: Location Information */}
-            <LocationStep
-              formData={{
-                street_address: formData.street_address,
-                nearby_landmark: formData.nearby_landmark,
-              }}
-              onUpdateFormData={updateFormData}
-              validationErrors={uiState.validationErrors}
-              onUseCurrentLocation={handleUseCurrentLocation}
-              isGettingLocation={uiState.isGettingLocation}
-            />
-
-
-            {/* Voice Statement & Evidence */}
-            <EvidenceStep
-              uiState={{ isRecording: uiState.isRecording }}
-              onUpdateUIState={updateUIState}
-              onFilesUploaded={(files) => setAttachments(files.map((f) => f.path))}
-            />
-
-            {/* Review & Submit Options */}
-            <ReviewStep
-              uiState={{ isSubmitting: uiState.isSubmitting }}
-              onSubmit={handleSubmitReport}
-            />
-
-            {/* Cancel Button */}
-            <View className="mb-4">
+            {/* Location Icon */}
+            <View className="flex-row items-center">
+              {formData.street_address && !uiState.locationFetchFailed && (
+                <Text
+                  className="mr-2 max-w-[150px] text-xs"
+                  style={{ color: colors.textSecondary }}
+                  numberOfLines={1}>
+                  {formData.street_address}
+                </Text>
+              )}
               <TouchableOpacity
-                onPress={() => router.replace('/(protected)/home')}
-                className="items-center rounded-lg px-8 py-4"
+                onPress={() => {
+                  if (uiState.locationFetchFailed) {
+                    updateUIState({ showLocationDialog: true });
+                  } else {
+                    handleUseCurrentLocation();
+                  }
+                }}
+                disabled={uiState.isGettingLocation}
+                activeOpacity={0.7}>
+                {uiState.isGettingLocation ? (
+                  <ActivityIndicator size="small" color={colors.primary} />
+                ) : (
+                  <MapPin
+                    size={24}
+                    color={
+                      uiState.locationFetchFailed
+                        ? colors.error
+                        : formData.street_address
+                          ? colors.success
+                          : colors.textSecondary
+                    }
+                  />
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Incident Title */}
+          <View className="mb-4">
+            <Text className="mb-2 text-xs font-semibold uppercase" style={{ color: colors.textSecondary }}>
+              Incident Title <Text style={{ color: colors.error }}>*</Text>
+            </Text>
+            <TextInput
+              placeholder="Brief title of the incident"
+              value={formData.incident_title}
+              onChangeText={(value) => updateFormData({ incident_title: value })}
+              className="rounded-xl px-4 py-4 text-base"
+              style={{
+                backgroundColor: colors.surface,
+                borderColor: uiState.validationErrors.incident_title ? colors.error : colors.border,
+                borderWidth: 1,
+                color: colors.text,
+              }}
+              placeholderTextColor={colors.textSecondary}
+            />
+            {uiState.validationErrors.incident_title && (
+              <Text className="mt-1 text-xs" style={{ color: colors.error }}>
+                {uiState.validationErrors.incident_title}
+              </Text>
+            )}
+          </View>
+
+          {/* What Happened */}
+          <View className="mb-4">
+            <Text className="mb-2 text-xs font-semibold uppercase" style={{ color: colors.textSecondary }}>
+              What Happened? <Text style={{ color: colors.error }}>*</Text>
+            </Text>
+            <TextInput
+              placeholder="Describe the incident in detail..."
+              value={formData.what_happened}
+              onChangeText={(value) => updateFormData({ what_happened: value })}
+              multiline
+              numberOfLines={6}
+              className="rounded-xl px-4 py-4 text-base"
+              style={{
+                backgroundColor: colors.surface,
+                borderColor: uiState.validationErrors.what_happened ? colors.error : colors.border,
+                borderWidth: 1,
+                color: colors.text,
+                minHeight: 120,
+              }}
+              placeholderTextColor={colors.textSecondary}
+              textAlignVertical="top"
+            />
+            {uiState.validationErrors.what_happened && (
+              <Text className="mt-1 text-xs" style={{ color: colors.error }}>
+                {uiState.validationErrors.what_happened}
+              </Text>
+            )}
+          </View>
+
+          {/* Category */}
+          <View className="mb-4">
+            <Text className="mb-2 text-xs font-semibold uppercase" style={{ color: colors.textSecondary }}>
+              Category <Text style={{ color: colors.error }}>*</Text>
+            </Text>
+            <TouchableOpacity
+              onPress={() => !categoriesLoading && updateUIState({ showCategoryDropdown: true })}
+              className="flex-row items-center justify-between rounded-xl px-4 py-4"
+              disabled={categoriesLoading}
+              activeOpacity={0.7}
+              style={{
+                backgroundColor: colors.surface,
+                borderColor: uiState.validationErrors.incident_category ? colors.error : colors.border,
+                borderWidth: 1,
+                opacity: categoriesLoading ? 0.6 : 1,
+              }}>
+              <Text style={{ color: formData.incident_category ? colors.text : colors.textSecondary }}>
+                {categoriesLoading
+                  ? 'Loading categories...'
+                  : formData.incident_category || 'Select incident category'}
+              </Text>
+              <ChevronDown size={20} color={colors.textSecondary} />
+            </TouchableOpacity>
+            {categoriesError && (
+              <Text className="mt-1 text-xs" style={{ color: colors.error }}>
+                Failed to load categories: {categoriesError}
+              </Text>
+            )}
+            {uiState.validationErrors.incident_category && (
+              <Text className="mt-1 text-xs" style={{ color: colors.error }}>
+                {uiState.validationErrors.incident_category}
+              </Text>
+            )}
+          </View>
+
+          {/* Subcategory - shown after category selection */}
+          {formData.incident_category && (
+            <View className="mb-4">
+              <Text className="mb-2 text-xs font-semibold uppercase" style={{ color: colors.textSecondary }}>
+                Subcategory
+              </Text>
+              <TouchableOpacity
+                onPress={() => updateUIState({ showSubcategoryDropdown: true })}
+                className="flex-row items-center justify-between rounded-xl px-4 py-4"
+                activeOpacity={0.7}
                 style={{
                   backgroundColor: colors.surface,
                   borderColor: colors.border,
                   borderWidth: 1,
-                }}
-                activeOpacity={0.8}>
-                <Text className="text-base font-semibold" style={{ color: colors.text }}>
-                  Cancel & Return Home
+                }}>
+                <Text style={{ color: formData.incident_subcategory ? colors.text : colors.textSecondary }}>
+                  {formData.incident_subcategory || 'Other'}
+                </Text>
+                <ChevronDown size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+          )}
+
+          {/* Evidence Section */}
+          <View className="mb-4">
+            <View className="mb-2 flex-row items-center justify-between">
+              <Text className="text-xs font-semibold uppercase" style={{ color: colors.textSecondary }}>
+                Evidence
+              </Text>
+              <TouchableOpacity
+                onPress={() => updateUIState({ showEvidenceModal: true })}
+                className="flex-row items-center"
+                activeOpacity={0.7}>
+                <Plus size={16} color={colors.primary} />
+                <Text className="ml-1 text-sm font-semibold" style={{ color: colors.primary }}>
+                  Add
                 </Text>
               </TouchableOpacity>
             </View>
-          </Animated.View>
+
+            {/* Upload Progress */}
+            {isUploading && uploadProgress && (
+              <View className="mb-3">
+                <UploadProgress progress={uploadProgress} fileName="Uploading..." />
+              </View>
+            )}
+
+            {/* Uploaded Files */}
+            {uploadedFiles.length > 0 ? (
+              <View className="space-y-2">
+                {uploadedFiles.map((file, index) => (
+                  <View
+                    key={index}
+                    className="flex-row items-center justify-between rounded-xl p-3"
+                    style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }}>
+                    {renderFilePreview(file)}
+                    <View className="flex-1">
+                      <Text className="text-sm font-medium" style={{ color: colors.text }} numberOfLines={1}>
+                        {file.name}
+                      </Text>
+                      <Text className="text-xs" style={{ color: colors.textSecondary }}>
+                        {FileUtils.formatFileSize(file.size)}
+                      </Text>
+                    </View>
+                    <TouchableOpacity
+                      onPress={() => removeFile(index)}
+                      className="ml-2 p-1"
+                      activeOpacity={0.7}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                      <X size={16} color={colors.error} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View
+                className="items-center justify-center rounded-xl py-6"
+                style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }}>
+                <Text className="text-sm" style={{ color: colors.textSecondary }}>
+                  No evidence added yet
+                </Text>
+              </View>
+            )}
+          </View>
+
+          {/* Disclaimer */}
+          <View
+            className="mb-4 rounded-xl p-4"
+            style={{ backgroundColor: colors.surfaceVariant }}>
+            <Text className="text-center text-xs" style={{ color: colors.textSecondary }}>
+              Your report will be reviewed by our team and may be subject to verification. Please provide
+              accurate information.
+            </Text>
+          </View>
         </View>
       </ScrollView>
+
+      {/* Floating Action Buttons */}
+      <View
+        className="absolute bottom-0 left-0 right-0 flex-row space-x-3 px-4 pb-6 pt-4"
+        style={{
+          backgroundColor: colors.background,
+          borderTopWidth: 1,
+          borderTopColor: colors.border,
+        }}>
+        <TouchableOpacity
+          onPress={() => router.replace('/(protected)/home')}
+          className="flex-1 items-center rounded-xl px-6 py-4"
+          activeOpacity={0.8}
+          style={{
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+            borderWidth: 1,
+          }}>
+          <Text className="text-base font-semibold" style={{ color: colors.text }}>
+            Cancel
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={handleSubmitReport}
+          disabled={uiState.isSubmitting}
+          className="flex-1 items-center rounded-xl px-6 py-4"
+          activeOpacity={0.8}
+          style={{
+            backgroundColor: uiState.isSubmitting ? colors.surfaceVariant : colors.primary,
+            opacity: uiState.isSubmitting ? 0.6 : 1,
+          }}>
+          {uiState.isSubmitting ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text className="text-base font-semibold text-white">Submit Report</Text>
+          )}
+        </TouchableOpacity>
+      </View>
+
+      {/* Date & Time Dialog */}
+      <AppDialog
+        visible={uiState.showDateTimeDialog}
+        title="Select Date & Time"
+        description="Choose when the incident occurred"
+        tone="neutral"
+        dismissable={true}
+        onDismiss={() => updateUIState({ showDateTimeDialog: false })}
+        actions={[
+          {
+            label: 'Use Current Date & Time',
+            onPress: handleUseCurrentDateTime,
+          },
+          {
+            label: 'Select Date',
+            onPress: () => {
+              updateUIState({ showDateTimeDialog: false });
+              setShowDatePicker(true);
+            },
+          },
+          {
+            label: 'Select Time',
+            onPress: () => {
+              updateUIState({ showDateTimeDialog: false });
+              setShowTimePicker(true);
+            },
+          },
+        ]}
+      />
+
+      {/* Location Dialog */}
+      <AppDialog
+        visible={uiState.showLocationDialog}
+        title="Set Location"
+        description="Choose how to set the incident location"
+        tone="neutral"
+        dismissable={true}
+        onDismiss={() => updateUIState({ showLocationDialog: false })}
+        actions={[
+          {
+            label: 'Search Location',
+            onPress: () => {
+              updateUIState({ showLocationDialog: false });
+              setShowAddressSearch(true);
+            },
+          },
+          {
+            label: 'Use Current Location',
+            onPress: () => handleUseCurrentLocation(),
+          },
+        ]}
+      />
+
+      {/* Evidence Upload Modal */}
+      <Modal
+        visible={uiState.showEvidenceModal || uiState.isRecording}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          if (!uiState.isRecording) {
+            updateUIState({ showEvidenceModal: false });
+          }
+        }}>
+        <View className="flex-1 justify-end" style={{ backgroundColor: colors.overlay }}>
+          <View
+            className="rounded-t-3xl p-6"
+            style={{ backgroundColor: colors.surface }}>
+            <View className="mb-6 flex-row items-center justify-between">
+              <Text className="text-lg font-bold" style={{ color: colors.text }}>
+                {uiState.isRecording ? 'Recording Audio' : 'Add Evidence'}
+              </Text>
+              {!uiState.isRecording && (
+                <TouchableOpacity
+                  onPress={() => updateUIState({ showEvidenceModal: false })}
+                  activeOpacity={0.7}>
+                  <X size={24} color={colors.textSecondary} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {uiState.isRecording ? (
+              <View className="items-center py-8">
+                <View className="mb-4 h-24 w-24 items-center justify-center rounded-full bg-red-600">
+                  <Mic size={40} color="white" />
+                </View>
+                <Text className="mb-2 text-2xl font-bold text-red-600">
+                  {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
+                </Text>
+                <Text className="mb-6 text-sm" style={{ color: colors.textSecondary }}>
+                  Recording in progress...
+                </Text>
+                <TouchableOpacity
+                  onPress={handleVoiceRecording}
+                  className="w-full items-center rounded-xl py-4"
+                  activeOpacity={0.8}
+                  style={{ backgroundColor: colors.error }}>
+                  <Text className="text-base font-semibold text-white">Stop Recording</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View className="space-y-3">
+                <TouchableOpacity
+                  onPress={handleVoiceRecording}
+                  className="flex-row items-center rounded-xl p-4"
+                  activeOpacity={0.7}
+                  style={{ backgroundColor: colors.surfaceVariant }}>
+                  <View
+                    className="mr-4 h-12 w-12 items-center justify-center rounded-full"
+                    style={{ backgroundColor: colors.primary + '20' }}>
+                    <Mic size={24} color={colors.primary} />
+                  </View>
+                  <Text className="text-base font-medium" style={{ color: colors.text }}>
+                    Record Audio
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => handleFileUpload('photo')}
+                  className="flex-row items-center rounded-xl p-4"
+                  activeOpacity={0.7}
+                  disabled={isUploading}
+                  style={{ backgroundColor: colors.surfaceVariant, opacity: isUploading ? 0.6 : 1 }}>
+                  <View
+                    className="mr-4 h-12 w-12 items-center justify-center rounded-full"
+                    style={{ backgroundColor: colors.primary + '20' }}>
+                    <Camera size={24} color={colors.primary} />
+                  </View>
+                  <Text className="text-base font-medium" style={{ color: colors.text }}>
+                    Take a Picture
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => handleFileUpload('image')}
+                  className="flex-row items-center rounded-xl p-4"
+                  activeOpacity={0.7}
+                  disabled={isUploading}
+                  style={{ backgroundColor: colors.surfaceVariant, opacity: isUploading ? 0.6 : 1 }}>
+                  <View
+                    className="mr-4 h-12 w-12 items-center justify-center rounded-full"
+                    style={{ backgroundColor: colors.primary + '20' }}>
+                    <Upload size={24} color={colors.primary} />
+                  </View>
+                  <Text className="text-base font-medium" style={{ color: colors.text }}>
+                    Upload a Picture
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => handleFileUpload('document')}
+                  className="flex-row items-center rounded-xl p-4"
+                  activeOpacity={0.7}
+                  disabled={isUploading}
+                  style={{ backgroundColor: colors.surfaceVariant, opacity: isUploading ? 0.6 : 1 }}>
+                  <View
+                    className="mr-4 h-12 w-12 items-center justify-center rounded-full"
+                    style={{ backgroundColor: colors.primary + '20' }}>
+                    <FileText size={24} color={colors.primary} />
+                  </View>
+                  <Text className="text-base font-medium" style={{ color: colors.text }}>
+                    Upload a Document
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Dropdowns */}
+      <Dropdown
+        isVisible={uiState.showCategoryDropdown}
+        onClose={() => updateUIState({ showCategoryDropdown: false })}
+        onSelect={(item) =>
+          updateFormData({ incident_category: item.name, incident_subcategory: 'Other' })
+        }
+        data={incidentCategories}
+        keyExtractor={(item) => item.name}
+        renderItem={({ item }) => (
+          <View className="px-4 py-3">
+            <Text className="font-medium" style={{ color: colors.text }}>
+              {item.name}
+            </Text>
+          </View>
+        )}
+        title="Select Incident Category"
+        searchable={true}
+        searchPlaceholder="Search categories..."
+      />
+
+      <Dropdown
+        isVisible={uiState.showSubcategoryDropdown}
+        onClose={() => updateUIState({ showSubcategoryDropdown: false })}
+        onSelect={(item) => updateFormData({ incident_subcategory: item })}
+        data={subcategories[formData.incident_category as keyof typeof subcategories] || []}
+        keyExtractor={(item, index) => index.toString()}
+        renderItem={({ item }) => (
+          <View className="px-4 py-3">
+            <Text style={{ color: colors.text }}>{item}</Text>
+          </View>
+        )}
+        title="Select Subcategory"
+      />
+
+      {/* Date & Time Pickers */}
+      <DatePicker
+        isVisible={showDatePicker}
+        onClose={() => setShowDatePicker(false)}
+        onSelectDate={(dateString) => {
+          updateFormData({ incident_date: dateString });
+          setShowDatePicker(false);
+        }}
+        initialDate={formData.incident_date}
+      />
+
+      <TimePicker
+        isVisible={showTimePicker}
+        onClose={() => setShowTimePicker(false)}
+        onSelectTime={(timeString) => {
+          updateFormData({ incident_time: timeString });
+          setShowTimePicker(false);
+        }}
+        initialHour=""
+        initialMinute=""
+        initialPeriod=""
+        selectedDate={formData.incident_date}
+      />
+
+      {/* Address Search */}
+      <AddressSearch
+        visible={showAddressSearch}
+        onClose={() => setShowAddressSearch(false)}
+        onSelect={handleAddressSelect}
+      />
+
+      {/* Success Dialog */}
       <AppDialog
         visible={successDialogVisible}
         title="Report Submitted Successfully!"
