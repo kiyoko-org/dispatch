@@ -8,6 +8,7 @@ import {
   Text,
   View,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   Alert,
   ScrollView,
   Platform,
@@ -1152,73 +1153,77 @@ export default function ReportIncidentIndex() {
         transparent
         animationType="slide"
         onRequestClose={() => updateUIState({ showDateTimeDialog: false })}>
-        <View className="flex-1 justify-end" style={{ backgroundColor: colors.overlay }}>
-          <View className="rounded-t-3xl p-6" style={{ backgroundColor: colors.surface }}>
-            <View className="mb-6 flex-row items-center justify-between">
-              <Text className="text-lg font-bold" style={{ color: colors.text }}>
-                Select Date & Time
-              </Text>
-              <TouchableOpacity
-                onPress={() => updateUIState({ showDateTimeDialog: false })}
-                activeOpacity={0.7}>
-                <X size={24} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-
-            <View className="space-y-3">
-              <TouchableOpacity
-                onPress={handleUseCurrentDateTime}
-                className="flex-row items-center rounded-xl p-4"
-                activeOpacity={0.7}
-                style={{ backgroundColor: colors.surfaceVariant }}>
-                <View
-                  className="mr-4 h-12 w-12 items-center justify-center rounded-full"
-                  style={{ backgroundColor: colors.primary + '20' }}>
-                  <Clock size={24} color={colors.primary} />
+        <TouchableWithoutFeedback onPress={() => updateUIState({ showDateTimeDialog: false })}>
+          <View className="flex-1 justify-end" style={{ backgroundColor: colors.overlay }}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View className="rounded-t-3xl p-6" style={{ backgroundColor: colors.surface }}>
+                <View className="mb-6 flex-row items-center justify-between">
+                  <Text className="text-lg font-bold" style={{ color: colors.text }}>
+                    Select Date & Time
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => updateUIState({ showDateTimeDialog: false })}
+                    activeOpacity={0.7}>
+                    <X size={24} color={colors.textSecondary} />
+                  </TouchableOpacity>
                 </View>
-                <Text className="text-base font-medium" style={{ color: colors.text }}>
-                  Use Current Date & Time
-                </Text>
-              </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={() => {
-                  updateUIState({ showDateTimeDialog: false });
-                  setShowDatePicker(true);
-                }}
-                className="flex-row items-center rounded-xl p-4"
-                activeOpacity={0.7}
-                style={{ backgroundColor: colors.surfaceVariant }}>
-                <View
-                  className="mr-4 h-12 w-12 items-center justify-center rounded-full"
-                  style={{ backgroundColor: colors.primary + '20' }}>
-                  <Calendar size={24} color={colors.primary} />
-                </View>
-                <Text className="text-base font-medium" style={{ color: colors.text }}>
-                  Select Date
-                </Text>
-              </TouchableOpacity>
+                <View className="space-y-3">
+                  <TouchableOpacity
+                    onPress={handleUseCurrentDateTime}
+                    className="flex-row items-center rounded-xl p-4"
+                    activeOpacity={0.7}
+                    style={{ backgroundColor: colors.surfaceVariant }}>
+                    <View
+                      className="mr-4 h-12 w-12 items-center justify-center rounded-full"
+                      style={{ backgroundColor: colors.primary + '20' }}>
+                      <Clock size={24} color={colors.primary} />
+                    </View>
+                    <Text className="text-base font-medium" style={{ color: colors.text }}>
+                      Use Current Date & Time
+                    </Text>
+                  </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={() => {
-                  updateUIState({ showDateTimeDialog: false });
-                  setShowTimePicker(true);
-                }}
-                className="flex-row items-center rounded-xl p-4"
-                activeOpacity={0.7}
-                style={{ backgroundColor: colors.surfaceVariant }}>
-                <View
-                  className="mr-4 h-12 w-12 items-center justify-center rounded-full"
-                  style={{ backgroundColor: colors.primary + '20' }}>
-                  <Clock size={24} color={colors.primary} />
+                  <TouchableOpacity
+                    onPress={() => {
+                      updateUIState({ showDateTimeDialog: false });
+                      setShowDatePicker(true);
+                    }}
+                    className="flex-row items-center rounded-xl p-4"
+                    activeOpacity={0.7}
+                    style={{ backgroundColor: colors.surfaceVariant }}>
+                    <View
+                      className="mr-4 h-12 w-12 items-center justify-center rounded-full"
+                      style={{ backgroundColor: colors.primary + '20' }}>
+                      <Calendar size={24} color={colors.primary} />
+                    </View>
+                    <Text className="text-base font-medium" style={{ color: colors.text }}>
+                      Select Date
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      updateUIState({ showDateTimeDialog: false });
+                      setShowTimePicker(true);
+                    }}
+                    className="flex-row items-center rounded-xl p-4"
+                    activeOpacity={0.7}
+                    style={{ backgroundColor: colors.surfaceVariant }}>
+                    <View
+                      className="mr-4 h-12 w-12 items-center justify-center rounded-full"
+                      style={{ backgroundColor: colors.primary + '20' }}>
+                      <Clock size={24} color={colors.primary} />
+                    </View>
+                    <Text className="text-base font-medium" style={{ color: colors.text }}>
+                      Select Time
+                    </Text>
+                  </TouchableOpacity>
                 </View>
-                <Text className="text-base font-medium" style={{ color: colors.text }}>
-                  Select Time
-                </Text>
-              </TouchableOpacity>
-            </View>
+              </View>
+            </TouchableWithoutFeedback>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
 
       {/* Location Dialog */}
@@ -1227,94 +1232,98 @@ export default function ReportIncidentIndex() {
         transparent
         animationType="slide"
         onRequestClose={() => updateUIState({ showLocationDialog: false })}>
-        <View className="flex-1 justify-end" style={{ backgroundColor: colors.overlay }}>
-          <View className="rounded-t-3xl p-6" style={{ backgroundColor: colors.surface }}>
-            <View className="mb-6 flex-row items-center justify-between">
-              <Text className="text-lg font-bold" style={{ color: colors.text }}>
-                Set Location
-              </Text>
-              <TouchableOpacity
-                onPress={() => updateUIState({ showLocationDialog: false })}
-                activeOpacity={0.7}>
-                <X size={24} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-
-            <View>
-              <View className="flex-row space-x-3">
-                <TouchableOpacity
-                  onPress={() => {
-                    updateUIState({ showLocationDialog: false });
-                    setShowAddressSearch(true);
-                  }}
-                  className="flex-1 items-center rounded-xl p-4"
-                  activeOpacity={0.7}
-                  style={{ backgroundColor: colors.surfaceVariant }}>
-                  <View
-                    className="mb-3 h-12 w-12 items-center justify-center rounded-full"
-                    style={{ backgroundColor: colors.primary + '20' }}>
-                    <MapPin size={24} color={colors.primary} />
-                  </View>
-                  <Text className="text-sm font-medium text-center" style={{ color: colors.text }}>
-                    Search Location
+        <TouchableWithoutFeedback onPress={() => updateUIState({ showLocationDialog: false })}>
+          <View className="flex-1 justify-end" style={{ backgroundColor: colors.overlay }}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View className="rounded-t-3xl p-6" style={{ backgroundColor: colors.surface }}>
+                <View className="mb-6 flex-row items-center justify-between">
+                  <Text className="text-lg font-bold" style={{ color: colors.text }}>
+                    Set Location
                   </Text>
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => updateUIState({ showLocationDialog: false })}
+                    activeOpacity={0.7}>
+                    <X size={24} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
 
-                <TouchableOpacity
-                  onPress={() => {
-                    updateUIState({ showLocationDialog: false });
-                    openMapView();
-                  }}
-                  className="flex-1 items-center rounded-xl p-4"
-                  activeOpacity={0.7}
-                  style={{ backgroundColor: colors.surfaceVariant }}>
-                  <View
-                    className="mb-3 h-12 w-12 items-center justify-center rounded-full"
-                    style={{ backgroundColor: colors.primary + '20' }}>
-                    <MapPin size={24} color={colors.primary} />
-                  </View>
-                  <Text className="text-sm font-medium text-center" style={{ color: colors.text }}>
-                    Select on Map
-                  </Text>
-                </TouchableOpacity>
+                <View>
+                  <View className="flex-row space-x-3">
+                    <TouchableOpacity
+                      onPress={() => {
+                        updateUIState({ showLocationDialog: false });
+                        setShowAddressSearch(true);
+                      }}
+                      className="flex-1 items-center rounded-xl p-4"
+                      activeOpacity={0.7}
+                      style={{ backgroundColor: colors.surfaceVariant }}>
+                      <View
+                        className="mb-3 h-12 w-12 items-center justify-center rounded-full"
+                        style={{ backgroundColor: colors.primary + '20' }}>
+                        <MapPin size={24} color={colors.primary} />
+                      </View>
+                      <Text className="text-sm font-medium text-center" style={{ color: colors.text }}>
+                        Search Location
+                      </Text>
+                    </TouchableOpacity>
 
-                <TouchableOpacity
-                  onPress={() => handleUseCurrentLocation()}
-                  className="flex-1 items-center rounded-xl p-4"
-                  activeOpacity={0.7}
-                  style={{ backgroundColor: colors.surfaceVariant }}>
-                  <View
-                    className="mb-3 h-12 w-12 items-center justify-center rounded-full"
-                    style={{ backgroundColor: colors.primary + '20' }}>
-                    <MapPin size={24} color={colors.primary} />
+                    <TouchableOpacity
+                      onPress={() => {
+                        updateUIState({ showLocationDialog: false });
+                        openMapView();
+                      }}
+                      className="flex-1 items-center rounded-xl p-4"
+                      activeOpacity={0.7}
+                      style={{ backgroundColor: colors.surfaceVariant }}>
+                      <View
+                        className="mb-3 h-12 w-12 items-center justify-center rounded-full"
+                        style={{ backgroundColor: colors.primary + '20' }}>
+                        <MapPin size={24} color={colors.primary} />
+                      </View>
+                      <Text className="text-sm font-medium text-center" style={{ color: colors.text }}>
+                        Select on Map
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => handleUseCurrentLocation()}
+                      className="flex-1 items-center rounded-xl p-4"
+                      activeOpacity={0.7}
+                      style={{ backgroundColor: colors.surfaceVariant }}>
+                      <View
+                        className="mb-3 h-12 w-12 items-center justify-center rounded-full"
+                        style={{ backgroundColor: colors.primary + '20' }}>
+                        <MapPin size={24} color={colors.primary} />
+                      </View>
+                      <Text className="text-sm font-medium text-center" style={{ color: colors.text }}>
+                        Use Current Location
+                      </Text>
+                    </TouchableOpacity>
                   </View>
-                  <Text className="text-sm font-medium text-center" style={{ color: colors.text }}>
-                    Use Current Location
-                  </Text>
-                </TouchableOpacity>
+
+                  <View className="mt-4">
+                    <Text className="mb-2 text-xs font-semibold uppercase" style={{ color: colors.textSecondary }}>
+                      Nearby Landmark
+                    </Text>
+                    <TextInput
+                      placeholder="Nearby landmark (optional)"
+                      value={formData.nearby_landmark}
+                      onChangeText={(value) => updateFormData({ nearby_landmark: value })}
+                      className="rounded-xl px-4 py-4 text-base"
+                      style={{
+                        backgroundColor: colors.surface,
+                        borderColor: colors.border,
+                        borderWidth: 1,
+                        color: colors.text,
+                      }}
+                      placeholderTextColor={colors.textSecondary}
+                    />
+                  </View>
+                </View>
               </View>
-
-              <View className="mt-4">
-                <Text className="mb-2 text-xs font-semibold uppercase" style={{ color: colors.textSecondary }}>
-                  Nearby Landmark
-                </Text>
-                <TextInput
-                  placeholder="Nearby landmark (optional)"
-                  value={formData.nearby_landmark}
-                  onChangeText={(value) => updateFormData({ nearby_landmark: value })}
-                  className="rounded-xl px-4 py-4 text-base"
-                  style={{
-                    backgroundColor: colors.surface,
-                    borderColor: colors.border,
-                    borderWidth: 1,
-                    color: colors.text,
-                  }}
-                  placeholderTextColor={colors.textSecondary}
-                />
-              </View>
-            </View>
+            </TouchableWithoutFeedback>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
 
       {/* Evidence Upload Modal */}
@@ -1327,110 +1336,119 @@ export default function ReportIncidentIndex() {
             updateUIState({ showEvidenceModal: false });
           }
         }}>
-        <View className="flex-1 justify-end" style={{ backgroundColor: colors.overlay }}>
-          <View
-            className="rounded-t-3xl p-6"
-            style={{ backgroundColor: colors.surface }}>
-            <View className="mb-6 flex-row items-center justify-between">
-              <Text className="text-lg font-bold" style={{ color: colors.text }}>
-                {uiState.isRecording ? 'Recording Audio' : 'Add Evidence'}
-              </Text>
-              {!uiState.isRecording && (
-                <TouchableOpacity
-                  onPress={() => updateUIState({ showEvidenceModal: false })}
-                  activeOpacity={0.7}>
-                  <X size={24} color={colors.textSecondary} />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {uiState.isRecording ? (
-              <View className="items-center py-8">
-                <View className="mb-4 h-24 w-24 items-center justify-center rounded-full bg-red-600">
-                  <Mic size={40} color="white" />
+        <TouchableWithoutFeedback
+          onPress={() => {
+            if (!uiState.isRecording) {
+              updateUIState({ showEvidenceModal: false });
+            }
+          }}>
+          <View className="flex-1 justify-end" style={{ backgroundColor: colors.overlay }}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View
+                className="rounded-t-3xl p-6"
+                style={{ backgroundColor: colors.surface }}>
+                <View className="mb-6 flex-row items-center justify-between">
+                  <Text className="text-lg font-bold" style={{ color: colors.text }}>
+                    {uiState.isRecording ? 'Recording Audio' : 'Add Evidence'}
+                  </Text>
+                  {!uiState.isRecording && (
+                    <TouchableOpacity
+                      onPress={() => updateUIState({ showEvidenceModal: false })}
+                      activeOpacity={0.7}>
+                      <X size={24} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                  )}
                 </View>
-                <Text className="mb-2 text-2xl font-bold text-red-600">
-                  {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
-                </Text>
-                <Text className="mb-6 text-sm" style={{ color: colors.textSecondary }}>
-                  Recording in progress...
-                </Text>
-                <TouchableOpacity
-                  onPress={handleVoiceRecording}
-                  className="w-full items-center rounded-xl py-4"
-                  activeOpacity={0.8}
-                  style={{ backgroundColor: colors.error }}>
-                  <Text className="text-base font-semibold text-white">Stop Recording</Text>
-                </TouchableOpacity>
+
+                {uiState.isRecording ? (
+                  <View className="items-center py-8">
+                    <View className="mb-4 h-24 w-24 items-center justify-center rounded-full bg-red-600">
+                      <Mic size={40} color="white" />
+                    </View>
+                    <Text className="mb-2 text-2xl font-bold text-red-600">
+                      {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
+                    </Text>
+                    <Text className="mb-6 text-sm" style={{ color: colors.textSecondary }}>
+                      Recording in progress...
+                    </Text>
+                    <TouchableOpacity
+                      onPress={handleVoiceRecording}
+                      className="w-full items-center rounded-xl py-4"
+                      activeOpacity={0.8}
+                      style={{ backgroundColor: colors.error }}>
+                      <Text className="text-base font-semibold text-white">Stop Recording</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View className="space-y-3">
+                    <TouchableOpacity
+                      onPress={handleVoiceRecording}
+                      className="flex-row items-center rounded-xl p-4"
+                      activeOpacity={0.7}
+                      style={{ backgroundColor: colors.surfaceVariant }}>
+                      <View
+                        className="mr-4 h-12 w-12 items-center justify-center rounded-full"
+                        style={{ backgroundColor: colors.primary + '20' }}>
+                        <Mic size={24} color={colors.primary} />
+                      </View>
+                      <Text className="text-base font-medium" style={{ color: colors.text }}>
+                        Record Audio
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => handleFileUpload('photo')}
+                      className="flex-row items-center rounded-xl p-4"
+                      activeOpacity={0.7}
+                      disabled={isUploading}
+                      style={{ backgroundColor: colors.surfaceVariant, opacity: isUploading ? 0.6 : 1 }}>
+                      <View
+                        className="mr-4 h-12 w-12 items-center justify-center rounded-full"
+                        style={{ backgroundColor: colors.primary + '20' }}>
+                        <Camera size={24} color={colors.primary} />
+                      </View>
+                      <Text className="text-base font-medium" style={{ color: colors.text }}>
+                        Take a Picture
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => handleFileUpload('image')}
+                      className="flex-row items-center rounded-xl p-4"
+                      activeOpacity={0.7}
+                      disabled={isUploading}
+                      style={{ backgroundColor: colors.surfaceVariant, opacity: isUploading ? 0.6 : 1 }}>
+                      <View
+                        className="mr-4 h-12 w-12 items-center justify-center rounded-full"
+                        style={{ backgroundColor: colors.primary + '20' }}>
+                        <Upload size={24} color={colors.primary} />
+                      </View>
+                      <Text className="text-base font-medium" style={{ color: colors.text }}>
+                        Upload a Picture
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => handleFileUpload('document')}
+                      className="flex-row items-center rounded-xl p-4"
+                      activeOpacity={0.7}
+                      disabled={isUploading}
+                      style={{ backgroundColor: colors.surfaceVariant, opacity: isUploading ? 0.6 : 1 }}>
+                      <View
+                        className="mr-4 h-12 w-12 items-center justify-center rounded-full"
+                        style={{ backgroundColor: colors.primary + '20' }}>
+                        <FileText size={24} color={colors.primary} />
+                      </View>
+                      <Text className="text-base font-medium" style={{ color: colors.text }}>
+                        Upload a Document
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
               </View>
-            ) : (
-              <View className="space-y-3">
-                <TouchableOpacity
-                  onPress={handleVoiceRecording}
-                  className="flex-row items-center rounded-xl p-4"
-                  activeOpacity={0.7}
-                  style={{ backgroundColor: colors.surfaceVariant }}>
-                  <View
-                    className="mr-4 h-12 w-12 items-center justify-center rounded-full"
-                    style={{ backgroundColor: colors.primary + '20' }}>
-                    <Mic size={24} color={colors.primary} />
-                  </View>
-                  <Text className="text-base font-medium" style={{ color: colors.text }}>
-                    Record Audio
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => handleFileUpload('photo')}
-                  className="flex-row items-center rounded-xl p-4"
-                  activeOpacity={0.7}
-                  disabled={isUploading}
-                  style={{ backgroundColor: colors.surfaceVariant, opacity: isUploading ? 0.6 : 1 }}>
-                  <View
-                    className="mr-4 h-12 w-12 items-center justify-center rounded-full"
-                    style={{ backgroundColor: colors.primary + '20' }}>
-                    <Camera size={24} color={colors.primary} />
-                  </View>
-                  <Text className="text-base font-medium" style={{ color: colors.text }}>
-                    Take a Picture
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => handleFileUpload('image')}
-                  className="flex-row items-center rounded-xl p-4"
-                  activeOpacity={0.7}
-                  disabled={isUploading}
-                  style={{ backgroundColor: colors.surfaceVariant, opacity: isUploading ? 0.6 : 1 }}>
-                  <View
-                    className="mr-4 h-12 w-12 items-center justify-center rounded-full"
-                    style={{ backgroundColor: colors.primary + '20' }}>
-                    <Upload size={24} color={colors.primary} />
-                  </View>
-                  <Text className="text-base font-medium" style={{ color: colors.text }}>
-                    Upload a Picture
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  onPress={() => handleFileUpload('document')}
-                  className="flex-row items-center rounded-xl p-4"
-                  activeOpacity={0.7}
-                  disabled={isUploading}
-                  style={{ backgroundColor: colors.surfaceVariant, opacity: isUploading ? 0.6 : 1 }}>
-                  <View
-                    className="mr-4 h-12 w-12 items-center justify-center rounded-full"
-                    style={{ backgroundColor: colors.primary + '20' }}>
-                    <FileText size={24} color={colors.primary} />
-                  </View>
-                  <Text className="text-base font-medium" style={{ color: colors.text }}>
-                    Upload a Document
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
+            </TouchableWithoutFeedback>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
 
       {/* Dropdowns */}
@@ -1661,64 +1679,68 @@ export default function ReportIncidentIndex() {
         transparent
         animationType="fade"
         onRequestClose={closeUnsupportedAreaDialog}>
-        <View className="flex-1 items-center justify-center bg-black/30 p-6">
-          <View
-            className="w-full max-w-sm rounded-2xl p-6"
-            style={{
-              backgroundColor: colors.card,
-              borderWidth: 1,
-              borderColor: colors.border,
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 10 },
-              shadowOpacity: 0.2,
-              shadowRadius: 20,
-              elevation: 10,
-            }}>
-            <View
-              className="mb-4 h-14 w-14 items-center justify-center rounded-full self-center"
-              style={{ backgroundColor: colors.error + '20' }}>
-              <X size={32} color={colors.error} />
-            </View>
-            <Text className="text-center text-lg font-semibold" style={{ color: colors.text }}>
-              Location Update Failed
-            </Text>
-            <Text
-              className="mt-3 text-center text-sm leading-relaxed"
-              style={{ color: colors.textSecondary }}>
-              {unsupportedAreaDialog.description}
-            </Text>
-            <View className="mt-6 w-full flex-row space-x-3">
-              <TouchableOpacity
-                onPress={closeUnsupportedAreaDialog}
-                className="flex-1 items-center rounded-xl py-3"
-                activeOpacity={0.8}
+        <TouchableWithoutFeedback onPress={closeUnsupportedAreaDialog}>
+          <View className="flex-1 items-center justify-center bg-black/30 p-6">
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View
+                className="w-full max-w-sm rounded-2xl p-6"
                 style={{
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border,
+                  backgroundColor: colors.card,
                   borderWidth: 1,
+                  borderColor: colors.border,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 10 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 20,
+                  elevation: 10,
                 }}>
-                <Text className="text-base font-semibold" style={{ color: colors.text }}>
-                  Dismiss
+                <View
+                  className="mb-4 h-14 w-14 items-center justify-center rounded-full self-center"
+                  style={{ backgroundColor: colors.error + '20' }}>
+                  <X size={32} color={colors.error} />
+                </View>
+                <Text className="text-center text-lg font-semibold" style={{ color: colors.text }}>
+                  Location Update Failed
                 </Text>
-              </TouchableOpacity>
-              {unsupportedAreaDialog.onRetry && (
-                <TouchableOpacity
-                  onPress={() => {
-                    const retry = unsupportedAreaDialog.onRetry;
-                    closeUnsupportedAreaDialog();
-                    setTimeout(() => {
-                      retry?.();
-                    }, 150);
-                  }}
-                  className="flex-1 items-center rounded-xl py-3"
-                  activeOpacity={0.8}
-                  style={{ backgroundColor: colors.primary }}>
-                  <Text className="text-base font-semibold text-white">Retry</Text>
-                </TouchableOpacity>
-              )}
-            </View>
+                <Text
+                  className="mt-3 text-center text-sm leading-relaxed"
+                  style={{ color: colors.textSecondary }}>
+                  {unsupportedAreaDialog.description}
+                </Text>
+                <View className="mt-6 w-full flex-row space-x-3">
+                  <TouchableOpacity
+                    onPress={closeUnsupportedAreaDialog}
+                    className="flex-1 items-center rounded-xl py-3"
+                    activeOpacity={0.8}
+                    style={{
+                      backgroundColor: colors.surface,
+                      borderColor: colors.border,
+                      borderWidth: 1,
+                    }}>
+                    <Text className="text-base font-semibold" style={{ color: colors.text }}>
+                      Dismiss
+                    </Text>
+                  </TouchableOpacity>
+                  {unsupportedAreaDialog.onRetry && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        const retry = unsupportedAreaDialog.onRetry;
+                        closeUnsupportedAreaDialog();
+                        setTimeout(() => {
+                          retry?.();
+                        }, 150);
+                      }}
+                      className="flex-1 items-center rounded-xl py-3"
+                      activeOpacity={0.8}
+                      style={{ backgroundColor: colors.primary }}>
+                      <Text className="text-base font-semibold text-white">Retry</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
           </View>
-        </View>
+        </TouchableWithoutFeedback>
       </Modal>
 
       {/* Success Dialog */}
