@@ -662,7 +662,6 @@ export default function ReportIncidentIndex() {
 
       updateFormData({
         street_address: address?.name || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
-        nearby_landmark: address?.name || '',
       });
 
       setCurrentLocation({
@@ -1084,41 +1083,43 @@ export default function ReportIncidentIndex() {
 
       {/* Floating Action Buttons */}
       <View
-        className="absolute bottom-0 left-0 right-0 flex-row space-x-3 px-4 pb-6 pt-4"
+        className="absolute bottom-0 left-0 right-0 px-4 pb-6 pt-4"
         style={{
           backgroundColor: colors.background,
           borderTopWidth: 1,
           borderTopColor: colors.border,
         }}>
-        <TouchableOpacity
-          onPress={() => router.replace('/(protected)/home')}
-          className="flex-1 items-center rounded-xl px-6 py-4"
-          activeOpacity={0.8}
-          style={{
-            backgroundColor: colors.surface,
-            borderColor: colors.border,
-            borderWidth: 1,
-          }}>
-          <Text className="text-base font-semibold" style={{ color: colors.text }}>
-            Cancel
-          </Text>
-        </TouchableOpacity>
+        <View className="flex-row space-x-4">
+          <TouchableOpacity
+            onPress={() => router.replace('/(protected)/home')}
+            className="flex-1 items-center rounded-xl px-6 py-4"
+            activeOpacity={0.8}
+            style={{
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              borderWidth: 1,
+            }}>
+            <Text className="text-base font-semibold" style={{ color: colors.text }}>
+              Cancel
+            </Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={handleSubmitReport}
-          disabled={uiState.isSubmitting}
-          className="flex-1 items-center rounded-xl px-6 py-4"
-          activeOpacity={0.8}
-          style={{
-            backgroundColor: uiState.isSubmitting ? colors.surfaceVariant : colors.primary,
-            opacity: uiState.isSubmitting ? 0.6 : 1,
-          }}>
-          {uiState.isSubmitting ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text className="text-base font-semibold text-white">Submit Report</Text>
-          )}
-        </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleSubmitReport}
+            disabled={uiState.isSubmitting}
+            className="flex-1 items-center rounded-xl px-6 py-4"
+            activeOpacity={0.8}
+            style={{
+              backgroundColor: uiState.isSubmitting ? colors.surfaceVariant : colors.primary,
+              opacity: uiState.isSubmitting ? 0.6 : 1,
+            }}>
+            {uiState.isSubmitting ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text className="text-base font-semibold text-white">Submit Report</Text>
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Date & Time Dialog */}
@@ -1215,57 +1216,78 @@ export default function ReportIncidentIndex() {
               </TouchableOpacity>
             </View>
 
-            <View className="space-y-3">
-              <TouchableOpacity
-                onPress={() => {
-                  updateUIState({ showLocationDialog: false });
-                  setShowAddressSearch(true);
-                }}
-                className="flex-row items-center rounded-xl p-4"
-                activeOpacity={0.7}
-                style={{ backgroundColor: colors.surfaceVariant }}>
-                <View
-                  className="mr-4 h-12 w-12 items-center justify-center rounded-full"
-                  style={{ backgroundColor: colors.primary + '20' }}>
-                  <MapPin size={24} color={colors.primary} />
-                </View>
-                <Text className="text-base font-medium" style={{ color: colors.text }}>
-                  Search Location
-                </Text>
-              </TouchableOpacity>
+            <View>
+              <View className="flex-row space-x-3">
+                <TouchableOpacity
+                  onPress={() => {
+                    updateUIState({ showLocationDialog: false });
+                    setShowAddressSearch(true);
+                  }}
+                  className="flex-1 items-center rounded-xl p-4"
+                  activeOpacity={0.7}
+                  style={{ backgroundColor: colors.surfaceVariant }}>
+                  <View
+                    className="mb-3 h-12 w-12 items-center justify-center rounded-full"
+                    style={{ backgroundColor: colors.primary + '20' }}>
+                    <MapPin size={24} color={colors.primary} />
+                  </View>
+                  <Text className="text-sm font-medium text-center" style={{ color: colors.text }}>
+                    Search Location
+                  </Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={() => {
-                  updateUIState({ showLocationDialog: false });
-                  openMapView();
-                }}
-                className="flex-row items-center rounded-xl p-4"
-                activeOpacity={0.7}
-                style={{ backgroundColor: colors.surfaceVariant }}>
-                <View
-                  className="mr-4 h-12 w-12 items-center justify-center rounded-full"
-                  style={{ backgroundColor: colors.primary + '20' }}>
-                  <MapPin size={24} color={colors.primary} />
-                </View>
-                <Text className="text-base font-medium" style={{ color: colors.text }}>
-                  Select on Map
-                </Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    updateUIState({ showLocationDialog: false });
+                    openMapView();
+                  }}
+                  className="flex-1 items-center rounded-xl p-4"
+                  activeOpacity={0.7}
+                  style={{ backgroundColor: colors.surfaceVariant }}>
+                  <View
+                    className="mb-3 h-12 w-12 items-center justify-center rounded-full"
+                    style={{ backgroundColor: colors.primary + '20' }}>
+                    <MapPin size={24} color={colors.primary} />
+                  </View>
+                  <Text className="text-sm font-medium text-center" style={{ color: colors.text }}>
+                    Select on Map
+                  </Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                onPress={() => handleUseCurrentLocation()}
-                className="flex-row items-center rounded-xl p-4"
-                activeOpacity={0.7}
-                style={{ backgroundColor: colors.surfaceVariant }}>
-                <View
-                  className="mr-4 h-12 w-12 items-center justify-center rounded-full"
-                  style={{ backgroundColor: colors.primary + '20' }}>
-                  <MapPin size={24} color={colors.primary} />
-                </View>
-                <Text className="text-base font-medium" style={{ color: colors.text }}>
-                  Use Current Location
+                <TouchableOpacity
+                  onPress={() => handleUseCurrentLocation()}
+                  className="flex-1 items-center rounded-xl p-4"
+                  activeOpacity={0.7}
+                  style={{ backgroundColor: colors.surfaceVariant }}>
+                  <View
+                    className="mb-3 h-12 w-12 items-center justify-center rounded-full"
+                    style={{ backgroundColor: colors.primary + '20' }}>
+                    <MapPin size={24} color={colors.primary} />
+                  </View>
+                  <Text className="text-sm font-medium text-center" style={{ color: colors.text }}>
+                    Use Current Location
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <View className="mt-4">
+                <Text className="mb-2 text-xs font-semibold uppercase" style={{ color: colors.textSecondary }}>
+                  Nearby Landmark
                 </Text>
-              </TouchableOpacity>
+                <TextInput
+                  placeholder="Nearby landmark (optional)"
+                  value={formData.nearby_landmark}
+                  onChangeText={(value) => updateFormData({ nearby_landmark: value })}
+                  className="rounded-xl px-4 py-4 text-base"
+                  style={{
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                    borderWidth: 1,
+                    color: colors.text,
+                  }}
+                  placeholderTextColor={colors.textSecondary}
+                />
+              </View>
             </View>
           </View>
         </View>
