@@ -345,10 +345,17 @@ export default function ReportIncidentIndex() {
             return;
           }
 
-          const streetAddress =
-            [place.streetNumber, place.street].filter(Boolean).join(' ') ||
-            place.name ||
-            'Current Location';
+          // Build a comprehensive street address
+          const addressParts = [
+            place.streetNumber,
+            place.street,
+            place.subregion,
+            place.city,
+          ].filter(Boolean);
+          
+          const streetAddress = addressParts.length > 0 
+            ? addressParts.join(', ')
+            : place.name || 'Current Location';
 
           updateFormData({
             street_address: streetAddress,
