@@ -989,57 +989,136 @@ export default function ReportIncidentIndex() {
       </View>
 
       {/* Date & Time Dialog */}
-      <AppDialog
+      <Modal
         visible={uiState.showDateTimeDialog}
-        title="Select Date & Time"
-        description="Choose when the incident occurred"
-        tone="neutral"
-        dismissable={true}
-        onDismiss={() => updateUIState({ showDateTimeDialog: false })}
-        actions={[
-          {
-            label: 'Use Current Date & Time',
-            onPress: handleUseCurrentDateTime,
-          },
-          {
-            label: 'Select Date',
-            onPress: () => {
-              updateUIState({ showDateTimeDialog: false });
-              setShowDatePicker(true);
-            },
-          },
-          {
-            label: 'Select Time',
-            onPress: () => {
-              updateUIState({ showDateTimeDialog: false });
-              setShowTimePicker(true);
-            },
-          },
-        ]}
-      />
+        transparent
+        animationType="slide"
+        onRequestClose={() => updateUIState({ showDateTimeDialog: false })}>
+        <View className="flex-1 justify-end" style={{ backgroundColor: colors.overlay }}>
+          <View className="rounded-t-3xl p-6" style={{ backgroundColor: colors.surface }}>
+            <View className="mb-6 flex-row items-center justify-between">
+              <Text className="text-lg font-bold" style={{ color: colors.text }}>
+                Select Date & Time
+              </Text>
+              <TouchableOpacity
+                onPress={() => updateUIState({ showDateTimeDialog: false })}
+                activeOpacity={0.7}>
+                <X size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <View className="space-y-3">
+              <TouchableOpacity
+                onPress={handleUseCurrentDateTime}
+                className="flex-row items-center rounded-xl p-4"
+                activeOpacity={0.7}
+                style={{ backgroundColor: colors.surfaceVariant }}>
+                <View
+                  className="mr-4 h-12 w-12 items-center justify-center rounded-full"
+                  style={{ backgroundColor: colors.primary + '20' }}>
+                  <Clock size={24} color={colors.primary} />
+                </View>
+                <Text className="text-base font-medium" style={{ color: colors.text }}>
+                  Use Current Date & Time
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  updateUIState({ showDateTimeDialog: false });
+                  setShowDatePicker(true);
+                }}
+                className="flex-row items-center rounded-xl p-4"
+                activeOpacity={0.7}
+                style={{ backgroundColor: colors.surfaceVariant }}>
+                <View
+                  className="mr-4 h-12 w-12 items-center justify-center rounded-full"
+                  style={{ backgroundColor: colors.primary + '20' }}>
+                  <Calendar size={24} color={colors.primary} />
+                </View>
+                <Text className="text-base font-medium" style={{ color: colors.text }}>
+                  Select Date
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  updateUIState({ showDateTimeDialog: false });
+                  setShowTimePicker(true);
+                }}
+                className="flex-row items-center rounded-xl p-4"
+                activeOpacity={0.7}
+                style={{ backgroundColor: colors.surfaceVariant }}>
+                <View
+                  className="mr-4 h-12 w-12 items-center justify-center rounded-full"
+                  style={{ backgroundColor: colors.primary + '20' }}>
+                  <Clock size={24} color={colors.primary} />
+                </View>
+                <Text className="text-base font-medium" style={{ color: colors.text }}>
+                  Select Time
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Location Dialog */}
-      <AppDialog
+      <Modal
         visible={uiState.showLocationDialog}
-        title="Set Location"
-        description="Choose how to set the incident location"
-        tone="neutral"
-        dismissable={true}
-        onDismiss={() => updateUIState({ showLocationDialog: false })}
-        actions={[
-          {
-            label: 'Search Location',
-            onPress: () => {
-              updateUIState({ showLocationDialog: false });
-              setShowAddressSearch(true);
-            },
-          },
-          {
-            label: 'Use Current Location',
-            onPress: () => handleUseCurrentLocation(),
-          },
-        ]}
-      />
+        transparent
+        animationType="slide"
+        onRequestClose={() => updateUIState({ showLocationDialog: false })}>
+        <View className="flex-1 justify-end" style={{ backgroundColor: colors.overlay }}>
+          <View className="rounded-t-3xl p-6" style={{ backgroundColor: colors.surface }}>
+            <View className="mb-6 flex-row items-center justify-between">
+              <Text className="text-lg font-bold" style={{ color: colors.text }}>
+                Set Location
+              </Text>
+              <TouchableOpacity
+                onPress={() => updateUIState({ showLocationDialog: false })}
+                activeOpacity={0.7}>
+                <X size={24} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <View className="space-y-3">
+              <TouchableOpacity
+                onPress={() => {
+                  updateUIState({ showLocationDialog: false });
+                  setShowAddressSearch(true);
+                }}
+                className="flex-row items-center rounded-xl p-4"
+                activeOpacity={0.7}
+                style={{ backgroundColor: colors.surfaceVariant }}>
+                <View
+                  className="mr-4 h-12 w-12 items-center justify-center rounded-full"
+                  style={{ backgroundColor: colors.primary + '20' }}>
+                  <MapPin size={24} color={colors.primary} />
+                </View>
+                <Text className="text-base font-medium" style={{ color: colors.text }}>
+                  Search Location
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => handleUseCurrentLocation()}
+                className="flex-row items-center rounded-xl p-4"
+                activeOpacity={0.7}
+                style={{ backgroundColor: colors.surfaceVariant }}>
+                <View
+                  className="mr-4 h-12 w-12 items-center justify-center rounded-full"
+                  style={{ backgroundColor: colors.primary + '20' }}>
+                  <MapPin size={24} color={colors.primary} />
+                </View>
+                <Text className="text-base font-medium" style={{ color: colors.text }}>
+                  Use Current Location
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Evidence Upload Modal */}
       <Modal
