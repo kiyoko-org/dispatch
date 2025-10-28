@@ -8,6 +8,7 @@ import {
   Text,
   View,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   Alert,
   ScrollView,
   Platform,
@@ -123,6 +124,7 @@ export default function ReportIncidentIndex() {
   const [attachments, setAttachments] = useState<string[]>([]);
   const [uploadedFiles, setUploadedFiles] = useState<FileUploadResult[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadingContext, setUploadingContext] = useState<'file' | 'recording' | null>(null);
   const [uploadProgress, setUploadProgress] = useState<FileUploadProgress | null>(null);
   const [signedUrls, setSignedUrls] = useState<Record<string, string>>({});
   const [successDialogVisible, setSuccessDialogVisible] = useState(false);
@@ -471,6 +473,7 @@ export default function ReportIncidentIndex() {
       // Stop recording
       if (recorder) {
         try {
+          setUploadingContext('recording');
           setIsUploading(true);
           const result = await uploadManager.uploadRecordedAudio(
             recorder,
@@ -494,6 +497,7 @@ export default function ReportIncidentIndex() {
           Alert.alert('Upload Failed', 'Failed to upload recorded audio. Please try again.');
         } finally {
           setIsUploading(false);
+          setUploadingContext(null);
           setUploadProgress(null);
           setRecorder(null);
         }
@@ -525,6 +529,7 @@ export default function ReportIncidentIndex() {
 
   const handleFileUpload = async (type: 'image' | 'photo' | 'document') => {
     try {
+      setUploadingContext('file');
       setIsUploading(true);
       let result: FileUploadResult | null = null;
 
@@ -567,6 +572,7 @@ export default function ReportIncidentIndex() {
       Alert.alert('Upload Failed', `Failed to upload file: ${errorMessage}. Please try again.`);
     } finally {
       setIsUploading(false);
+      setUploadingContext(null);
       setUploadProgress(null);
     }
   };
@@ -1721,6 +1727,34 @@ export default function ReportIncidentIndex() {
             </View>
           </View>
         </View>
+      </Modal>
+
+      <Modal
+        visible={isUploading}
+        transparent
+        animationType="fade"
+        onRequestClose={() => {}}>
+        <TouchableWithoutFeedback>
+          <View className="flex-1 items-center justify-center" style={{ backgroundColor: colors.overlay }}>
+            <View
+              className="items-center rounded-2xl px-6 py-8"
+              style={{
+                backgroundColor: colors.card,
+                borderWidth: 1,
+                borderColor: colors.border,
+              }}>
+              <ActivityIndicator size="large" color={colors.primary} />
+              <Text className="mt-4 text-base font-semibold" style={{ color: colors.text }}>
+                {uploadingContext === 'recording' ? 'Uploading recording...' : 'Uploading file...'}
+              </Text>
+              {uploadProgress && (
+                <Text className="mt-2 text-sm" style={{ color: colors.textSecondary }}>
+                  {Math.round(uploadProgress.percentage)}% complete
+                </Text>
+              )}
+            </View>
+          </View>
+        </TouchableWithoutFeedback>
       </Modal>
 
       {/* Success Dialog */}
