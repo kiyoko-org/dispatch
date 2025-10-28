@@ -359,7 +359,6 @@ export default function ReportIncidentIndex() {
 
           updateFormData({
             street_address: streetAddress,
-            nearby_landmark: place.name || '',
           });
           updateUIState({ locationFetchFailed: false, showLocationDialog: false });
           if (!silent) {
@@ -594,7 +593,6 @@ export default function ReportIncidentIndex() {
   const handleAddressSelect = (address: SearchResult) => {
     updateFormData({
       street_address: address.display_name || address.name || '',
-      nearby_landmark: address.name || '',
     });
     setCurrentLocation({
       latitude: address.lat,
