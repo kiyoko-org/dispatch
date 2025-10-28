@@ -1,7 +1,6 @@
 import HeaderWithSidebar from 'components/HeaderWithSidebar';
 import BasicInfoStep from 'components/report-incident/BasicInfoStep';
 import LocationStep from 'components/report-incident/LocationStep';
-import DetailsStep from 'components/report-incident/DetailsStep';
 import EvidenceStep from 'components/report-incident/EvidenceStep';
 import ReviewStep from 'components/report-incident/ReviewStep';
 
@@ -32,7 +31,6 @@ interface UIState {
   showSubcategoryDropdown: boolean;
   showTimePicker: boolean;
   showDatePicker: boolean;
-  showInjuriesDropdown: boolean;
   selectedHour: string;
   selectedMinute: string;
   selectedPeriod: string;
@@ -60,19 +58,13 @@ export default function ReportIncidentIndex() {
     incident_title: '',
     incident_date: '',
     incident_time: '',
+    what_happened: '',
 
     // Location Information
     street_address: '',
     nearby_landmark: '',
 
-    // Detailed Information
-    what_happened: '',
-    who_was_involved: '',
-    number_of_witnesses: '',
-    injuries_reported: '',
-    property_damage: '',
-    suspect_description: '',
-    witness_contact_info: '',
+
   });
 
   // UI state - separate from form data
@@ -81,7 +73,6 @@ export default function ReportIncidentIndex() {
     showSubcategoryDropdown: false,
     showTimePicker: false,
     showDatePicker: false,
-    showInjuriesDropdown: false,
     selectedHour: '',
     selectedMinute: '',
     selectedPeriod: '',
@@ -157,12 +148,6 @@ export default function ReportIncidentIndex() {
       latitude: data.latitude || parseFloat(currentLocation.latitude),
       longitude: data.longitude || parseFloat(currentLocation.longitude),
       what_happened: data.what_happened,
-      who_was_involved: data.who_was_involved,
-      number_of_witnesses: data.number_of_witnesses,
-      injuries_reported: data.injuries_reported,
-      property_damage: data.property_damage,
-      suspect_description: data.suspect_description,
-      witness_contact_info: data.witness_contact_info,
       category_id: categoryId,
       sub_category: subCategoryId,
       attachments: attachments.length > 0 ? attachments : null,
@@ -337,16 +322,13 @@ export default function ReportIncidentIndex() {
     }
 
     // Numeric validations
-    if (data.number_of_witnesses && isNaN(Number(data.number_of_witnesses))) {
-      errors.number_of_witnesses = 'Number of witnesses must be a valid number';
-    }
 
     return errors;
   };
 
   // Function to handle dropdown opening - closes others automatically
   const openDropdown = (
-    dropdownType: 'category' | 'subcategory' | 'time' | 'date' | 'injuries'
+    dropdownType: 'category' | 'subcategory' | 'time' | 'date'
   ) => {
     if (dropdownType === 'category') {
       const newState = !uiState.showCategoryDropdown;
@@ -355,7 +337,6 @@ export default function ReportIncidentIndex() {
         showSubcategoryDropdown: false,
         showTimePicker: false,
         showDatePicker: false,
-        showInjuriesDropdown: false,
       });
 
       Animated.timing(dropdownAnim, {
@@ -370,7 +351,6 @@ export default function ReportIncidentIndex() {
         showCategoryDropdown: false,
         showTimePicker: false,
         showDatePicker: false,
-        showInjuriesDropdown: false,
       });
 
       Animated.timing(dropdownAnim, {
@@ -385,7 +365,6 @@ export default function ReportIncidentIndex() {
         showCategoryDropdown: false,
         showSubcategoryDropdown: false,
         showDatePicker: false,
-        showInjuriesDropdown: false,
       });
 
       Animated.timing(dropdownAnim, {
@@ -400,22 +379,6 @@ export default function ReportIncidentIndex() {
         showCategoryDropdown: false,
         showSubcategoryDropdown: false,
         showTimePicker: false,
-        showInjuriesDropdown: false,
-      });
-
-      Animated.timing(dropdownAnim, {
-        toValue: newState ? 1 : 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
-    } else if (dropdownType === 'injuries') {
-      const newState = !uiState.showInjuriesDropdown;
-      updateUIState({
-        showInjuriesDropdown: newState,
-        showCategoryDropdown: false,
-        showSubcategoryDropdown: false,
-        showTimePicker: false,
-        showDatePicker: false,
       });
 
       Animated.timing(dropdownAnim, {
@@ -434,14 +397,7 @@ export default function ReportIncidentIndex() {
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  const injuryOptions: { name: string; severity: string; icon: string }[] = [
-    { name: 'Minor', severity: 'Low', icon: '🩹' },
-    { name: 'Moderate', severity: 'Medium', icon: '⚠️' },
-    { name: 'Serious', severity: 'High', icon: '🚑' },
-    { name: 'Severe', severity: 'Critical', icon: '🆘' },
-    { name: 'Critical', severity: 'Critical', icon: '💔' },
-    { name: 'Fatal', severity: 'Critical', icon: '⚰️' },
-  ];
+
 
   // Create subcategories mapping from categories data
   const subcategories: Record<string, string[]> = {};
@@ -584,6 +540,7 @@ export default function ReportIncidentIndex() {
                 incident_title: formData.incident_title,
                 incident_date: formData.incident_date,
                 incident_time: formData.incident_time,
+                what_happened: formData.what_happened,
               }}
               onUpdateFormData={updateFormData}
               onOpenDropdown={openDropdown}
@@ -620,26 +577,6 @@ export default function ReportIncidentIndex() {
               isGettingLocation={uiState.isGettingLocation}
             />
 
-            {/* Step 3: Detailed Incident Information */}
-            <DetailsStep
-              formData={{
-                what_happened: formData.what_happened,
-                who_was_involved: formData.who_was_involved,
-                number_of_witnesses: formData.number_of_witnesses,
-                injuries_reported: formData.injuries_reported,
-                property_damage: formData.property_damage,
-                suspect_description: formData.suspect_description,
-                witness_contact_info: formData.witness_contact_info,
-              }}
-              onUpdateFormData={updateFormData}
-              onOpenDropdown={openDropdown}
-              injuryOptions={injuryOptions}
-              showInjuriesDropdown={uiState.showInjuriesDropdown}
-              onCloseDropdown={(type: 'injuries') => {
-                if (type === 'injuries') updateUIState({ showInjuriesDropdown: false });
-              }}
-              validationErrors={uiState.validationErrors}
-            />
 
             {/* Voice Statement & Evidence */}
             <EvidenceStep

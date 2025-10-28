@@ -13,6 +13,7 @@ interface BasicInfoStepProps {
     incident_title: string;
     incident_date: string;
     incident_time: string;
+    what_happened: string;
   };
   onUpdateFormData: (updates: Partial<BasicInfoStepProps['formData']>) => void;
   onOpenDropdown: (dropdownType: 'category' | 'subcategory' | 'time' | 'date') => void;
@@ -114,19 +115,45 @@ export default function BasicInfoStep({
 
         {/* Incident Title */}
         <View>
+        <Text className="mb-2 font-medium" style={{ color: colors.text }}>
+        Incident Title <Text className="text-red-600">*</Text>
+        </Text>
+        <TextInput
+        placeholder="Brief, clear title describing the incident"
+        value={formData.incident_title}
+        onChangeText={(value) => onUpdateFormData({ incident_title: value })}
+        className="mb-3 rounded-lg px-4 py-3"
+        style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, color: colors.text }}
+        placeholderTextColor={colors.textSecondary}
+        />
+        {validationErrors.incident_title && (
+        <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.incident_title}</Text>
+        )}
+        </View>
+
+        {/* What Happened */}
+        <View>
           <Text className="mb-2 font-medium" style={{ color: colors.text }}>
-            Incident Title <Text className="text-red-600">*</Text>
+            What Happened? <Text className="text-red-600">*</Text>
           </Text>
           <TextInput
-            placeholder="Brief, clear title describing the incident"
-            value={formData.incident_title}
-            onChangeText={(value) => onUpdateFormData({ incident_title: value })}
+            placeholder="Describe the incident in detail..."
+            value={formData.what_happened}
+            onChangeText={(value) => onUpdateFormData({ what_happened: value })}
+            multiline
+            numberOfLines={4}
             className="mb-3 rounded-lg px-4 py-3"
-            style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, color: colors.text }}
+            style={{
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              borderWidth: 1,
+              color: colors.text,
+            }}
             placeholderTextColor={colors.textSecondary}
+            textAlignVertical="top"
           />
-          {validationErrors.incident_title && (
-            <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.incident_title}</Text>
+          {validationErrors.what_happened && (
+            <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.what_happened}</Text>
           )}
         </View>
 

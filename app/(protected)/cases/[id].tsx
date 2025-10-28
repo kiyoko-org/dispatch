@@ -13,10 +13,6 @@ import {
   Calendar,
   Clock,
   AlertTriangle,
-  User,
-  FileText,
-  Phone,
-  UserCheck,
   Shield,
   Badge,
 } from 'lucide-react-native';
@@ -388,102 +384,11 @@ export default function ReportDetails() {
                 </Text>
               </View>
 
-              {reportInfo.who_was_involved && (
-                <View className="rounded-lg p-3" style={{ backgroundColor: colors.surfaceVariant }}>
-                  <Text
-                    className="mb-1.5 text-xs font-semibold uppercase tracking-wider"
-                    style={{ color: colors.textSecondary }}>
-                    People Involved
-                  </Text>
-                  <Text className="text-sm" style={{ color: colors.text }}>
-                    {reportInfo.who_was_involved}
-                  </Text>
-                </View>
-              )}
-
-              {reportInfo.suspect_description && (
-                <View className="rounded-lg p-3" style={{ backgroundColor: colors.surfaceVariant }}>
-                  <Text
-                    className="mb-1.5 text-xs font-semibold uppercase tracking-wider"
-                    style={{ color: colors.textSecondary }}>
-                    Suspect Description
-                  </Text>
-                  <Text className="text-sm" style={{ color: colors.text }}>
-                    {reportInfo.suspect_description}
-                  </Text>
-                </View>
-              )}
-
-              {reportInfo.property_damage && (
-                <View className="rounded-lg p-3" style={{ backgroundColor: colors.surfaceVariant }}>
-                  <Text
-                    className="mb-1.5 text-xs font-semibold uppercase tracking-wider"
-                    style={{ color: colors.textSecondary }}>
-                    Property Damage
-                  </Text>
-                  <Text className="text-sm" style={{ color: colors.text }}>
-                    {reportInfo.property_damage}
-                  </Text>
-                </View>
-              )}
+              
             </View>
           </Card>
 
-          {/* Witness Information Card */}
-          {(reportInfo.number_of_witnesses || reportInfo.witness_contact_info) && (
-            <Card
-              className="mb-5"
-              style={{
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 8,
-                elevation: 3,
-              }}>
-              <View className="mb-4 flex-row items-center">
-                <View
-                  className="mr-3 h-10 w-10 items-center justify-center rounded-full"
-                  style={{ backgroundColor: colors.primary + '20' }}>
-                  <UserCheck size={20} color={colors.primary} />
-                </View>
-                <Text className="text-lg font-bold" style={{ color: colors.text }}>
-                  Witness Information
-                </Text>
-              </View>
 
-              <View className="space-y-3">
-                {reportInfo.number_of_witnesses && (
-                  <View
-                    className="rounded-lg p-3"
-                    style={{ backgroundColor: colors.surfaceVariant }}>
-                    <Text
-                      className="mb-1.5 text-xs font-semibold uppercase tracking-wider"
-                      style={{ color: colors.textSecondary }}>
-                      Number of Witnesses
-                    </Text>
-                    <Text className="text-sm font-medium" style={{ color: colors.text }}>
-                      {reportInfo.number_of_witnesses}
-                    </Text>
-                  </View>
-                )}
-
-                {reportInfo.witness_contact_info && (
-                  <View
-                    className="rounded-lg p-3"
-                    style={{ backgroundColor: colors.surfaceVariant }}>
-                    <Text
-                      className="mb-1.5 text-xs font-semibold uppercase tracking-wider"
-                      style={{ color: colors.textSecondary }}>
-                      Witness Contact Information
-                    </Text>
-                    <Text className="text-sm" style={{ color: colors.text }}>
-                      {reportInfo.witness_contact_info}
-                    </Text>
-                  </View>
-                )}
-              </View>
-            </Card>
-          )}
 
           {/* Additional Information Card */}
           <Card
@@ -507,18 +412,6 @@ export default function ReportDetails() {
             </View>
 
             <View className="space-y-3">
-              {reportInfo.injuries_reported && (
-                <View className="rounded-lg p-3" style={{ backgroundColor: colors.surfaceVariant }}>
-                  <Text
-                    className="mb-1.5 text-xs font-semibold uppercase tracking-wider"
-                    style={{ color: colors.textSecondary }}>
-                    Injuries Reported
-                  </Text>
-                  <Text className="text-sm" style={{ color: colors.text }}>
-                    {reportInfo.injuries_reported}
-                  </Text>
-                </View>
-              )}
 
               <View className="rounded-lg p-3" style={{ backgroundColor: colors.surfaceVariant }}>
                 <Text

@@ -281,23 +281,25 @@ export default function LocationStep({
 
         {/* Nearby Landmark */}
         <View>
-          <Text className="mb-2 font-medium" style={{ color: colors.text }}>
-            Nearby Landmark
-          </Text>
-          <TextInput
-            placeholder="Notable landmark or building"
-            value={formData.nearby_landmark}
-            onChangeText={(value) => onUpdateFormData({ nearby_landmark: value })}
-            className="mb-3 rounded-lg px-4 py-3"
-            style={{
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-              borderWidth: 1,
-              color: colors.text,
-            }}
-            placeholderTextColor={colors.textSecondary}
-          />
+        <Text className="mb-2 font-medium" style={{ color: colors.text }}>
+        Nearby Landmark
+        </Text>
+        <TextInput
+        placeholder="Notable landmark or building"
+        value={formData.nearby_landmark}
+        onChangeText={(value) => onUpdateFormData({ nearby_landmark: value })}
+        className="mb-3 rounded-lg px-4 py-3"
+        style={{
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
+        borderWidth: 1,
+        color: colors.text,
+        }}
+        placeholderTextColor={colors.textSecondary}
+        />
         </View>
+
+        
       </View>
       <AddressSearch
         visible={showAddressSearch}

@@ -18,12 +18,6 @@ export interface ReportData {
 
   // Detailed Information
   what_happened: string;
-  who_was_involved: string;
-  number_of_witnesses: string;
-  injuries_reported: string;
-  property_damage: string;
-  suspect_description: string;
-  witness_contact_info: string;
 }
 
 // Emergency Contact types
