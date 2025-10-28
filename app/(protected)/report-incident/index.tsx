@@ -29,11 +29,11 @@ import { useTheme } from 'components/ThemeContext';
 import { useDispatchClient } from 'components/DispatchProvider';
 import { useReports } from '@kiyoko-org/dispatch-lib';
 import AppDialog from 'components/AppDialog';
-import { 
-  Check, 
-  MapPin, 
-  ChevronDown, 
-  Calendar, 
+import {
+  Check,
+  MapPin,
+  ChevronDown,
+  Calendar,
   Clock,
   Plus,
   X,
@@ -43,7 +43,7 @@ import {
   FileText,
   Music,
   File,
-  Navigation
+  Navigation,
 } from 'lucide-react-native';
 import {
   UploadManager,
@@ -135,6 +135,14 @@ export default function ReportIncidentIndex() {
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const mapRef = useRef<MapView>(null);
+  const [unsupportedAreaDialog, setUnsupportedAreaDialog] = useState<{
+    visible: boolean;
+    description: string;
+    onRetry?: () => void;
+  }>({
+    visible: false,
+    description: '',
+  });
 
   // Helper functions for updating state
   const updateFormData = (updates: Partial<ReportData>) => {
@@ -143,6 +151,20 @@ export default function ReportIncidentIndex() {
 
   const updateUIState = (updates: Partial<UIState>) => {
     setUIState((prev) => ({ ...prev, ...updates }));
+  };
+
+  const showUnsupportedAreaDialog = (message?: string, onRetry?: () => void) => {
+    setUnsupportedAreaDialog({
+      visible: true,
+      description:
+        message ||
+        'Dispatch currently operates only within Tuguegarao City. Please choose a location within the city limits.',
+      onRetry,
+    });
+  };
+
+  const closeUnsupportedAreaDialog = () => {
+    setUnsupportedAreaDialog((prev) => ({ ...prev, visible: false }));
   };
 
   // Auto-populate current date and time on mount
@@ -338,9 +360,10 @@ export default function ReportIncidentIndex() {
           if (!isTuguegarao) {
             updateUIState({ locationFetchFailed: true });
             if (!silent) {
-              Alert.alert('Area Not Supported', 'Your area is not supported by Dispatch just yet.', [
-                { text: 'OK' },
-              ]);
+              showUnsupportedAreaDialog(
+                'This app currently only supports Tuguegarao City. Please choose a location within Tuguegarao City.',
+                () => handleUseCurrentLocation(true)
+              );
             }
             return;
           }
@@ -1555,29 +1578,63 @@ export default function ReportIncidentIndex() {
 
           {/* Error Overlay */}
           {locationError && (
-            <View
-              className="absolute inset-x-4 top-20 rounded-lg p-4"
-              style={{ backgroundColor: colors.error }}>
-              <Text className="mb-2 font-semibold text-white">{locationError}</Text>
-              <View className="flex-row space-x-3">
-                <TouchableOpacity
-                  onPress={() => setLocationError(null)}
-                  className="rounded-lg px-4 py-2"
-                  style={{ backgroundColor: colors.surfaceVariant }}>
-                  <Text className="font-medium" style={{ color: colors.text }}>
-                    Dismiss
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => {
-                    if (selectedLocation) {
-                      updateLocationFromMap(selectedLocation.latitude, selectedLocation.longitude);
-                    }
-                  }}
-                  className="rounded-lg px-4 py-2"
-                  style={{ backgroundColor: colors.primary }}>
-                  <Text className="font-medium text-white">Retry</Text>
-                </TouchableOpacity>
+            <View className="absolute inset-0 items-center justify-center px-6">
+              <View
+                className="w-full max-w-sm rounded-2xl p-6"
+                style={{
+                  backgroundColor: colors.card,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 10 },
+                  shadowOpacity: 0.2,
+                  shadowRadius: 20,
+                  elevation: 10,
+                }}>
+                <View
+                  className="mb-4 h-14 w-14 items-center justify-center self-center rounded-full"
+                  style={{ backgroundColor: colors.error + '20' }}>
+                  <X size={32} color={colors.error} />
+                </View>
+                <Text className="text-center text-lg font-semibold" style={{ color: colors.text }}>
+                  Location Update Failed
+                </Text>
+                <Text
+                  className="mt-3 text-center text-sm leading-relaxed"
+                  style={{ color: colors.textSecondary }}>
+                  {locationError}
+                </Text>
+                <View className="mt-6 w-full flex-row space-x-3">
+                  <TouchableOpacity
+                    onPress={() => setLocationError(null)}
+                    className="flex-1 items-center rounded-xl py-3"
+                    activeOpacity={0.8}
+                    style={{
+                      backgroundColor: colors.surface,
+                      borderColor: colors.border,
+                      borderWidth: 1,
+                    }}>
+                    <Text className="text-base font-semibold" style={{ color: colors.text }}>
+                      Dismiss
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (selectedLocation) {
+                        setLocationError(null);
+                        updateLocationFromMap(selectedLocation.latitude, selectedLocation.longitude);
+                      }
+                    }}
+                    className="flex-1 items-center rounded-xl py-3"
+                    activeOpacity={0.8}
+                    disabled={!selectedLocation}
+                    style={{
+                      backgroundColor: colors.primary,
+                      opacity: selectedLocation ? 1 : 0.6,
+                    }}>
+                    <Text className="text-base font-semibold text-white">Retry</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           )}
@@ -1592,6 +1649,71 @@ export default function ReportIncidentIndex() {
             <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
               The address will be automatically updated
             </Text>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={unsupportedAreaDialog.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={closeUnsupportedAreaDialog}>
+        <View className="flex-1 items-center justify-center bg-black/30 p-6">
+          <View
+            className="w-full max-w-sm rounded-2xl p-6"
+            style={{
+              backgroundColor: colors.card,
+              borderWidth: 1,
+              borderColor: colors.border,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 10 },
+              shadowOpacity: 0.2,
+              shadowRadius: 20,
+              elevation: 10,
+            }}>
+            <View
+              className="mb-4 h-14 w-14 items-center justify-center rounded-full self-center"
+              style={{ backgroundColor: colors.error + '20' }}>
+              <X size={32} color={colors.error} />
+            </View>
+            <Text className="text-center text-lg font-semibold" style={{ color: colors.text }}>
+              Location Update Failed
+            </Text>
+            <Text
+              className="mt-3 text-center text-sm leading-relaxed"
+              style={{ color: colors.textSecondary }}>
+              {unsupportedAreaDialog.description}
+            </Text>
+            <View className="mt-6 w-full flex-row space-x-3">
+              <TouchableOpacity
+                onPress={closeUnsupportedAreaDialog}
+                className="flex-1 items-center rounded-xl py-3"
+                activeOpacity={0.8}
+                style={{
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  borderWidth: 1,
+                }}>
+                <Text className="text-base font-semibold" style={{ color: colors.text }}>
+                  Dismiss
+                </Text>
+              </TouchableOpacity>
+              {unsupportedAreaDialog.onRetry && (
+                <TouchableOpacity
+                  onPress={() => {
+                    const retry = unsupportedAreaDialog.onRetry;
+                    closeUnsupportedAreaDialog();
+                    setTimeout(() => {
+                      retry?.();
+                    }, 150);
+                  }}
+                  className="flex-1 items-center rounded-xl py-3"
+                  activeOpacity={0.8}
+                  style={{ backgroundColor: colors.primary }}>
+                  <Text className="text-base font-semibold text-white">Retry</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
         </View>
       </Modal>
