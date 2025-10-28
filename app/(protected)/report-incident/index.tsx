@@ -21,6 +21,8 @@ import {
 import { useRouter } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
 import * as Location from 'expo-location';
+import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
+import { reverseGeocode } from 'lib/services/geocoding';
 import { ReportData } from 'lib/types';
 import { geocodingService } from 'lib/services/geocoding';
 import { useTheme } from 'components/ThemeContext';
@@ -40,7 +42,8 @@ import {
   Upload,
   FileText,
   Music,
-  File
+  File,
+  Navigation
 } from 'lucide-react-native';
 import {
   UploadManager,
@@ -126,6 +129,12 @@ export default function ReportIncidentIndex() {
   const [showAddressSearch, setShowAddressSearch] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showMapView, setShowMapView] = useState(false);
+  const [mapRegion, setMapRegion] = useState<Region | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const mapRef = useRef<MapView>(null);
 
   // Helper functions for updating state
   const updateFormData = (updates: Partial<ReportData>) => {
@@ -586,6 +595,124 @@ export default function ReportIncidentIndex() {
     });
     setShowAddressSearch(false);
     updateUIState({ showLocationDialog: false, locationFetchFailed: false });
+  };
+
+  // Initialize map region
+  const initializeMapRegion = () => {
+    const lat = parseFloat(currentLocation.latitude);
+    const lon = parseFloat(currentLocation.longitude);
+    
+    if (!isNaN(lat) && !isNaN(lon)) {
+      const region: Region = {
+        latitude: lat,
+        longitude: lon,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      };
+      setMapRegion(region);
+    } else {
+      // Default to Tuguegarao City
+      const region: Region = {
+        latitude: 17.6132,
+        longitude: 121.727,
+        latitudeDelta: 0.15,
+        longitudeDelta: 0.15,
+      };
+      setMapRegion(region);
+    }
+  };
+
+  // Update location from map
+  const updateLocationFromMap = async (latitude: number, longitude: number) => {
+    setIsUpdatingLocation(true);
+    setLocationError(null);
+    setSelectedLocation({ latitude, longitude });
+
+    try {
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Location update timed out')), 10000);
+      });
+
+      const geocodePromise = reverseGeocode(latitude, longitude);
+      const geocodeResults = (await Promise.race([geocodePromise, timeoutPromise])) as any[];
+      const address = geocodeResults[0];
+
+      const city = (
+        address?.city ||
+        address?.subregion ||
+        address?.region ||
+        address?.name ||
+        ''
+      ).toString();
+      const isTuguegarao = /tuguegarao/i.test(city);
+
+      if (!isTuguegarao) {
+        setLocationError(
+          'This app currently only supports Tuguegarao City. Please choose a location within Tuguegarao City.'
+        );
+        return;
+      }
+
+      updateFormData({
+        street_address: address?.name || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+        nearby_landmark: address?.name || '',
+      });
+
+      setCurrentLocation({
+        latitude: latitude.toString(),
+        longitude: longitude.toString(),
+      });
+
+      const newRegion: Region = {
+        latitude,
+        longitude,
+        latitudeDelta: 0.01,
+        longitudeDelta: 0.01,
+      };
+      setMapRegion(newRegion);
+      mapRef.current?.animateToRegion(newRegion, 1000);
+    } catch (error) {
+      console.error('Error updating location:', error);
+      if (error instanceof Error && error.message === 'Location update timed out') {
+        setLocationError('Location update timed out. Please try again.');
+      } else {
+        setLocationError('Failed to get address for this location. Coordinates saved.');
+      }
+
+      updateFormData({
+        street_address: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+      });
+      setCurrentLocation({
+        latitude: latitude.toString(),
+        longitude: longitude.toString(),
+      });
+    } finally {
+      setIsUpdatingLocation(false);
+    }
+  };
+
+  // Handle map marker drag
+  const handleMarkerDragEnd = async (event: any) => {
+    const { latitude, longitude } = event.nativeEvent.coordinate;
+    await updateLocationFromMap(latitude, longitude);
+  };
+
+  // Handle map tap
+  const handleMapPress = async (event: any) => {
+    const { latitude, longitude } = event.nativeEvent.coordinate;
+    await updateLocationFromMap(latitude, longitude);
+  };
+
+  // Open map view
+  const openMapView = () => {
+    initializeMapRegion();
+    const lat = parseFloat(currentLocation.latitude);
+    const lon = parseFloat(currentLocation.longitude);
+    
+    if (!isNaN(lat) && !isNaN(lon)) {
+      setSelectedLocation({ latitude: lat, longitude: lon });
+    }
+    setShowMapView(true);
   };
 
   // Transform categories from database to match component expectations
@@ -1102,6 +1229,24 @@ export default function ReportIncidentIndex() {
               </TouchableOpacity>
 
               <TouchableOpacity
+                onPress={() => {
+                  updateUIState({ showLocationDialog: false });
+                  openMapView();
+                }}
+                className="flex-row items-center rounded-xl p-4"
+                activeOpacity={0.7}
+                style={{ backgroundColor: colors.surfaceVariant }}>
+                <View
+                  className="mr-4 h-12 w-12 items-center justify-center rounded-full"
+                  style={{ backgroundColor: colors.primary + '20' }}>
+                  <MapPin size={24} color={colors.primary} />
+                </View>
+                <Text className="text-base font-medium" style={{ color: colors.text }}>
+                  Select on Map
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
                 onPress={() => handleUseCurrentLocation()}
                 className="flex-row items-center rounded-xl p-4"
                 activeOpacity={0.7}
@@ -1301,6 +1446,129 @@ export default function ReportIncidentIndex() {
         onClose={() => setShowAddressSearch(false)}
         onSelect={handleAddressSelect}
       />
+
+      {/* Map View Modal */}
+      <Modal
+        visible={showMapView}
+        animationType="slide"
+        presentationStyle="fullScreen"
+        onRequestClose={() => setShowMapView(false)}>
+        <View className="flex-1" style={{ backgroundColor: colors.background }}>
+          {/* Header */}
+          <View
+            className="flex-row items-center justify-between px-4 py-4 pt-12"
+            style={{ backgroundColor: colors.card }}>
+            <View className="flex-row items-center">
+              <Navigation size={24} color={colors.text} />
+              <Text className="ml-2 text-lg font-bold" style={{ color: colors.text }}>
+                Select Location
+              </Text>
+            </View>
+            <TouchableOpacity
+              onPress={() => setShowMapView(false)}
+              className="rounded-full p-2"
+              style={{ backgroundColor: colors.surfaceVariant }}>
+              <X size={24} color={colors.text} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Map View */}
+          {mapRegion && (
+            <MapView
+              ref={mapRef}
+              provider={PROVIDER_GOOGLE}
+              style={{ flex: 1 }}
+              initialRegion={mapRegion}
+              onRegionChangeComplete={setMapRegion}
+              onPress={handleMapPress}
+              showsUserLocation={true}
+              showsMyLocationButton={true}>
+              {/* Selected Location Marker */}
+              {selectedLocation && (
+                <Marker
+                  coordinate={{
+                    latitude: selectedLocation.latitude,
+                    longitude: selectedLocation.longitude,
+                  }}
+                  draggable
+                  onDragEnd={handleMarkerDragEnd}>
+                  <View
+                    className="items-center justify-center rounded-full"
+                    style={{
+                      width: 40,
+                      height: 40,
+                      backgroundColor: colors.primary,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.3,
+                      shadowRadius: 4,
+                      elevation: 5,
+                    }}>
+                    <MapPin size={24} color="#FFF" />
+                  </View>
+                </Marker>
+              )}
+            </MapView>
+          )}
+
+          {/* Loading Overlay */}
+          {isUpdatingLocation && (
+            <View
+              className="absolute inset-0 items-center justify-center"
+              style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}>
+              <View
+                className="items-center rounded-lg px-6 py-4"
+                style={{ backgroundColor: colors.card }}>
+                <ActivityIndicator size="large" color={colors.primary} />
+                <Text className="mt-2 font-medium" style={{ color: colors.text }}>
+                  Updating location...
+                </Text>
+              </View>
+            </View>
+          )}
+
+          {/* Error Overlay */}
+          {locationError && (
+            <View
+              className="absolute inset-x-4 top-20 rounded-lg p-4"
+              style={{ backgroundColor: colors.error }}>
+              <Text className="mb-2 font-semibold text-white">{locationError}</Text>
+              <View className="flex-row space-x-3">
+                <TouchableOpacity
+                  onPress={() => setLocationError(null)}
+                  className="rounded-lg px-4 py-2"
+                  style={{ backgroundColor: colors.surfaceVariant }}>
+                  <Text className="font-medium" style={{ color: colors.text }}>
+                    Dismiss
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    if (selectedLocation) {
+                      updateLocationFromMap(selectedLocation.latitude, selectedLocation.longitude);
+                    }
+                  }}
+                  className="rounded-lg px-4 py-2"
+                  style={{ backgroundColor: colors.primary }}>
+                  <Text className="font-medium text-white">Retry</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          {/* Instructions */}
+          <View
+            className="absolute bottom-4 left-4 right-4 rounded-lg p-4"
+            style={{ backgroundColor: colors.card }}>
+            <Text className="text-sm font-medium" style={{ color: colors.text }}>
+              Tap anywhere on the map or drag the marker to select your precise location
+            </Text>
+            <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
+              The address will be automatically updated
+            </Text>
+          </View>
+        </View>
+      </Modal>
 
       {/* Success Dialog */}
       <AppDialog
