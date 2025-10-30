@@ -19,7 +19,7 @@ import { useEffect, useRef, useState } from 'react';
 import { supabase } from 'lib/supabase';
 import { createURL } from 'expo-linking';
 import { registerForFCMToken } from 'hooks/useFCMToken';
-import { verifyNationalIdQR, type NationalIdData } from 'lib/id';
+import { verifyNationalIdQR, type NationalIdData } from 'lib/id-client';
 import { useTheme } from 'components/ThemeContext';
 import Dropdown from 'components/Dropdown';
 import DatePicker from 'components/DatePicker';
