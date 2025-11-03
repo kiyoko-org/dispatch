@@ -28,7 +28,9 @@ import { ReportData } from 'lib/types';
 import { geocodingService } from 'lib/services/geocoding';
 import { useTheme } from 'components/ThemeContext';
 import { useDispatchClient } from 'components/DispatchProvider';
-import { useReports } from '@kiyoko-org/dispatch-lib';
+import { useReports, useRealtimeReports } from '@kiyoko-org/dispatch-lib';
+import { distanceInMeters } from 'lib/locations';
+import type { Database } from '@kiyoko-org/dispatch-lib/database.types';
 import AppDialog from 'components/AppDialog';
 import {
   Check,
@@ -69,6 +71,10 @@ interface UIState {
   isGettingLocation: boolean;
   locationFetchFailed: boolean;
   validationErrors: Record<string, string>;
+  nearbyReportDialog: {
+    visible: boolean;
+    nearbyReports: any[];
+  };
 }
 
 // Initialize services
@@ -81,6 +87,7 @@ export default function ReportIncidentIndex() {
   const { colors, isDark } = useTheme();
   const { categories, categoriesLoading, categoriesError } = useDispatchClient();
   const { addReport } = useReports();
+  const { reports, loading: reportsLoading, error: reportsError } = useRealtimeReports();
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [recorder, setRecorder] = useState<AudioRecorder | null>(null);
   const [recordingDuration, setRecordingDuration] = useState(0);
@@ -112,6 +119,10 @@ export default function ReportIncidentIndex() {
     isGettingLocation: false,
     locationFetchFailed: false,
     validationErrors: {},
+    nearbyReportDialog: {
+      visible: false,
+      nearbyReports: [],
+    },
   });
 
   // Location state
@@ -133,7 +144,10 @@ export default function ReportIncidentIndex() {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [showMapView, setShowMapView] = useState(false);
   const [mapRegion, setMapRegion] = useState<Region | null>(null);
-  const [selectedLocation, setSelectedLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
   const [isUpdatingLocation, setIsUpdatingLocation] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const mapRef = useRef<MapView>(null);
@@ -169,6 +183,71 @@ export default function ReportIncidentIndex() {
     setUnsupportedAreaDialog((prev) => ({ ...prev, visible: false }));
   };
 
+  // Check for nearby reports function
+  const checkForNearbyReports = async (latitude: number, longitude: number) => {
+    try {
+      if (!reports || reports.length === 0) {
+        console.log('[Nearby Reports] No reports available to check');
+        return;
+      }
+
+      console.log('[Nearby Reports] Starting nearby report check');
+      console.log('[Nearby Reports] Current location:', { latitude, longitude });
+      console.log('[Nearby Reports] Total reports in system:', reports.length);
+
+      // Get current timestamp
+      const now = new Date();
+      const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      console.log('[Nearby Reports] Checking for reports from last 24 hours');
+      console.log(
+        '[Nearby Reports] Time window: from',
+        oneDayAgo.toISOString(),
+        'to',
+        now.toISOString()
+      );
+
+      // Filter reports within 100 meters and from last 24 hours
+      const nearbyReports = reports.filter((report: any) => {
+        // Check if report has location data
+        if (!report.latitude || !report.longitude) {
+          return false;
+        }
+
+        // Check if report is within last 24 hours
+        const reportDate = new Date(report.created_at);
+        if (reportDate < oneDayAgo) {
+          return false;
+        }
+
+        // Calculate distance using Haversine formula
+        const distance = distanceInMeters(latitude, longitude, report.latitude, report.longitude);
+
+        // Log individual report checks for debugging
+        console.log(
+          `[Nearby Reports] Report ID: ${report.id}, Distance: ${distance.toFixed(2)}m, Created: ${report.created_at}`
+        );
+
+        return distance <= 100;
+      });
+
+      console.log('[Nearby Reports] Nearby reports found:', nearbyReports.length);
+      if (nearbyReports.length > 0) {
+        console.log(
+          '[Nearby Reports] Report IDs:',
+          nearbyReports.map((r: any) => r.id)
+        );
+        updateUIState({
+          nearbyReportDialog: {
+            visible: true,
+            nearbyReports,
+          },
+        });
+      }
+    } catch (error) {
+      console.error('[Nearby Reports] Error checking for nearby reports:', error);
+    }
+  };
+
   // Auto-populate current date and time on mount
   useEffect(() => {
     const now = new Date();
@@ -193,6 +272,21 @@ export default function ReportIncidentIndex() {
   useEffect(() => {
     handleUseCurrentLocation(true);
   }, []);
+
+  // Log reports availability for debugging
+  useEffect(() => {
+    console.log('[Nearby Reports] Reports from useRealtimeReports:', {
+      available: reports ? 'yes' : 'no',
+      count: reports?.length ?? 0,
+      loading: reportsLoading,
+      error: reportsError,
+      type: typeof reports,
+      isArray: Array.isArray(reports),
+      firstReport: reports?.[0]
+        ? { id: reports[0].id, lat: reports[0].latitude, lon: reports[0].longitude }
+        : null,
+    });
+  }, [reports, reportsLoading, reportsError]);
 
   // Cleanup recording interval on unmount
   useEffect(() => {
@@ -378,9 +472,8 @@ export default function ReportIncidentIndex() {
             place.city,
           ].filter(Boolean);
 
-          const streetAddress = addressParts.length > 0
-            ? addressParts.join(', ')
-            : place.name || 'Current Location';
+          const streetAddress =
+            addressParts.length > 0 ? addressParts.join(', ') : place.name || 'Current Location';
 
           updateFormData({
             street_address: streetAddress,
@@ -391,12 +484,16 @@ export default function ReportIncidentIndex() {
               { text: 'OK' },
             ]);
           }
+          // Check for nearby reports
+          await checkForNearbyReports(location.coords.latitude, location.coords.longitude);
         } else {
           // Fallback to coordinates if reverse geocoding fails
           updateFormData({
             street_address: `Lat: ${location.coords.latitude.toFixed(6)}, Lng: ${location.coords.longitude.toFixed(6)}`,
           });
           updateUIState({ locationFetchFailed: false, showLocationDialog: false });
+          // Check for nearby reports
+          await checkForNearbyReports(location.coords.latitude, location.coords.longitude);
         }
       } catch (geocodeError) {
         console.error('Geocoding error:', geocodeError);
@@ -405,6 +502,8 @@ export default function ReportIncidentIndex() {
           street_address: `Lat: ${location.coords.latitude.toFixed(6)}, Lng: ${location.coords.longitude.toFixed(6)}`,
         });
         updateUIState({ locationFetchFailed: false, showLocationDialog: false });
+        // Check for nearby reports
+        await checkForNearbyReports(location.coords.latitude, location.coords.longitude);
       }
     } catch (error) {
       console.error('Error getting location:', error);
@@ -629,6 +728,8 @@ export default function ReportIncidentIndex() {
     });
     setShowAddressSearch(false);
     updateUIState({ showLocationDialog: false, locationFetchFailed: false });
+    // Check for nearby reports
+    checkForNearbyReports(parseFloat(address.lat), parseFloat(address.lon));
   };
 
   // Initialize map region
@@ -704,6 +805,8 @@ export default function ReportIncidentIndex() {
       };
       setMapRegion(newRegion);
       mapRef.current?.animateToRegion(newRegion, 1000);
+      // Check for nearby reports
+      await checkForNearbyReports(latitude, longitude);
     } catch (error) {
       console.error('Error updating location:', error);
       if (error instanceof Error && error.message === 'Location update timed out') {
@@ -874,7 +977,7 @@ export default function ReportIncidentIndex() {
               activeOpacity={0.7}>
               <Calendar size={20} color={colors.textSecondary} className="mr-2" />
 
-              <View className='w-2' />
+              <View className="w-2" />
 
               <View>
                 <Text className="text-xs font-medium" style={{ color: colors.textSecondary }}>
@@ -883,12 +986,12 @@ export default function ReportIncidentIndex() {
                 <Text className="text-sm font-semibold" style={{ color: colors.text }}>
                   {formData.incident_date && formData.incident_time
                     ? (() => {
-                      // Parse MM/DD/YYYY format
-                      const [month, day, year] = formData.incident_date.split('/');
-                      const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-                      const monthName = date.toLocaleDateString('en-US', { month: 'short' });
-                      return `${monthName} ${day} at ${formData.incident_time}`;
-                    })()
+                        // Parse MM/DD/YYYY format
+                        const [month, day, year] = formData.incident_date.split('/');
+                        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                        const monthName = date.toLocaleDateString('en-US', { month: 'short' });
+                        return `${monthName} ${day} at ${formData.incident_time}`;
+                      })()
                     : 'Select date & time'}
                 </Text>
               </View>
@@ -927,7 +1030,9 @@ export default function ReportIncidentIndex() {
 
           {/* Incident Title */}
           <View className="mb-4">
-            <Text className="mb-2 text-xs font-semibold uppercase" style={{ color: colors.textSecondary }}>
+            <Text
+              className="mb-2 text-xs font-semibold uppercase"
+              style={{ color: colors.textSecondary }}>
               Incident Title <Text style={{ color: colors.error }}>*</Text>
             </Text>
             <TextInput
@@ -952,7 +1057,9 @@ export default function ReportIncidentIndex() {
 
           {/* What Happened */}
           <View className="mb-4">
-            <Text className="mb-2 text-xs font-semibold uppercase" style={{ color: colors.textSecondary }}>
+            <Text
+              className="mb-2 text-xs font-semibold uppercase"
+              style={{ color: colors.textSecondary }}>
               What Happened? <Text style={{ color: colors.error }}>*</Text>
             </Text>
             <TextInput
@@ -981,7 +1088,9 @@ export default function ReportIncidentIndex() {
 
           {/* Category */}
           <View className="mb-4">
-            <Text className="mb-2 text-xs font-semibold uppercase" style={{ color: colors.textSecondary }}>
+            <Text
+              className="mb-2 text-xs font-semibold uppercase"
+              style={{ color: colors.textSecondary }}>
               Category <Text style={{ color: colors.error }}>*</Text>
             </Text>
             <TouchableOpacity
@@ -991,11 +1100,14 @@ export default function ReportIncidentIndex() {
               activeOpacity={0.7}
               style={{
                 backgroundColor: colors.surface,
-                borderColor: uiState.validationErrors.incident_category ? colors.error : colors.border,
+                borderColor: uiState.validationErrors.incident_category
+                  ? colors.error
+                  : colors.border,
                 borderWidth: 1,
                 opacity: categoriesLoading ? 0.6 : 1,
               }}>
-              <Text style={{ color: formData.incident_category ? colors.text : colors.textSecondary }}>
+              <Text
+                style={{ color: formData.incident_category ? colors.text : colors.textSecondary }}>
                 {categoriesLoading
                   ? 'Loading categories...'
                   : formData.incident_category || 'Select incident category'}
@@ -1017,7 +1129,9 @@ export default function ReportIncidentIndex() {
           {/* Subcategory - shown after category selection */}
           {formData.incident_category && (
             <View className="mb-4">
-              <Text className="mb-2 text-xs font-semibold uppercase" style={{ color: colors.textSecondary }}>
+              <Text
+                className="mb-2 text-xs font-semibold uppercase"
+                style={{ color: colors.textSecondary }}>
                 Subcategory
               </Text>
               <TouchableOpacity
@@ -1029,7 +1143,10 @@ export default function ReportIncidentIndex() {
                   borderColor: colors.border,
                   borderWidth: 1,
                 }}>
-                <Text style={{ color: formData.incident_subcategory ? colors.text : colors.textSecondary }}>
+                <Text
+                  style={{
+                    color: formData.incident_subcategory ? colors.text : colors.textSecondary,
+                  }}>
                   {formData.incident_subcategory || 'Other'}
                 </Text>
                 <ChevronDown size={20} color={colors.textSecondary} />
@@ -1040,7 +1157,9 @@ export default function ReportIncidentIndex() {
           {/* Evidence Section */}
           <View className="mb-4">
             <View className="mb-2 flex-row items-center justify-between">
-              <Text className="text-xs font-semibold uppercase" style={{ color: colors.textSecondary }}>
+              <Text
+                className="text-xs font-semibold uppercase"
+                style={{ color: colors.textSecondary }}>
                 Evidence
               </Text>
               <TouchableOpacity
@@ -1068,10 +1187,17 @@ export default function ReportIncidentIndex() {
                   <View
                     key={index}
                     className="flex-row items-center justify-between rounded-xl p-3"
-                    style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }}>
+                    style={{
+                      backgroundColor: colors.surface,
+                      borderColor: colors.border,
+                      borderWidth: 1,
+                    }}>
                     {renderFilePreview(file)}
                     <View className="flex-1">
-                      <Text className="text-sm font-medium" style={{ color: colors.text }} numberOfLines={1}>
+                      <Text
+                        className="text-sm font-medium"
+                        style={{ color: colors.text }}
+                        numberOfLines={1}>
                         {file.name}
                       </Text>
                       <Text className="text-xs" style={{ color: colors.textSecondary }}>
@@ -1091,7 +1217,11 @@ export default function ReportIncidentIndex() {
             ) : (
               <View
                 className="items-center justify-center rounded-xl py-6"
-                style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }}>
+                style={{
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  borderWidth: 1,
+                }}>
                 <Text className="text-sm" style={{ color: colors.textSecondary }}>
                   No evidence added yet
                 </Text>
@@ -1100,12 +1230,10 @@ export default function ReportIncidentIndex() {
           </View>
 
           {/* Disclaimer */}
-          <View
-            className="mb-4 rounded-xl p-4"
-            style={{ backgroundColor: colors.surfaceVariant }}>
+          <View className="mb-4 rounded-xl p-4" style={{ backgroundColor: colors.surfaceVariant }}>
             <Text className="text-center text-xs" style={{ color: colors.textSecondary }}>
-              Your report will be reviewed by our team and may be subject to verification. Please provide
-              accurate information.
+              Your report will be reviewed by our team and may be subject to verification. Please
+              provide accurate information.
             </Text>
           </View>
         </View>
@@ -1134,7 +1262,7 @@ export default function ReportIncidentIndex() {
             </Text>
           </TouchableOpacity>
 
-          <View className='w-2' />
+          <View className="w-2" />
 
           <TouchableOpacity
             onPress={handleSubmitReport}
@@ -1263,7 +1391,7 @@ export default function ReportIncidentIndex() {
                     style={{ backgroundColor: colors.primary + '20' }}>
                     <MapPin size={24} color={colors.primary} />
                   </View>
-                  <Text className="text-sm font-medium text-center" style={{ color: colors.text }}>
+                  <Text className="text-center text-sm font-medium" style={{ color: colors.text }}>
                     Search Location
                   </Text>
                 </TouchableOpacity>
@@ -1281,7 +1409,7 @@ export default function ReportIncidentIndex() {
                     style={{ backgroundColor: colors.primary + '20' }}>
                     <MapPin size={24} color={colors.primary} />
                   </View>
-                  <Text className="text-sm font-medium text-center" style={{ color: colors.text }}>
+                  <Text className="text-center text-sm font-medium" style={{ color: colors.text }}>
                     Select on Map
                   </Text>
                 </TouchableOpacity>
@@ -1296,14 +1424,16 @@ export default function ReportIncidentIndex() {
                     style={{ backgroundColor: colors.primary + '20' }}>
                     <MapPin size={24} color={colors.primary} />
                   </View>
-                  <Text className="text-sm font-medium text-center" style={{ color: colors.text }}>
+                  <Text className="text-center text-sm font-medium" style={{ color: colors.text }}>
                     Use Current Location
                   </Text>
                 </TouchableOpacity>
               </View>
 
               <View className="mt-4">
-                <Text className="mb-2 text-xs font-semibold uppercase" style={{ color: colors.textSecondary }}>
+                <Text
+                  className="mb-2 text-xs font-semibold uppercase"
+                  style={{ color: colors.textSecondary }}>
                   Nearby Landmark
                 </Text>
                 <TextInput
@@ -1336,9 +1466,7 @@ export default function ReportIncidentIndex() {
           }
         }}>
         <View className="flex-1 justify-end" style={{ backgroundColor: colors.overlay }}>
-          <View
-            className="rounded-t-3xl p-6"
-            style={{ backgroundColor: colors.surface }}>
+          <View className="rounded-t-3xl p-6" style={{ backgroundColor: colors.surface }}>
             <View className="mb-6 flex-row items-center justify-between">
               <Text className="text-lg font-bold" style={{ color: colors.text }}>
                 {uiState.isRecording ? 'Recording Audio' : 'Add Evidence'}
@@ -1358,7 +1486,8 @@ export default function ReportIncidentIndex() {
                   <Mic size={40} color="white" />
                 </View>
                 <Text className="mb-2 text-2xl font-bold text-red-600">
-                  {Math.floor(recordingDuration / 60)}:{(recordingDuration % 60).toString().padStart(2, '0')}
+                  {Math.floor(recordingDuration / 60)}:
+                  {(recordingDuration % 60).toString().padStart(2, '0')}
                 </Text>
                 <Text className="mb-6 text-sm" style={{ color: colors.textSecondary }}>
                   Recording in progress...
@@ -1393,7 +1522,10 @@ export default function ReportIncidentIndex() {
                   className="flex-row items-center rounded-xl p-4"
                   activeOpacity={0.7}
                   disabled={isUploading}
-                  style={{ backgroundColor: colors.surfaceVariant, opacity: isUploading ? 0.6 : 1 }}>
+                  style={{
+                    backgroundColor: colors.surfaceVariant,
+                    opacity: isUploading ? 0.6 : 1,
+                  }}>
                   <View
                     className="mr-4 h-12 w-12 items-center justify-center rounded-full"
                     style={{ backgroundColor: colors.primary + '20' }}>
@@ -1409,7 +1541,10 @@ export default function ReportIncidentIndex() {
                   className="flex-row items-center rounded-xl p-4"
                   activeOpacity={0.7}
                   disabled={isUploading}
-                  style={{ backgroundColor: colors.surfaceVariant, opacity: isUploading ? 0.6 : 1 }}>
+                  style={{
+                    backgroundColor: colors.surfaceVariant,
+                    opacity: isUploading ? 0.6 : 1,
+                  }}>
                   <View
                     className="mr-4 h-12 w-12 items-center justify-center rounded-full"
                     style={{ backgroundColor: colors.primary + '20' }}>
@@ -1425,7 +1560,10 @@ export default function ReportIncidentIndex() {
                   className="flex-row items-center rounded-xl p-4"
                   activeOpacity={0.7}
                   disabled={isUploading}
-                  style={{ backgroundColor: colors.surfaceVariant, opacity: isUploading ? 0.6 : 1 }}>
+                  style={{
+                    backgroundColor: colors.surfaceVariant,
+                    opacity: isUploading ? 0.6 : 1,
+                  }}>
                   <View
                     className="mr-4 h-12 w-12 items-center justify-center rounded-full"
                     style={{ backgroundColor: colors.primary + '20' }}>
@@ -1633,7 +1771,10 @@ export default function ReportIncidentIndex() {
                     onPress={() => {
                       if (selectedLocation) {
                         setLocationError(null);
-                        updateLocationFromMap(selectedLocation.latitude, selectedLocation.longitude);
+                        updateLocationFromMap(
+                          selectedLocation.latitude,
+                          selectedLocation.longitude
+                        );
                       }
                     }}
                     className="flex-1 items-center rounded-xl py-3"
@@ -1683,7 +1824,7 @@ export default function ReportIncidentIndex() {
               elevation: 10,
             }}>
             <View
-              className="mb-4 h-14 w-14 items-center justify-center rounded-full self-center"
+              className="mb-4 h-14 w-14 items-center justify-center self-center rounded-full"
               style={{ backgroundColor: colors.error + '20' }}>
               <X size={32} color={colors.error} />
             </View>
@@ -1729,13 +1870,11 @@ export default function ReportIncidentIndex() {
         </View>
       </Modal>
 
-      <Modal
-        visible={isUploading}
-        transparent
-        animationType="fade"
-        onRequestClose={() => {}}>
+      <Modal visible={isUploading} transparent animationType="fade" onRequestClose={() => {}}>
         <TouchableWithoutFeedback>
-          <View className="flex-1 items-center justify-center" style={{ backgroundColor: colors.overlay }}>
+          <View
+            className="flex-1 items-center justify-center"
+            style={{ backgroundColor: colors.overlay }}>
             <View
               className="items-center rounded-2xl px-6 py-8"
               style={{
@@ -1771,6 +1910,23 @@ export default function ReportIncidentIndex() {
             onPress: handleSuccessDialogConfirm,
           },
         ]}
+      />
+
+      {/* Nearby Report Dialog */}
+      <AppDialog
+        visible={uiState.nearbyReportDialog.visible}
+        title="Nearby Report Found"
+        description={`We found ${uiState.nearbyReportDialog.nearbyReports.length} similar report(s) within 100 meters and from the last 24 hours. This might be a duplicate or related incident. Please review existing reports before submitting.`}
+        tone="info"
+        dismissable={true}
+        onDismiss={() => {
+          updateUIState({
+            nearbyReportDialog: {
+              visible: false,
+              nearbyReports: [],
+            },
+          });
+        }}
       />
     </KeyboardAvoidingView>
   );
