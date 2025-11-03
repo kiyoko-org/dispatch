@@ -87,6 +87,7 @@ export default function ReportIncidentIndex() {
   const { colors, isDark } = useTheme();
   const { categories, categoriesLoading, categoriesError } = useDispatchClient();
   const { addReport, reports } = useReports();
+  const reportsRef = useRef(reports); // Keep ref in sync with reports state
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [recorder, setRecorder] = useState<AudioRecorder | null>(null);
   const [recordingDuration, setRecordingDuration] = useState(0);
@@ -186,7 +187,7 @@ export default function ReportIncidentIndex() {
   const checkForNearbyReports = async (latitude: number, longitude: number) => {
     try {
       // Wait for reports to be available (with timeout)
-      let availableReports = reports;
+      let availableReports = reportsRef.current;
       let retries = 0;
       const maxRetries = 5;
 
@@ -195,6 +196,7 @@ export default function ReportIncidentIndex() {
           `[Nearby Reports] Reports not yet loaded, waiting... (attempt ${retries + 1}/${maxRetries})`
         );
         await new Promise((resolve) => setTimeout(resolve, 200)); // Wait 200ms
+        availableReports = reportsRef.current; // Check the latest ref value
         retries++;
       }
 
@@ -296,6 +298,11 @@ export default function ReportIncidentIndex() {
         ? { id: reports[0].id, lat: reports[0].latitude, lon: reports[0].longitude }
         : null,
     });
+  }, [reports]);
+
+  // Keep reports ref in sync with reports state
+  useEffect(() => {
+    reportsRef.current = reports;
   }, [reports]);
 
   // Cleanup recording interval on unmount
