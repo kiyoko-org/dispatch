@@ -28,7 +28,7 @@ import { ReportData } from 'lib/types';
 import { geocodingService } from 'lib/services/geocoding';
 import { useTheme } from 'components/ThemeContext';
 import { useDispatchClient } from 'components/DispatchProvider';
-import { useReports, useRealtimeReports } from '@kiyoko-org/dispatch-lib';
+import { useReports } from '@kiyoko-org/dispatch-lib';
 import { distanceInMeters } from 'lib/locations';
 import type { Database } from '@kiyoko-org/dispatch-lib/database.types';
 import AppDialog from 'components/AppDialog';
@@ -86,8 +86,7 @@ export default function ReportIncidentIndex() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const { categories, categoriesLoading, categoriesError } = useDispatchClient();
-  const { addReport } = useReports();
-  const { reports, loading: reportsLoading, error: reportsError } = useRealtimeReports();
+  const { addReport, reports } = useReports();
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const [recorder, setRecorder] = useState<AudioRecorder | null>(null);
   const [recordingDuration, setRecordingDuration] = useState(0);
@@ -275,18 +274,16 @@ export default function ReportIncidentIndex() {
 
   // Log reports availability for debugging
   useEffect(() => {
-    console.log('[Nearby Reports] Reports from useRealtimeReports:', {
+    console.log('[Nearby Reports] Reports from useReports:', {
       available: reports ? 'yes' : 'no',
       count: reports?.length ?? 0,
-      loading: reportsLoading,
-      error: reportsError,
       type: typeof reports,
       isArray: Array.isArray(reports),
       firstReport: reports?.[0]
         ? { id: reports[0].id, lat: reports[0].latitude, lon: reports[0].longitude }
         : null,
     });
-  }, [reports, reportsLoading, reportsError]);
+  }, [reports]);
 
   // Cleanup recording interval on unmount
   useEffect(() => {
