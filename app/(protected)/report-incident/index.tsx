@@ -234,7 +234,10 @@ export default function ReportIncidentIndex() {
         }
 
         // Calculate distance using Haversine formula
-        const distance = distanceInMeters(latitude, longitude, report.latitude, report.longitude);
+        const distance = distanceInMeters(
+          { lat: latitude, lon: longitude },
+          { lat: report.latitude, lon: report.longitude }
+        );
 
         // Log individual report checks for debugging
         console.log(
