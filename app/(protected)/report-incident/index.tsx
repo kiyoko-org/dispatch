@@ -185,14 +185,27 @@ export default function ReportIncidentIndex() {
   // Check for nearby reports function
   const checkForNearbyReports = async (latitude: number, longitude: number) => {
     try {
-      if (!reports || reports.length === 0) {
-        console.log('[Nearby Reports] No reports available to check');
+      // Wait for reports to be available (with timeout)
+      let availableReports = reports;
+      let retries = 0;
+      const maxRetries = 5;
+
+      while ((!availableReports || availableReports.length === 0) && retries < maxRetries) {
+        console.log(
+          `[Nearby Reports] Reports not yet loaded, waiting... (attempt ${retries + 1}/${maxRetries})`
+        );
+        await new Promise((resolve) => setTimeout(resolve, 200)); // Wait 200ms
+        retries++;
+      }
+
+      if (!availableReports || availableReports.length === 0) {
+        console.log('[Nearby Reports] No reports available to check after waiting');
         return;
       }
 
       console.log('[Nearby Reports] Starting nearby report check');
       console.log('[Nearby Reports] Current location:', { latitude, longitude });
-      console.log('[Nearby Reports] Total reports in system:', reports.length);
+      console.log('[Nearby Reports] Total reports in system:', availableReports.length);
 
       // Get current timestamp
       const now = new Date();
@@ -206,7 +219,7 @@ export default function ReportIncidentIndex() {
       );
 
       // Filter reports within 100 meters and from last 24 hours
-      const nearbyReports = reports.filter((report: any) => {
+      const nearbyReports = availableReports.filter((report: any) => {
         // Check if report has location data
         if (!report.latitude || !report.longitude) {
           return false;
