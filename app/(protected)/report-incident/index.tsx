@@ -2172,7 +2172,6 @@ export default function ReportIncidentIndex() {
       <AppDialog
         visible={detailDialog.visible}
         title={detailDialog.report?.incident_title || 'Report Details'}
-        description={detailDialog.report?.what_happened || 'No description provided.'}
         tone="default"
         dismissable={true}
         onDismiss={() => setDetailDialog({ visible: false, report: null })}
@@ -2186,6 +2185,15 @@ export default function ReportIncidentIndex() {
       >
         {detailDialog.report ? (
           <View className="mt-2">
+            <Text
+              className="text-base leading-relaxed"
+              style={{ color: colors.textSecondary, textAlign: 'left' }}>
+              {detailDialog.report.what_happened || 'No description provided.'}
+            </Text>
+            <View
+              className="my-4 h-px"
+              style={{ backgroundColor: colors.surfaceVariant, opacity: isDark ? 0.4 : 0.6 }}
+            />
             <View className="flex-row items-center justify-end" style={{ gap: 12 }}>
               <TouchableOpacity
                 onPress={() => handleAddPlusOne(detailDialog.report.id)}
