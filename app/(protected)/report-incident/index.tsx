@@ -205,6 +205,7 @@ export default function ReportIncidentIndex() {
   // Check for nearby reports function
   const checkForNearbyReports = async (latitude: number, longitude: number) => {
     try {
+      const currentUserId = session?.user?.id;
       // Wait for reports to be available (with timeout)
       let availableReports = reportsRef.current;
       let retries = 0;
@@ -253,6 +254,25 @@ export default function ReportIncidentIndex() {
             `[Nearby Reports] Ignoring report ${report.id} with status: ${report.status}`
           );
           return false;
+        }
+
+        // Ignore reports where current user already participated
+        if (currentUserId && Array.isArray(report.witnesses)) {
+          const hasUserWitnessed = report.witnesses.some((witness: any) => {
+            if (!witness || typeof witness !== 'object') {
+              return false;
+            }
+            const witnessUserId =
+              witness.user_id || witness.userId || witness.userID || witness.user;
+            return witnessUserId === currentUserId;
+          });
+
+          if (hasUserWitnessed) {
+            console.log(
+              `[Nearby Reports] Ignoring report ${report.id} - user has already added a +1 or statement`
+            );
+            return false;
+          }
         }
 
         // Check if report is within last 24 hours
