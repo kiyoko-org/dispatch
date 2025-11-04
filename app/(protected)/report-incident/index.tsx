@@ -256,6 +256,22 @@ export default function ReportIncidentIndex() {
           return false;
         }
 
+        // Ignore reports created by the current user
+        if (currentUserId) {
+          const creatorId =
+            report.user_id ||
+            report.created_by ||
+            report.creator_id ||
+            report.userId ||
+            report.creatorId ||
+            report.owner_id;
+
+          if (creatorId && String(creatorId) === String(currentUserId)) {
+            console.log(`[Nearby Reports] Ignoring report ${report.id} - created by current user`);
+            return false;
+          }
+        }
+
         // Ignore reports where current user already participated
         if (currentUserId && Array.isArray(report.witnesses)) {
           const hasUserWitnessed = report.witnesses.some((witness: any) => {
@@ -2137,8 +2153,7 @@ export default function ReportIncidentIndex() {
             },
             variant: 'secondary',
           },
-        ]}
-      >
+        ]}>
         <View className="space-y-4">
           {uiState.nearbyReportDialog.nearbyReports.map((report: any) => (
             <TouchableOpacity
@@ -2150,8 +2165,7 @@ export default function ReportIncidentIndex() {
                 borderWidth: 1,
               }}
               activeOpacity={0.8}
-              onPress={() => setDetailDialog({ visible: true, report })}
-            >
+              onPress={() => setDetailDialog({ visible: true, report })}>
               <View className="flex-row justify-between">
                 <View style={{ flex: 1, paddingRight: 8 }}>
                   <Text className="font-semibold" style={{ color: colors.text }} numberOfLines={1}>
@@ -2201,8 +2215,7 @@ export default function ReportIncidentIndex() {
             onPress: () => setDetailDialog({ visible: false, report: null }),
             variant: 'secondary',
           },
-        ]}
-      >
+        ]}>
         {detailDialog.report ? (
           <View className="mt-2">
             <Text
@@ -2332,9 +2345,10 @@ export default function ReportIncidentIndex() {
                 className="flex-1 items-center rounded-xl px-6 py-4"
                 activeOpacity={0.8}
                 style={{
-                  backgroundColor: isAddingWitness || !witnessModal.witnessStatement.trim()
-                    ? colors.surfaceVariant
-                    : colors.primary,
+                  backgroundColor:
+                    isAddingWitness || !witnessModal.witnessStatement.trim()
+                      ? colors.surfaceVariant
+                      : colors.primary,
                   opacity: isAddingWitness || !witnessModal.witnessStatement.trim() ? 0.6 : 1,
                 }}>
                 {isAddingWitness ? (
