@@ -1201,9 +1201,12 @@ export default function ReportIncidentIndex() {
                     ? (() => {
                         // Parse MM/DD/YYYY format
                         const [month, day, year] = formData.incident_date.split('/');
-                        const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+                        const date = new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
                         const monthName = date.toLocaleDateString('en-US', { month: 'short' });
-                        return `${monthName} ${day} at ${formData.incident_time}`;
+                        const currentYear = new Date().getFullYear();
+                        const includeYear = date.getFullYear() !== currentYear;
+                        const dateDisplay = includeYear ? `${monthName} ${day}, ${year}` : `${monthName} ${day}`;
+                        return `${dateDisplay} at ${formData.incident_time}`;
                       })()
                     : 'Select date & time'}
                 </Text>
