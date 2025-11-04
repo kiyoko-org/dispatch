@@ -253,7 +253,7 @@ export default function ReportIncidentIndex() {
           `[Nearby Reports] Report ID: ${report.id}, Status: ${report.status}, Distance: ${distance.toFixed(2)}m, Created: ${report.created_at}`
         );
 
-        return distance <= 100;
+        return distance <= 20;
       });
 
       console.log('[Nearby Reports] Nearby reports found:', nearbyReports.length);
@@ -1945,7 +1945,7 @@ export default function ReportIncidentIndex() {
       <AppDialog
         visible={uiState.nearbyReportDialog.visible}
         title="Nearby Report Found"
-        description={`We found ${uiState.nearbyReportDialog.nearbyReports.length} similar report(s) within 100 meters and from the last 24 hours. This might be a duplicate or related incident. Please review existing reports before submitting.`}
+        description={`We found ${uiState.nearbyReportDialog.nearbyReports.length} similar report(s) within 20 meters and from the last 24 hours. This might be a duplicate or related incident. Please review existing reports before submitting.`}
         tone="info"
         dismissable={true}
         onDismiss={() => {
