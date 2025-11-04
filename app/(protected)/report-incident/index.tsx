@@ -48,7 +48,7 @@ import {
   Music,
   File,
   Navigation,
-  ThumbsUp,
+  UserPlus,
   MessageSquare,
 } from 'lucide-react-native';
 import {
@@ -173,6 +173,10 @@ export default function ReportIncidentIndex() {
     witnessStatement: '',
   });
   const [isAddingWitness, setIsAddingWitness] = useState(false);
+  const [detailDialog, setDetailDialog] = useState<{ visible: boolean; report: any | null }>({
+    visible: false,
+    report: null,
+  });
 
   // Helper functions for updating state
   const updateFormData = (updates: Partial<ReportData>) => {
@@ -2083,16 +2087,19 @@ export default function ReportIncidentIndex() {
           },
         ]}
       >
-        <View className="space-y-3">
+        <View className="space-y-4">
           {uiState.nearbyReportDialog.nearbyReports.map((report: any) => (
-            <View
+            <TouchableOpacity
               key={report.id}
               className="rounded-xl p-4"
               style={{
                 backgroundColor: colors.surface,
                 borderColor: colors.border,
                 borderWidth: 1,
-              }}>
+              }}
+              activeOpacity={0.8}
+              onPress={() => setDetailDialog({ visible: true, report })}
+            >
               <View className="flex-row justify-between">
                 <View style={{ flex: 1, paddingRight: 8 }}>
                   <Text className="font-semibold" style={{ color: colors.text }} numberOfLines={1}>
@@ -2105,13 +2112,13 @@ export default function ReportIncidentIndex() {
                     {report.what_happened || 'No description provided.'}
                   </Text>
                 </View>
-                <View className="items-end justify-center" style={{ gap: 8 }}>
+                <View className="flex-row items-center justify-end" style={{ gap: 8 }}>
                   <TouchableOpacity
                     onPress={() => handleAddPlusOne(report.id)}
                     activeOpacity={0.8}
                     style={{ padding: 6 }}
                     hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-                    <ThumbsUp size={20} color={colors.primary} />
+                    <UserPlus size={20} color={colors.primary} />
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() =>
@@ -2124,9 +2131,53 @@ export default function ReportIncidentIndex() {
                   </TouchableOpacity>
                 </View>
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
+      </AppDialog>
+
+      {/* Detailed Report Dialog */}
+      <AppDialog
+        visible={detailDialog.visible}
+        title={detailDialog.report?.incident_title || 'Report Details'}
+        description={detailDialog.report?.what_happened || 'No description provided.'}
+        tone="default"
+        dismissable={true}
+        onDismiss={() => setDetailDialog({ visible: false, report: null })}
+        actions={[
+          {
+            label: 'Close',
+            onPress: () => setDetailDialog({ visible: false, report: null }),
+            variant: 'secondary',
+          },
+        ]}
+      >
+        {detailDialog.report ? (
+          <View className="mt-2">
+            <View className="flex-row items-center justify-end" style={{ gap: 12 }}>
+              <TouchableOpacity
+                onPress={() => handleAddPlusOne(detailDialog.report.id)}
+                activeOpacity={0.8}
+                style={{ padding: 8 }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <UserPlus size={22} color={colors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() =>
+                  setWitnessModal({
+                    visible: true,
+                    reportId: detailDialog.report.id,
+                    witnessStatement: '',
+                  })
+                }
+                activeOpacity={0.8}
+                style={{ padding: 8 }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                <MessageSquare size={22} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : null}
       </AppDialog>
 
       {/* Witness Statement Modal */}
