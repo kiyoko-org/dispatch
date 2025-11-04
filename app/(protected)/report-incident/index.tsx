@@ -50,6 +50,7 @@ import {
   Navigation,
   UserPlus,
   MessageSquare,
+  DoorClosed,
 } from 'lucide-react-native';
 import {
   UploadManager,
@@ -284,6 +285,13 @@ export default function ReportIncidentIndex() {
           nearbyReportDialog: {
             visible: true,
             nearbyReports,
+          },
+        });
+      } else {
+        updateUIState({
+          nearbyReportDialog: {
+            visible: false,
+            nearbyReports: [],
           },
         });
       }
@@ -1096,6 +1104,9 @@ export default function ReportIncidentIndex() {
     }
   };
 
+  const nearbyReportCount = uiState.nearbyReportDialog.nearbyReports.length;
+  const hasNearbyReports = nearbyReportCount > 0;
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -1106,7 +1117,28 @@ export default function ReportIncidentIndex() {
         backgroundColor={colors.background}
       />
 
-      <HeaderWithSidebar title="Report Incident" showBackButton={false} />
+      <HeaderWithSidebar
+        title="Report Incident"
+        showBackButton={false}
+        rightActions={
+          hasNearbyReports ? (
+            <TouchableOpacity
+              onPress={() =>
+                updateUIState({
+                  nearbyReportDialog: {
+                    ...uiState.nearbyReportDialog,
+                    visible: true,
+                  },
+                })
+              }
+              className="h-10 w-10 items-center justify-center rounded-full border"
+              style={{ backgroundColor: colors.surface, borderColor: colors.border }}
+              activeOpacity={0.7}>
+              <DoorClosed size={18} color={colors.text} />
+            </TouchableOpacity>
+          ) : null
+        }
+      />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -2067,8 +2099,8 @@ export default function ReportIncidentIndex() {
         onDismiss={() => {
           updateUIState({
             nearbyReportDialog: {
+              ...uiState.nearbyReportDialog,
               visible: false,
-              nearbyReports: [],
             },
           });
         }}

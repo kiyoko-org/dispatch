@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import type { ReactNode } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, Animated } from 'react-native';
 import {
   User,
@@ -40,6 +41,7 @@ interface HeaderWithSidebarProps {
   onRefreshReports?: () => void;
   showSyncIndicator?: boolean;
   showNotificationBell?: boolean;
+  rightActions?: ReactNode;
 }
 
 export default function HeaderWithSidebar({
@@ -52,6 +54,7 @@ export default function HeaderWithSidebar({
   onRefreshReports,
   showSyncIndicator = false,
   showNotificationBell = false,
+  rightActions,
 }: HeaderWithSidebarProps) {
   const router = useRouter();
   const { colors } = useTheme();
@@ -307,29 +310,34 @@ export default function HeaderWithSidebar({
             </Text>
           </View>
 
-          {/* Sync Indicator */}
-          {showSyncIndicator && (
-            <View className="mr-2">
-              <SyncIndicator compact />
-            </View>
-          )}
+          <View className="flex-row items-center">
+            {/* Custom Right Actions */}
+            {rightActions && <View className="mr-2">{rightActions}</View>}
 
-          {/* Activity Bell Icon - Top Right */}
-          {showNotificationBell && (
-            <TouchableOpacity
-              onPress={toggleActivity}
-              className="h-10 w-10 items-center justify-center rounded-full"
-              style={{ backgroundColor: colors.surfaceVariant }}
-              activeOpacity={0.7}>
-              <Bell size={20} color={colors.text} />
-              {localNotifCount < userNotifications.length && (
-                <View
-                  className="absolute right-1 top-1 h-2 w-2 rounded-full"
-                  style={{ backgroundColor: colors.error }}
-                />
-              )}
-            </TouchableOpacity>
-          )}
+            {/* Sync Indicator */}
+            {showSyncIndicator && (
+              <View className="mr-2">
+                <SyncIndicator compact />
+              </View>
+            )}
+
+            {/* Activity Bell Icon - Top Right */}
+            {showNotificationBell && (
+              <TouchableOpacity
+                onPress={toggleActivity}
+                className="h-10 w-10 items-center justify-center rounded-full"
+                style={{ backgroundColor: colors.surfaceVariant }}
+                activeOpacity={0.7}>
+                <Bell size={20} color={colors.text} />
+                {localNotifCount < userNotifications.length && (
+                  <View
+                    className="absolute right-1 top-1 h-2 w-2 rounded-full"
+                    style={{ backgroundColor: colors.error }}
+                  />
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </Animated.View>
 
