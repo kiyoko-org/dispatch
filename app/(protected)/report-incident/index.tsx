@@ -28,6 +28,7 @@ import { ReportData } from 'lib/types';
 import { geocodingService } from 'lib/services/geocoding';
 import { useTheme } from 'components/ThemeContext';
 import { useDispatchClient } from 'components/DispatchProvider';
+import { useAuthContext } from 'components/AuthProvider';
 import { useReports } from '@kiyoko-org/dispatch-lib';
 import { distanceInMeters } from 'lib/locations';
 import type { Database } from '@kiyoko-org/dispatch-lib/database.types';
@@ -85,7 +86,8 @@ const uploadManager = new UploadManager(storageService, filePickerService);
 export default function ReportIncidentIndex() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { categories, categoriesLoading, categoriesError } = useDispatchClient();
+  const { categories, categoriesLoading, categoriesError, client } = useDispatchClient();
+  const { session } = useAuthContext();
   const { addReport, reports } = useReports();
   const reportsRef = useRef(reports); // Keep ref in sync with reports state
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -159,6 +161,16 @@ export default function ReportIncidentIndex() {
     visible: false,
     description: '',
   });
+  const [witnessModal, setWitnessModal] = useState<{
+    visible: boolean;
+    reportId: number | null;
+    witnessStatement: string;
+  }>({
+    visible: false,
+    reportId: null,
+    witnessStatement: '',
+  });
+  const [isAddingWitness, setIsAddingWitness] = useState(false);
 
   // Helper functions for updating state
   const updateFormData = (updates: Partial<ReportData>) => {
@@ -897,6 +909,104 @@ export default function ReportIncidentIndex() {
       subcategories[category.name] = ['Other'];
     }
   });
+
+  // Handle adding +1 to a report
+  const handleAddPlusOne = async (reportId: number) => {
+    if (!client) {
+      Alert.alert('Error', 'Dispatch client is not available. Please continue with a new report.');
+      return;
+    }
+    if (!session?.user?.id) {
+      Alert.alert('Error', 'No active session. Please sign in again.');
+      return;
+    }
+
+    setIsAddingWitness(true);
+    try {
+      const result = await client.addWitnessToReport(reportId, session.user.id, null);
+
+      if (result.error) {
+        Alert.alert('Error', result.error.message || 'Failed to add +1 to report');
+        return;
+      }
+
+      Alert.alert('Success', 'Your +1 has been added to the report!', [
+        {
+          text: 'OK',
+          onPress: () => {
+            updateUIState({
+              nearbyReportDialog: {
+                visible: false,
+                nearbyReports: [],
+              },
+            });
+            router.replace('/(protected)/home');
+          },
+        },
+      ]);
+    } catch (error) {
+      console.error('Error adding +1:', error);
+      Alert.alert('Error', 'Failed to add +1 to report. Please try again.');
+    } finally {
+      setIsAddingWitness(false);
+    }
+  };
+
+  // Handle submitting witness statement
+  const handleSubmitWitnessStatement = async () => {
+    if (!witnessModal.reportId || !client) {
+      Alert.alert('Error', 'Dispatch client is not available. Please continue with a new report.');
+      return;
+    }
+    if (!session?.user?.id) {
+      Alert.alert('Error', 'No active session. Please sign in again.');
+      return;
+    }
+
+    if (!witnessModal.witnessStatement.trim()) {
+      Alert.alert('Error', 'Please enter a witness statement.');
+      return;
+    }
+
+    setIsAddingWitness(true);
+    try {
+      const result = await client.addWitnessToReport(
+        witnessModal.reportId,
+        session.user.id,
+        witnessModal.witnessStatement.trim()
+      );
+
+      if (result.error) {
+        Alert.alert('Error', result.error.message || 'Failed to add witness statement');
+        return;
+      }
+
+      Alert.alert('Success', 'Your witness statement has been added to the report!', [
+        {
+          text: 'OK',
+          onPress: () => {
+            setWitnessModal({
+              visible: false,
+              reportId: null,
+              witnessStatement: '',
+            });
+            updateUIState({
+              nearbyReportDialog: {
+                visible: false,
+                nearbyReports: [],
+              },
+            });
+            router.replace('/(protected)/home');
+          },
+        },
+      ]);
+    } catch (error) {
+      console.error('Error adding witness statement:', error);
+      Alert.alert('Error', 'Failed to add witness statement. Please try again.');
+    } finally {
+      setIsAddingWitness(false);
+    }
+  };
 
   const handleSubmitReport = async () => {
     // Check if categories are loaded
@@ -1945,7 +2055,7 @@ export default function ReportIncidentIndex() {
       <AppDialog
         visible={uiState.nearbyReportDialog.visible}
         title="Nearby Report Found"
-        description={`We found ${uiState.nearbyReportDialog.nearbyReports.length} similar report(s) within 20 meters and from the last 24 hours. This might be a duplicate or related incident. Please review existing reports before submitting.`}
+        description={`We found ${uiState.nearbyReportDialog.nearbyReports.length} similar report(s) within 20 meters and from the last 24 hours. Would you like to add a +1 or witness statement to the existing report instead?`}
         tone="info"
         dismissable={true}
         onDismiss={() => {
@@ -1956,7 +2066,151 @@ export default function ReportIncidentIndex() {
             },
           });
         }}
+        actions={[
+          {
+            label: 'Continue with New Report',
+            onPress: () => {
+              updateUIState({
+                nearbyReportDialog: {
+                  visible: false,
+                  nearbyReports: [],
+                },
+              });
+            },
+            variant: 'secondary',
+          },
+          {
+            label: 'Add +1',
+            onPress: () => {
+              if (uiState.nearbyReportDialog.nearbyReports.length > 0) {
+                handleAddPlusOne(uiState.nearbyReportDialog.nearbyReports[0].id);
+              }
+            },
+            variant: 'primary',
+          },
+          {
+            label: 'Add Witness Statement',
+            onPress: () => {
+              if (uiState.nearbyReportDialog.nearbyReports.length > 0) {
+                setWitnessModal({
+                  visible: true,
+                  reportId: uiState.nearbyReportDialog.nearbyReports[0].id,
+                  witnessStatement: '',
+                });
+              }
+            },
+            variant: 'primary',
+          },
+        ]}
       />
+
+      {/* Witness Statement Modal */}
+      <Modal
+        visible={witnessModal.visible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => {
+          if (!isAddingWitness) {
+            setWitnessModal({
+              visible: false,
+              reportId: null,
+              witnessStatement: '',
+            });
+          }
+        }}>
+        <View className="flex-1 justify-end" style={{ backgroundColor: colors.overlay }}>
+          <View className="rounded-t-3xl p-6" style={{ backgroundColor: colors.surface }}>
+            <View className="mb-6 flex-row items-center justify-between">
+              <Text className="text-lg font-bold" style={{ color: colors.text }}>
+                Add Witness Statement
+              </Text>
+              {!isAddingWitness && (
+                <TouchableOpacity
+                  onPress={() => {
+                    setWitnessModal({
+                      visible: false,
+                      reportId: null,
+                      witnessStatement: '',
+                    });
+                  }}
+                  activeOpacity={0.7}>
+                  <X size={24} color={colors.textSecondary} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <View className="mb-4">
+              <Text
+                className="mb-2 text-xs font-semibold uppercase"
+                style={{ color: colors.textSecondary }}>
+                Your Statement <Text style={{ color: colors.error }}>*</Text>
+              </Text>
+              <TextInput
+                placeholder="Describe what you witnessed..."
+                value={witnessModal.witnessStatement}
+                onChangeText={(value) =>
+                  setWitnessModal((prev) => ({ ...prev, witnessStatement: value }))
+                }
+                multiline
+                numberOfLines={6}
+                className="rounded-xl px-4 py-4 text-base"
+                style={{
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  borderWidth: 1,
+                  color: colors.text,
+                  minHeight: 120,
+                }}
+                placeholderTextColor={colors.textSecondary}
+                textAlignVertical="top"
+                editable={!isAddingWitness}
+              />
+            </View>
+
+            <View className="flex-row space-x-3">
+              <TouchableOpacity
+                onPress={() => {
+                  setWitnessModal({
+                    visible: false,
+                    reportId: null,
+                    witnessStatement: '',
+                  });
+                }}
+                disabled={isAddingWitness}
+                className="flex-1 items-center rounded-xl px-6 py-4"
+                activeOpacity={0.8}
+                style={{
+                  backgroundColor: colors.surface,
+                  borderColor: colors.border,
+                  borderWidth: 1,
+                  opacity: isAddingWitness ? 0.6 : 1,
+                }}>
+                <Text className="text-base font-semibold" style={{ color: colors.text }}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={handleSubmitWitnessStatement}
+                disabled={isAddingWitness || !witnessModal.witnessStatement.trim()}
+                className="flex-1 items-center rounded-xl px-6 py-4"
+                activeOpacity={0.8}
+                style={{
+                  backgroundColor: isAddingWitness || !witnessModal.witnessStatement.trim()
+                    ? colors.surfaceVariant
+                    : colors.primary,
+                  opacity: isAddingWitness || !witnessModal.witnessStatement.trim() ? 0.6 : 1,
+                }}>
+                {isAddingWitness ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text className="text-base font-semibold text-white">Submit</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
