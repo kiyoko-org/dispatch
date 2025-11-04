@@ -220,10 +220,19 @@ export default function ReportIncidentIndex() {
         now.toISOString()
       );
 
-      // Filter reports within 100 meters and from last 24 hours
+      // Filter reports within 100 meters and from last 24 hours, ignoring resolved/cancelled
       const nearbyReports = availableReports.filter((report: any) => {
         // Check if report has location data
         if (!report.latitude || !report.longitude) {
+          return false;
+        }
+
+        // Ignore reports that are resolved or cancelled
+        const status = (report.status || '').toString().toLowerCase();
+        if (status === 'resolved' || status === 'cancelled') {
+          console.log(
+            `[Nearby Reports] Ignoring report ${report.id} with status: ${report.status}`
+          );
           return false;
         }
 
@@ -241,7 +250,7 @@ export default function ReportIncidentIndex() {
 
         // Log individual report checks for debugging
         console.log(
-          `[Nearby Reports] Report ID: ${report.id}, Distance: ${distance.toFixed(2)}m, Created: ${report.created_at}`
+          `[Nearby Reports] Report ID: ${report.id}, Status: ${report.status}, Distance: ${distance.toFixed(2)}m, Created: ${report.created_at}`
         );
 
         return distance <= 100;
