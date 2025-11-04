@@ -48,6 +48,8 @@ import {
   Music,
   File,
   Navigation,
+  ThumbsUp,
+  MessageSquare,
 } from 'lucide-react-native';
 import {
   UploadManager,
@@ -2054,8 +2056,8 @@ export default function ReportIncidentIndex() {
       {/* Nearby Report Dialog */}
       <AppDialog
         visible={uiState.nearbyReportDialog.visible}
-        title="Nearby Report Found"
-        description={`We found ${uiState.nearbyReportDialog.nearbyReports.length} similar report(s) within 20 meters and from the last 24 hours. Would you like to add a +1 or witness statement to the existing report instead?`}
+        title="Nearby Reports Found"
+        description={`We found ${uiState.nearbyReportDialog.nearbyReports.length} report(s) within 20 meters in the last 24 hours. You can +1 or add a witness statement to any of them.`}
         tone="info"
         dismissable={true}
         onDismiss={() => {
@@ -2079,30 +2081,53 @@ export default function ReportIncidentIndex() {
             },
             variant: 'secondary',
           },
-          {
-            label: 'Add +1',
-            onPress: () => {
-              if (uiState.nearbyReportDialog.nearbyReports.length > 0) {
-                handleAddPlusOne(uiState.nearbyReportDialog.nearbyReports[0].id);
-              }
-            },
-            variant: 'primary',
-          },
-          {
-            label: 'Add Witness Statement',
-            onPress: () => {
-              if (uiState.nearbyReportDialog.nearbyReports.length > 0) {
-                setWitnessModal({
-                  visible: true,
-                  reportId: uiState.nearbyReportDialog.nearbyReports[0].id,
-                  witnessStatement: '',
-                });
-              }
-            },
-            variant: 'primary',
-          },
         ]}
-      />
+      >
+        <View className="space-y-3">
+          {uiState.nearbyReportDialog.nearbyReports.map((report: any) => (
+            <View
+              key={report.id}
+              className="rounded-xl p-4"
+              style={{
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                borderWidth: 1,
+              }}>
+              <View className="flex-row justify-between">
+                <View style={{ flex: 1, paddingRight: 8 }}>
+                  <Text className="font-semibold" style={{ color: colors.text }} numberOfLines={1}>
+                    {report.incident_title || 'Untitled Report'}
+                  </Text>
+                  <Text
+                    className="mt-1 text-xs"
+                    style={{ color: colors.textSecondary }}
+                    numberOfLines={3}>
+                    {report.what_happened || 'No description provided.'}
+                  </Text>
+                </View>
+                <View className="items-end justify-center" style={{ gap: 8 }}>
+                  <TouchableOpacity
+                    onPress={() => handleAddPlusOne(report.id)}
+                    activeOpacity={0.8}
+                    style={{ padding: 6 }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <ThumbsUp size={20} color={colors.primary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() =>
+                      setWitnessModal({ visible: true, reportId: report.id, witnessStatement: '' })
+                    }
+                    activeOpacity={0.8}
+                    style={{ padding: 6 }}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                    <MessageSquare size={20} color={colors.primary} />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          ))}
+        </View>
+      </AppDialog>
 
       {/* Witness Statement Modal */}
       <Modal
