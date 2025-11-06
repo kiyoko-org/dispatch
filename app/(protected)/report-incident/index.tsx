@@ -1185,155 +1185,74 @@ export default function ReportIncidentIndex() {
         className="flex-1">
         <View className="px-4 pt-4">
           {/* Quick Links Section */}
-          <View className="mb-6">
-            <Text
-              className="mb-3 text-xs font-semibold uppercase"
-              style={{ color: colors.textSecondary }}>
-              Quick Links
-            </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 12 }}>
-              {/* Emergency Quick Link */}
-              <TouchableOpacity
-                onPress={() => {
-                  updateFormData({
-                    incident_category: 'Emergency',
-                    incident_subcategory: 'Other',
-                    incident_title: 'Emergency Situation',
-                    what_happened: '',
-                  });
-                }}
-                className="items-center justify-center rounded-xl px-4 py-3"
-                style={{
-                  backgroundColor: colors.error + '20',
-                  borderColor: colors.error + '40',
-                  borderWidth: 1,
-                  minWidth: 120,
-                }}
-                activeOpacity={0.7}>
-                <Text className="text-xs font-bold" style={{ color: colors.error }}>
-                  🚨 Emergency
-                </Text>
-              </TouchableOpacity>
+          {!categoriesLoading && categories.length > 0 && (
+            <View className="mb-6">
+              <Text
+                className="mb-3 text-xs font-semibold uppercase"
+                style={{ color: colors.textSecondary }}>
+                Quick Links
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 12 }}>
+                {categories.map((category) => {
+                  // Get category icon and color based on category name
+                  const getCategoryStyle = (name: string) => {
+                    const lowerName = name.toLowerCase();
+                    if (lowerName.includes('emergency')) {
+                      return { icon: '🚨', color: colors.error };
+                    } else if (lowerName.includes('crime') || lowerName.includes('theft') || lowerName.includes('violence')) {
+                      return { icon: '🚔', color: colors.primary };
+                    } else if (lowerName.includes('traffic') || lowerName.includes('accident')) {
+                      return { icon: '🚗', color: '#FFA500' };
+                    } else if (lowerName.includes('fire')) {
+                      return { icon: '🔥', color: '#FF4500' };
+                    } else if (lowerName.includes('medical') || lowerName.includes('health')) {
+                      return { icon: '🏥', color: '#00CED1' };
+                    } else if (lowerName.includes('disturbance') || lowerName.includes('noise')) {
+                      return { icon: '📢', color: '#9370DB' };
+                    } else if (lowerName.includes('environment') || lowerName.includes('pollution')) {
+                      return { icon: '🌳', color: '#228B22' };
+                    } else if (lowerName.includes('infrastructure') || lowerName.includes('utility')) {
+                      return { icon: '🏗️', color: '#808080' };
+                    } else if (lowerName.includes('animal')) {
+                      return { icon: '🐾', color: '#8B4513' };
+                    } else {
+                      return { icon: '📝', color: colors.textSecondary };
+                    }
+                  };
 
-              {/* Crime Quick Link */}
-              <TouchableOpacity
-                onPress={() => {
-                  updateFormData({
-                    incident_category: 'Crime',
-                    incident_subcategory: 'Other',
-                    incident_title: 'Crime Incident',
-                    what_happened: '',
-                  });
-                }}
-                className="items-center justify-center rounded-xl px-4 py-3"
-                style={{
-                  backgroundColor: colors.primary + '20',
-                  borderColor: colors.primary + '40',
-                  borderWidth: 1,
-                  minWidth: 120,
-                }}
-                activeOpacity={0.7}>
-                <Text className="text-xs font-bold" style={{ color: colors.primary }}>
-                  🚔 Crime
-                </Text>
-              </TouchableOpacity>
+                  const style = getCategoryStyle(category.name);
 
-              {/* Traffic Quick Link */}
-              <TouchableOpacity
-                onPress={() => {
-                  updateFormData({
-                    incident_category: 'Traffic',
-                    incident_subcategory: 'Other',
-                    incident_title: 'Traffic Incident',
-                    what_happened: '',
-                  });
-                }}
-                className="items-center justify-center rounded-xl px-4 py-3"
-                style={{
-                  backgroundColor: '#FFA500' + '20',
-                  borderColor: '#FFA500' + '40',
-                  borderWidth: 1,
-                  minWidth: 120,
-                }}
-                activeOpacity={0.7}>
-                <Text className="text-xs font-bold" style={{ color: '#FFA500' }}>
-                  🚗 Traffic
-                </Text>
-              </TouchableOpacity>
-
-              {/* Fire Quick Link */}
-              <TouchableOpacity
-                onPress={() => {
-                  updateFormData({
-                    incident_category: 'Fire',
-                    incident_subcategory: 'Other',
-                    incident_title: 'Fire Incident',
-                    what_happened: '',
-                  });
-                }}
-                className="items-center justify-center rounded-xl px-4 py-3"
-                style={{
-                  backgroundColor: '#FF4500' + '20',
-                  borderColor: '#FF4500' + '40',
-                  borderWidth: 1,
-                  minWidth: 120,
-                }}
-                activeOpacity={0.7}>
-                <Text className="text-xs font-bold" style={{ color: '#FF4500' }}>
-                  🔥 Fire
-                </Text>
-              </TouchableOpacity>
-
-              {/* Medical Quick Link */}
-              <TouchableOpacity
-                onPress={() => {
-                  updateFormData({
-                    incident_category: 'Medical',
-                    incident_subcategory: 'Other',
-                    incident_title: 'Medical Emergency',
-                    what_happened: '',
-                  });
-                }}
-                className="items-center justify-center rounded-xl px-4 py-3"
-                style={{
-                  backgroundColor: '#00CED1' + '20',
-                  borderColor: '#00CED1' + '40',
-                  borderWidth: 1,
-                  minWidth: 120,
-                }}
-                activeOpacity={0.7}>
-                <Text className="text-xs font-bold" style={{ color: '#00CED1' }}>
-                  🏥 Medical
-                </Text>
-              </TouchableOpacity>
-
-              {/* Disturbance Quick Link */}
-              <TouchableOpacity
-                onPress={() => {
-                  updateFormData({
-                    incident_category: 'Disturbance',
-                    incident_subcategory: 'Other',
-                    incident_title: 'Public Disturbance',
-                    what_happened: '',
-                  });
-                }}
-                className="items-center justify-center rounded-xl px-4 py-3"
-                style={{
-                  backgroundColor: '#9370DB' + '20',
-                  borderColor: '#9370DB' + '40',
-                  borderWidth: 1,
-                  minWidth: 120,
-                }}
-                activeOpacity={0.7}>
-                <Text className="text-xs font-bold" style={{ color: '#9370DB' }}>
-                  📢 Disturbance
-                </Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
+                  return (
+                    <TouchableOpacity
+                      key={category.id}
+                      onPress={() => {
+                        updateFormData({
+                          incident_category: category.name,
+                          incident_subcategory: 'Other',
+                          incident_title: `${category.name} Incident`,
+                          what_happened: '',
+                        });
+                      }}
+                      className="items-center justify-center rounded-xl px-4 py-3"
+                      style={{
+                        backgroundColor: style.color + '20',
+                        borderColor: style.color + '40',
+                        borderWidth: 1,
+                        minWidth: 120,
+                      }}
+                      activeOpacity={0.7}>
+                      <Text className="text-xs font-bold" style={{ color: style.color }}>
+                        {style.icon} {category.name}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          )}
 
           {/* Date/Time and Location Header */}
           <View className="mb-6 flex-row items-center justify-between">
