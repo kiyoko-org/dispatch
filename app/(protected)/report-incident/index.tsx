@@ -266,6 +266,8 @@ export default function ReportIncidentIndex() {
             report.creatorId ||
             report.owner_id;
 
+          console.log(`[Nearby Reports] Checking report ${report.id}, creatorId: ${creatorId}, currentUserId: ${currentUserId}, match: ${String(creatorId) === String(currentUserId)}`);
+
           if (creatorId && String(creatorId) === String(currentUserId)) {
             console.log(`[Nearby Reports] Ignoring report ${report.id} - created by current user`);
             return false;
