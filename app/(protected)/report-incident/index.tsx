@@ -967,8 +967,9 @@ export default function ReportIncidentIndex() {
   };
 
   // Transform categories from database to match component expectations
-  const incidentCategories: { name: string; severity: string }[] = categories
+  const incidentCategories: { id: number; name: string; severity: string }[] = categories
     .map((category) => ({
+      id: category.id,
       name: category.name,
       severity: 'Medium',
     }))
