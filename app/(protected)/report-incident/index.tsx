@@ -1207,22 +1207,23 @@ categories.forEach((category) => {
         <View className="px-4 pt-4">
           {/* Quick Links */}
           <View className="mb-6">
+            <Text className="mb-2 text-sm font-semibold" style={{ color: colors.textSecondary }}>Quick Links</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
               <TouchableOpacity
                 onPress={handleQuickLinkTheft}
                 className="mr-3 rounded-xl px-4 py-3"
-                style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }}
+                style={{ backgroundColor: colors.error + '15', borderColor: colors.error, borderWidth: 1 }}
                 activeOpacity={0.7}
               >
-                <Text className="text-sm font-medium" style={{ color: colors.text }}>Someone stole from me</Text>
+                <Text className="text-sm font-medium" style={{ color: colors.text }}>🛡️ Someone stole from me</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleQuickLinkCarCrash}
                 className="mr-3 rounded-xl px-4 py-3"
-                style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }}
+                style={{ backgroundColor: colors.primary + '15', borderColor: colors.primary, borderWidth: 1 }}
                 activeOpacity={0.7}
               >
-                <Text className="text-sm font-medium" style={{ color: colors.text }}>Got into a car crash</Text>
+                <Text className="text-sm font-medium" style={{ color: colors.text }}>🚗 Got into a car crash</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
