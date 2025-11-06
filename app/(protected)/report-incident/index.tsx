@@ -1,6 +1,5 @@
 import HeaderWithSidebar from 'components/HeaderWithSidebar';
 import AddressSearch from 'components/AddressSearch';
-import Dropdown from 'components/Dropdown';
 import DatePicker from 'components/DatePicker';
 import TimePicker from 'components/TimePicker';
 
@@ -36,7 +35,6 @@ import AppDialog from 'components/AppDialog';
 import {
   Check,
   MapPin,
-  ChevronDown,
   Calendar,
   Clock,
   Plus,
@@ -65,8 +63,6 @@ import { UploadProgress } from 'components/ui/UploadProgress';
 import { SearchResult } from 'lib/types/search';
 
 interface UIState {
-  showCategoryDropdown: boolean;
-  showSubcategoryDropdown: boolean;
   showDateTimeDialog: boolean;
   showLocationDialog: boolean;
   showEvidenceModal: boolean;
@@ -89,7 +85,7 @@ const uploadManager = new UploadManager(storageService, filePickerService);
 export default function ReportIncidentIndex() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { categories, categoriesLoading, categoriesError, client } = useDispatchClient();
+  const { client } = useDispatchClient();
   const { session } = useAuthContext();
   const { addReport, reports } = useReports();
   const reportsRef = useRef(reports); // Keep ref in sync with reports state
@@ -112,23 +108,21 @@ export default function ReportIncidentIndex() {
     nearby_landmark: '',
   });
 
-  // UI state
-  const [uiState, setUIState] = useState<UIState>({
-    showCategoryDropdown: false,
-    showSubcategoryDropdown: false,
-    showDateTimeDialog: false,
-    showLocationDialog: false,
-    showEvidenceModal: false,
-    isRecording: false,
-    isSubmitting: false,
-    isGettingLocation: false,
-    locationFetchFailed: false,
-    validationErrors: {},
-    nearbyReportDialog: {
-      visible: false,
-      nearbyReports: [],
-    },
-  });
+   // UI state
+   const [uiState, setUIState] = useState<UIState>({
+     showDateTimeDialog: false,
+     showLocationDialog: false,
+     showEvidenceModal: false,
+     isRecording: false,
+     isSubmitting: false,
+     isGettingLocation: false,
+     locationFetchFailed: false,
+     validationErrors: {},
+     nearbyReportDialog: {
+       visible: false,
+       nearbyReports: [],
+     },
+   });
 
   // Location state
   const [currentLocation, setCurrentLocation] = useState({
@@ -416,39 +410,6 @@ export default function ReportIncidentIndex() {
   // Helper function to transform ReportData to dispatch-lib schema
   const transformToDispatchLibSchema = (data: ReportData, attachments: string[]) => {
     console.log('payload', data);
-    console.log('Categories available:', categories);
-    console.log('Looking for category:', data.incident_category);
-
-    // Find the category ID from the categories list
-    const category = categories.find((cat) => cat.name === data.incident_category);
-    console.log('Found category:', category);
-    const categoryId = category?.id || null;
-    console.log('Category ID:', categoryId);
-
-    // If no category found, throw an error with helpful information
-    if (!category && data.incident_category) {
-      console.error('Category not found:', data.incident_category);
-      console.error(
-        'Available categories:',
-        categories.map((c) => c.name)
-      );
-      throw new Error(
-        `Category "${data.incident_category}" not found. Available categories: ${categories.map((c) => c.name).join(', ')}`
-      );
-    }
-
-    // Find the subcategory ID if it exists
-    let subCategoryId = null;
-    if (category && category.sub_categories && data.incident_subcategory) {
-      if (data.incident_subcategory === 'Other') {
-        subCategoryId = null;
-      } else {
-        const subCategoryIndex = category.sub_categories.findIndex(
-          (sub) => sub === data.incident_subcategory
-        );
-        subCategoryId = subCategoryIndex >= 0 ? subCategoryIndex : null;
-      }
-    }
 
     return {
       incident_title: data.incident_title,
@@ -459,8 +420,8 @@ export default function ReportIncidentIndex() {
       latitude: data.latitude || parseFloat(currentLocation.latitude),
       longitude: data.longitude || parseFloat(currentLocation.longitude),
       what_happened: data.what_happened,
-      category_id: categoryId,
-      sub_category: subCategoryId,
+      category_id: null,
+      sub_category: null,
       attachments: attachments.length > 0 ? attachments : null,
       status: 'pending',
       is_archived: false,
@@ -619,9 +580,6 @@ export default function ReportIncidentIndex() {
     const errors: Record<string, string> = {};
 
     // Required field validations
-    if (!data.incident_category.trim()) {
-      errors.incident_category = 'Please select an incident category';
-    }
     if (!data.incident_title.trim()) {
       errors.incident_title = 'Please enter a title for the incident';
     }
@@ -933,79 +891,17 @@ export default function ReportIncidentIndex() {
     await updateLocationFromMap(latitude, longitude);
   };
 
-  // Open map view
-  const openMapView = () => {
-    initializeMapRegion();
-    const lat = parseFloat(currentLocation.latitude);
-    const lon = parseFloat(currentLocation.longitude);
+   // Open map view
+   const openMapView = () => {
+     initializeMapRegion();
+     const lat = parseFloat(currentLocation.latitude);
+     const lon = parseFloat(currentLocation.longitude);
 
-    if (!isNaN(lat) && !isNaN(lon)) {
-      setSelectedLocation({ latitude: lat, longitude: lon });
-    }
-    setShowMapView(true);
-  };
-
-  // Transform categories from database to match component expectations
-  const incidentCategories: { name: string; severity: string }[] = categories
-    .map((category) => ({
-      name: category.name,
-      severity: 'Medium',
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name));
-
-  // Create subcategories mapping from categories data
-  const subcategories: Record<string, string[]> = {};
-  categories.forEach((category) => {
-    if (category.sub_categories && category.sub_categories.length > 0) {
-      subcategories[category.name] = ['Other', ...category.sub_categories].sort();
-    } else {
-      subcategories[category.name] = ['Other'];
-    }
-  });
-
-  // Handle adding +1 to a report
-  const handleAddPlusOne = async (reportId: number) => {
-    if (!client) {
-      Alert.alert('Error', 'Dispatch client is not available. Please continue with a new report.');
-      return;
-    }
-    if (!session?.user?.id) {
-      Alert.alert('Error', 'No active session. Please sign in again.');
-      return;
-    }
-
-    setIsAddingWitness(true);
-    try {
-      const result = await client.addWitnessToReport(reportId, session.user.id, null);
-
-      if (result.error) {
-        Alert.alert('Error', result.error.message || 'Failed to add +1 to report');
-        return;
-      }
-
-      Alert.alert('Success', 'Your +1 has been added to the report!', [
-        {
-          text: 'OK',
-          onPress: () => {
-            updateUIState({
-              nearbyReportDialog: {
-                visible: false,
-                nearbyReports: [],
-              },
-            });
-            router.replace('/(protected)/home');
-          },
-        },
-      ]);
-    } catch (error) {
-      console.error('Error adding +1:', error);
-      Alert.alert('Error', 'Failed to add +1 to report. Please try again.');
-    } finally {
-      setIsAddingWitness(false);
-    }
-  };
-
-  // Handle submitting witness statement
+     if (!isNaN(lat) && !isNaN(lon)) {
+       setSelectedLocation({ latitude: lat, longitude: lon });
+     }
+     setShowMapView(true);
+   };
   const handleSubmitWitnessStatement = async () => {
     if (!witnessModal.reportId || !client) {
       Alert.alert('Error', 'Dispatch client is not available. Please continue with a new report.');
@@ -1062,19 +958,6 @@ export default function ReportIncidentIndex() {
   };
 
   const handleSubmitReport = async () => {
-    // Check if categories are loaded
-    if (categoriesLoading) {
-      Alert.alert('Loading', 'Please wait while categories are being loaded...', [{ text: 'OK' }]);
-      return;
-    }
-
-    if (categories.length === 0) {
-      Alert.alert('Error', 'Categories are not available. Please refresh the page and try again.', [
-        { text: 'OK' },
-      ]);
-      return;
-    }
-
     // Run validation first
     const errors = validateForm(formData);
 
@@ -1274,104 +1157,36 @@ export default function ReportIncidentIndex() {
             )}
           </View>
 
-          {/* What Happened */}
-          <View className="mb-4">
-            <Text
-              className="mb-2 text-xs font-semibold uppercase"
-              style={{ color: colors.textSecondary }}>
-              What Happened? <Text style={{ color: colors.error }}>*</Text>
-            </Text>
-            <TextInput
-              placeholder="Describe the incident in detail..."
-              value={formData.what_happened}
-              onChangeText={(value) => updateFormData({ what_happened: value })}
-              multiline
-              numberOfLines={6}
-              className="rounded-xl px-4 py-4 text-base"
-              style={{
-                backgroundColor: colors.surface,
-                borderColor: uiState.validationErrors.what_happened ? colors.error : colors.border,
-                borderWidth: 1,
-                color: colors.text,
-                minHeight: 120,
-              }}
-              placeholderTextColor={colors.textSecondary}
-              textAlignVertical="top"
-            />
-            {uiState.validationErrors.what_happened && (
-              <Text className="mt-1 text-xs" style={{ color: colors.error }}>
-                {uiState.validationErrors.what_happened}
-              </Text>
-            )}
-          </View>
-
-          {/* Category */}
-          <View className="mb-4">
-            <Text
-              className="mb-2 text-xs font-semibold uppercase"
-              style={{ color: colors.textSecondary }}>
-              Category <Text style={{ color: colors.error }}>*</Text>
-            </Text>
-            <TouchableOpacity
-              onPress={() => !categoriesLoading && updateUIState({ showCategoryDropdown: true })}
-              className="flex-row items-center justify-between rounded-xl px-4 py-4"
-              disabled={categoriesLoading}
-              activeOpacity={0.7}
-              style={{
-                backgroundColor: colors.surface,
-                borderColor: uiState.validationErrors.incident_category
-                  ? colors.error
-                  : colors.border,
-                borderWidth: 1,
-                opacity: categoriesLoading ? 0.6 : 1,
-              }}>
-              <Text
-                style={{ color: formData.incident_category ? colors.text : colors.textSecondary }}>
-                {categoriesLoading
-                  ? 'Loading categories...'
-                  : formData.incident_category || 'Select incident category'}
-              </Text>
-              <ChevronDown size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
-            {categoriesError && (
-              <Text className="mt-1 text-xs" style={{ color: colors.error }}>
-                Failed to load categories: {categoriesError}
-              </Text>
-            )}
-            {uiState.validationErrors.incident_category && (
-              <Text className="mt-1 text-xs" style={{ color: colors.error }}>
-                {uiState.validationErrors.incident_category}
-              </Text>
-            )}
-          </View>
-
-          {/* Subcategory - shown after category selection */}
-          {formData.incident_category && (
-            <View className="mb-4">
-              <Text
-                className="mb-2 text-xs font-semibold uppercase"
-                style={{ color: colors.textSecondary }}>
-                Subcategory
-              </Text>
-              <TouchableOpacity
-                onPress={() => updateUIState({ showSubcategoryDropdown: true })}
-                className="flex-row items-center justify-between rounded-xl px-4 py-4"
-                activeOpacity={0.7}
-                style={{
-                  backgroundColor: colors.surface,
-                  borderColor: colors.border,
-                  borderWidth: 1,
-                }}>
-                <Text
-                  style={{
-                    color: formData.incident_subcategory ? colors.text : colors.textSecondary,
-                  }}>
-                  {formData.incident_subcategory || 'Other'}
-                </Text>
-                <ChevronDown size={20} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-          )}
+           {/* What Happened */}
+           <View className="mb-4">
+             <Text
+               className="mb-2 text-xs font-semibold uppercase"
+               style={{ color: colors.textSecondary }}>
+               What Happened? <Text style={{ color: colors.error }}>*</Text>
+             </Text>
+             <TextInput
+               placeholder="Describe the incident in detail..."
+               value={formData.what_happened}
+               onChangeText={(value) => updateFormData({ what_happened: value })}
+               multiline
+               numberOfLines={6}
+               className="rounded-xl px-4 py-4 text-base"
+               style={{
+                 backgroundColor: colors.surface,
+                 borderColor: uiState.validationErrors.what_happened ? colors.error : colors.border,
+                 borderWidth: 1,
+                 color: colors.text,
+                 minHeight: 120,
+               }}
+               placeholderTextColor={colors.textSecondary}
+               textAlignVertical="top"
+             />
+             {uiState.validationErrors.what_happened && (
+               <Text className="mt-1 text-xs" style={{ color: colors.error }}>
+                 {uiState.validationErrors.what_happened}
+               </Text>
+             )}
+           </View>
 
           {/* Evidence Section */}
           <View className="mb-4">
@@ -1798,64 +1613,29 @@ export default function ReportIncidentIndex() {
         </View>
       </Modal>
 
-      {/* Dropdowns */}
-      <Dropdown
-        isVisible={uiState.showCategoryDropdown}
-        onClose={() => updateUIState({ showCategoryDropdown: false })}
-        onSelect={(item) =>
-          updateFormData({ incident_category: item.name, incident_subcategory: 'Other' })
-        }
-        data={incidentCategories}
-        keyExtractor={(item) => item.name}
-        renderItem={({ item }) => (
-          <View className="px-4 py-3">
-            <Text className="font-medium" style={{ color: colors.text }}>
-              {item.name}
-            </Text>
-          </View>
-        )}
-        title="Select Incident Category"
-        searchable={true}
-        searchPlaceholder="Search categories..."
-      />
+       {/* Date & Time Pickers */}
+       <DatePicker
+         isVisible={showDatePicker}
+         onClose={() => setShowDatePicker(false)}
+         onSelectDate={(dateString) => {
+           updateFormData({ incident_date: dateString });
+           setShowDatePicker(false);
+         }}
+         initialDate={formData.incident_date}
+       />
 
-      <Dropdown
-        isVisible={uiState.showSubcategoryDropdown}
-        onClose={() => updateUIState({ showSubcategoryDropdown: false })}
-        onSelect={(item) => updateFormData({ incident_subcategory: item })}
-        data={subcategories[formData.incident_category as keyof typeof subcategories] || []}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={({ item }) => (
-          <View className="px-4 py-3">
-            <Text style={{ color: colors.text }}>{item}</Text>
-          </View>
-        )}
-        title="Select Subcategory"
-      />
-
-      {/* Date & Time Pickers */}
-      <DatePicker
-        isVisible={showDatePicker}
-        onClose={() => setShowDatePicker(false)}
-        onSelectDate={(dateString) => {
-          updateFormData({ incident_date: dateString });
-          setShowDatePicker(false);
-        }}
-        initialDate={formData.incident_date}
-      />
-
-      <TimePicker
-        isVisible={showTimePicker}
-        onClose={() => setShowTimePicker(false)}
-        onSelectTime={(timeString) => {
-          updateFormData({ incident_time: timeString });
-          setShowTimePicker(false);
-        }}
-        initialHour=""
-        initialMinute=""
-        initialPeriod=""
-        selectedDate={formData.incident_date}
-      />
+       <TimePicker
+         isVisible={showTimePicker}
+         onClose={() => setShowTimePicker(false)}
+         onSelectTime={(timeString) => {
+           updateFormData({ incident_time: timeString });
+           setShowTimePicker(false);
+         }}
+         initialHour=""
+         initialMinute=""
+         initialPeriod=""
+         selectedDate={formData.incident_date}
+       />
 
       {/* Address Search */}
       <AddressSearch

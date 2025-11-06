@@ -1,7 +1,6 @@
 import { View, Text, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
 import { Calendar, Clock } from 'lucide-react-native';
 import { Card } from '../ui/Card';
-import Dropdown from '../Dropdown';
 import TimePicker from '../TimePicker';
 import DatePicker from '../DatePicker';
 import { useTheme } from '../ThemeContext';
@@ -16,31 +15,21 @@ interface BasicInfoStepProps {
     what_happened: string;
   };
   onUpdateFormData: (updates: Partial<BasicInfoStepProps['formData']>) => void;
-  onOpenDropdown: (dropdownType: 'category' | 'subcategory' | 'time' | 'date') => void;
-  incidentCategories: { name: string; severity: string }[];
-  subcategories: Record<string, string[]>;
-  showCategoryDropdown: boolean;
-  showSubcategoryDropdown: boolean;
+  onOpenDropdown: (dropdownType: 'time' | 'date') => void;
   showTimePicker: boolean;
   showDatePicker: boolean;
-  onCloseDropdown: (type: 'category' | 'subcategory' | 'time' | 'date') => void;
+  onCloseDropdown: (type: 'time' | 'date') => void;
   selectedHour: string;
   selectedMinute: string;
   selectedPeriod: string;
   validationErrors: Record<string, string>;
   onUseCurrentDateTime: () => void;
-  categoriesLoading?: boolean;
-  categoriesError?: string | null;
 }
 
 export default function BasicInfoStep({
   formData,
   onUpdateFormData,
   onOpenDropdown,
-  incidentCategories,
-  subcategories,
-  showCategoryDropdown,
-  showSubcategoryDropdown,
   showTimePicker,
   showDatePicker,
   onCloseDropdown,
@@ -49,8 +38,6 @@ export default function BasicInfoStep({
   selectedPeriod,
   validationErrors,
   onUseCurrentDateTime,
-  categoriesLoading = false,
-  categoriesError = null,
 }: BasicInfoStepProps) {
   const { colors } = useTheme();
 
@@ -63,73 +50,24 @@ export default function BasicInfoStep({
         <Text className="text-xl font-bold" style={{ color: colors.text }}>Basic Incident Information</Text>
       </View>
 
-      <View className="space-y-4">
-        {/* Incident Category */}
-        <View>
-          <Text className="mb-2 font-medium" style={{ color: colors.text }}>
-            Incident Category <Text className="text-red-600">*</Text>
-          </Text>
-          <TouchableOpacity
-            onPress={() => !categoriesLoading && onOpenDropdown('category')}
-            className="mb-3 flex-row items-center justify-between rounded-lg px-4 py-3"
-            style={{ 
-              backgroundColor: colors.surface, 
-              borderColor: colors.border, 
-              borderWidth: 1,
-              opacity: categoriesLoading ? 0.6 : 1
-            }}>
-            <Text style={{ color: formData.incident_category ? colors.text : colors.textSecondary }}>
-              {categoriesLoading ? 'Loading categories...' : (formData.incident_category || 'Select incident category')}
-            </Text>
-            <Text style={{ color: colors.textSecondary }}>
-              {categoriesLoading ? '⏳' : '▼'}
-            </Text>
-          </TouchableOpacity>
-          {categoriesError && (
-            <Text className="mt-1 mb-3 text-sm text-red-600">
-              Failed to load categories: {categoriesError}
-            </Text>
-          )}
-          {validationErrors.incident_category && (
-            <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.incident_category}</Text>
-          )}
-        </View>
-
-        {/* Incident Subcategory */}
-        {formData.incident_category && (
-          <View>
-            <Text className="mb-2 font-medium" style={{ color: colors.text }}>
-              Subcategory
-            </Text>
-            <TouchableOpacity
-              onPress={() => onOpenDropdown('subcategory')}
-              className="mb-3 flex-row items-center justify-between rounded-lg px-4 py-3"
-              style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }}>
-              <Text style={{ color: formData.incident_subcategory ? colors.text : colors.textSecondary }}>
-                {formData.incident_subcategory || 'Select subcategory'}
-              </Text>
-              <Text style={{ color: colors.textSecondary }}>▼</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Incident Title */}
-        <View>
-        <Text className="mb-2 font-medium" style={{ color: colors.text }}>
-        Incident Title <Text className="text-red-600">*</Text>
-        </Text>
-        <TextInput
-        placeholder="Brief, clear title describing the incident"
-        value={formData.incident_title}
-        onChangeText={(value) => onUpdateFormData({ incident_title: value })}
-        className="mb-3 rounded-lg px-4 py-3"
-        style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, color: colors.text }}
-        placeholderTextColor={colors.textSecondary}
-        />
-        {validationErrors.incident_title && (
-        <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.incident_title}</Text>
-        )}
-        </View>
+       <View className="space-y-4">
+         {/* Incident Title */}
+         <View>
+         <Text className="mb-2 font-medium" style={{ color: colors.text }}>
+         Incident Title <Text className="text-red-600">*</Text>
+         </Text>
+         <TextInput
+         placeholder="Brief, clear title describing the incident"
+         value={formData.incident_title}
+         onChangeText={(value) => onUpdateFormData({ incident_title: value })}
+         className="mb-3 rounded-lg px-4 py-3"
+         style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, color: colors.text }}
+         placeholderTextColor={colors.textSecondary}
+         />
+         {validationErrors.incident_title && (
+         <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.incident_title}</Text>
+         )}
+         </View>
 
         {/* What Happened */}
         <View>
@@ -212,57 +150,24 @@ export default function BasicInfoStep({
           </View>
           <Text className="text-sm" style={{ color: colors.textSecondary }}>→</Text>
         </TouchableOpacity>
-      </View>
+       </View>
 
-      {/* Dropdown Components */}
-      <Dropdown
-        isVisible={showCategoryDropdown}
-        onClose={() => onCloseDropdown('category')}
-        onSelect={(item) =>
-          onUpdateFormData({ incident_category: item.name, incident_subcategory: 'Other' })
-        }
-        data={incidentCategories}
-        keyExtractor={(item) => item.name}
-        renderItem={({ item }) => (
-          <View className="px-4 py-3">
-            <Text className="font-medium" style={{ color: colors.text }}>{item.name}</Text>
-          </View>
-        )}
-        title="Select Incident Category"
-        searchable={true}
-        searchPlaceholder="Search categories..."
-      />
+       <TimePicker
+         isVisible={showTimePicker}
+         onClose={() => onCloseDropdown('time')}
+         onSelectTime={(timeString) => onUpdateFormData({ incident_time: timeString })}
+         initialHour={selectedHour}
+         initialMinute={selectedMinute}
+         initialPeriod={selectedPeriod}
+         selectedDate={formData.incident_date}
+       />
 
-      <Dropdown
-        isVisible={showSubcategoryDropdown}
-        onClose={() => onCloseDropdown('subcategory')}
-        onSelect={(item) => onUpdateFormData({ incident_subcategory: item })}
-        data={subcategories[formData.incident_category as keyof typeof subcategories] || []}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={({ item }) => (
-          <View className="px-4 py-3">
-            <Text style={{ color: colors.text }}>{item}</Text>
-          </View>
-        )}
-        title="Select Subcategory"
-      />
-
-      <TimePicker
-        isVisible={showTimePicker}
-        onClose={() => onCloseDropdown('time')}
-        onSelectTime={(timeString) => onUpdateFormData({ incident_time: timeString })}
-        initialHour={selectedHour}
-        initialMinute={selectedMinute}
-        initialPeriod={selectedPeriod}
-        selectedDate={formData.incident_date}
-      />
-
-      <DatePicker
-        isVisible={showDatePicker}
-        onClose={() => onCloseDropdown('date')}
-        onSelectDate={(dateString) => onUpdateFormData({ incident_date: dateString })}
-        initialDate={formData.incident_date}
-      />
-    </Card>
-  );
-}
+       <DatePicker
+         isVisible={showDatePicker}
+         onClose={() => onCloseDropdown('date')}
+         onSelectDate={(dateString) => onUpdateFormData({ incident_date: dateString })}
+         initialDate={formData.incident_date}
+       />
+     </Card>
+   );
+ }
