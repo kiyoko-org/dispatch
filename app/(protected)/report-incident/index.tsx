@@ -259,6 +259,7 @@ export default function ReportIncidentIndex() {
         // Ignore reports created by the current user
         if (currentUserId) {
           const creatorId =
+            report.reporter_id ||
             report.user_id ||
             report.created_by ||
             report.creator_id ||
