@@ -1847,10 +1847,10 @@ categories.forEach((category) => {
         isVisible={uiState.showCategoryDropdown}
         onClose={() => updateUIState({ showCategoryDropdown: false })}
         onSelect={(item) =>
-          updateFormData({ incident_category: item.id.toString(), incident_subcategory: 'Other' })
+          updateFormData({ incident_category: item?.id?.toString() || '', incident_subcategory: 'Other' })
         }
         data={incidentCategories}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item, index) => item?.id?.toString() || index.toString()}
         renderItem={({ item }) => (
           <View className="px-4 py-3">
             <Text className="font-medium" style={{ color: colors.text }}>
