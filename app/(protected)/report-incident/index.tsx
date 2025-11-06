@@ -413,6 +413,27 @@ export default function ReportIncidentIndex() {
     generateSignedUrls();
   }, [uploadedFiles]);
 
+  // Quick link handlers
+  const handleQuickLinkTheft = () => {
+    const category = categories.find(cat => cat.name === 'Property Crimes');
+    if (category) {
+      updateFormData({
+        incident_category: category.id.toString(),
+        incident_subcategory: 'Theft',
+      });
+    }
+  };
+
+  const handleQuickLinkCarCrash = () => {
+    const category = categories.find(cat => cat.name === 'Traffic Incidents');
+    if (category) {
+      updateFormData({
+        incident_category: category.id.toString(),
+        incident_subcategory: 'Vehicular Accident',
+      });
+    }
+  };
+
   // Helper function to transform ReportData to dispatch-lib schema
   const transformToDispatchLibSchema = (data: ReportData, attachments: string[]) => {
     console.log('payload', data);
@@ -420,7 +441,7 @@ export default function ReportIncidentIndex() {
     console.log('Looking for category:', data.incident_category);
 
     // Find the category ID from the categories list
-    const category = categories.find((cat) => cat.name === data.incident_category);
+    const category = categories.find((cat) => cat.id.toString() === data.incident_category);
     console.log('Found category:', category);
     const categoryId = category?.id || null;
     console.log('Category ID:', categoryId);
@@ -954,14 +975,14 @@ export default function ReportIncidentIndex() {
     .sort((a, b) => a.name.localeCompare(b.name));
 
   // Create subcategories mapping from categories data
-  const subcategories: Record<string, string[]> = {};
-  categories.forEach((category) => {
-    if (category.sub_categories && category.sub_categories.length > 0) {
-      subcategories[category.name] = ['Other', ...category.sub_categories].sort();
-    } else {
-      subcategories[category.name] = ['Other'];
-    }
-  });
+const subcategories: Record<string, string[]> = {};
+categories.forEach((category) => {
+  if (category.sub_categories && category.sub_categories.length > 0) {
+  subcategories[category.id.toString()] = ['Other', ...category.sub_categories].sort();
+  } else {
+  subcategories[category.id.toString()] = ['Other'];
+  }
+});
 
   // Handle adding +1 to a report
   const handleAddPlusOne = async (reportId: number) => {
@@ -1184,6 +1205,28 @@ export default function ReportIncidentIndex() {
         contentContainerStyle={{ paddingBottom: 100 }}
         className="flex-1">
         <View className="px-4 pt-4">
+          {/* Quick Links */}
+          <View className="mb-6">
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
+              <TouchableOpacity
+                onPress={handleQuickLinkTheft}
+                className="mr-3 rounded-xl px-4 py-3"
+                style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }}
+                activeOpacity={0.7}
+              >
+                <Text className="text-sm font-medium" style={{ color: colors.text }}>Someone stole from me</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleQuickLinkCarCrash}
+                className="mr-3 rounded-xl px-4 py-3"
+                style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }}
+                activeOpacity={0.7}
+              >
+                <Text className="text-sm font-medium" style={{ color: colors.text }}>Got into a car crash</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+
           {/* Date/Time and Location Header */}
           <View className="mb-6 flex-row items-center justify-between">
             {/* Date/Time */}
@@ -1329,7 +1372,7 @@ export default function ReportIncidentIndex() {
                 style={{ color: formData.incident_category ? colors.text : colors.textSecondary }}>
                 {categoriesLoading
                   ? 'Loading categories...'
-                  : formData.incident_category || 'Select incident category'}
+                  : (categories.find(cat => cat.id.toString() === formData.incident_category)?.name || 'Select incident category')}
               </Text>
               <ChevronDown size={20} color={colors.textSecondary} />
             </TouchableOpacity>
@@ -1803,10 +1846,10 @@ export default function ReportIncidentIndex() {
         isVisible={uiState.showCategoryDropdown}
         onClose={() => updateUIState({ showCategoryDropdown: false })}
         onSelect={(item) =>
-          updateFormData({ incident_category: item.name, incident_subcategory: 'Other' })
+          updateFormData({ incident_category: item.id.toString(), incident_subcategory: 'Other' })
         }
         data={incidentCategories}
-        keyExtractor={(item) => item.name}
+        keyExtractor={(item) => item.id.toString()}
         renderItem={({ item }) => (
           <View className="px-4 py-3">
             <Text className="font-medium" style={{ color: colors.text }}>
