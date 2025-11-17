@@ -31,6 +31,7 @@ import { useDispatchClient } from 'components/DispatchProvider';
 import { useAuthContext } from 'components/AuthProvider';
 import { useReports } from '@kiyoko-org/dispatch-lib';
 import { distanceInMeters } from 'lib/locations';
+import { isWithinTuguegarao } from 'lib/locations/tuguegarao-boundary';
 import type { Database } from '@kiyoko-org/dispatch-lib/database.types';
 import AppDialog from 'components/AppDialog';
 import {
@@ -542,42 +543,31 @@ export default function ReportIncidentIndex() {
         accuracy: Location.Accuracy.High,
       });
 
-      // Update current location coordinates
+      const latitude = location.coords.latitude;
+      const longitude = location.coords.longitude;
+
+      if (!isWithinTuguegarao(latitude, longitude)) {
+        updateUIState({ locationFetchFailed: true });
+        if (!silent) {
+          showUnsupportedAreaDialog(
+            'This app currently only supports Tuguegarao City. Please choose a location within Tuguegarao City.',
+            () => handleUseCurrentLocation(true)
+          );
+        }
+        return;
+      }
+
       setCurrentLocation({
-        latitude: location.coords.latitude.toString(),
-        longitude: location.coords.longitude.toString(),
+        latitude: latitude.toString(),
+        longitude: longitude.toString(),
       });
 
       try {
         // Reverse geocode to get address
-        const address = await geocodingService.reverseGeocode(
-          location.coords.latitude,
-          location.coords.longitude
-        );
+        const address = await geocodingService.reverseGeocode(latitude, longitude);
 
         if (address.length > 0) {
           const place = address[0];
-
-          // Check whether the detected place is within Tuguegarao City
-          const cityCheck = (
-            place.city ||
-            place.subregion ||
-            place.region ||
-            place.name ||
-            ''
-          ).toString();
-          const isTuguegarao = /tuguegarao/i.test(cityCheck);
-
-          if (!isTuguegarao) {
-            updateUIState({ locationFetchFailed: true });
-            if (!silent) {
-              showUnsupportedAreaDialog(
-                'This app currently only supports Tuguegarao City. Please choose a location within Tuguegarao City.',
-                () => handleUseCurrentLocation(true)
-              );
-            }
-            return;
-          }
 
           // Build a comprehensive street address
           const addressParts = [
@@ -600,25 +590,25 @@ export default function ReportIncidentIndex() {
             ]);
           }
           // Check for nearby reports
-          await checkForNearbyReports(location.coords.latitude, location.coords.longitude);
+          await checkForNearbyReports(latitude, longitude);
         } else {
           // Fallback to coordinates if reverse geocoding fails
           updateFormData({
-            street_address: `Lat: ${location.coords.latitude.toFixed(6)}, Lng: ${location.coords.longitude.toFixed(6)}`,
+            street_address: `Lat: ${latitude.toFixed(6)}, Lng: ${longitude.toFixed(6)}`,
           });
           updateUIState({ locationFetchFailed: false, showLocationDialog: false });
           // Check for nearby reports
-          await checkForNearbyReports(location.coords.latitude, location.coords.longitude);
+          await checkForNearbyReports(latitude, longitude);
         }
       } catch (geocodeError) {
         console.error('Geocoding error:', geocodeError);
-        // Fallback to coordinates if geocoding fails
+        // Fallback to coordinates if reverse geocoding fails
         updateFormData({
-          street_address: `Lat: ${location.coords.latitude.toFixed(6)}, Lng: ${location.coords.longitude.toFixed(6)}`,
+          street_address: `Lat: ${latitude.toFixed(6)}, Lng: ${longitude.toFixed(6)}`,
         });
         updateUIState({ locationFetchFailed: false, showLocationDialog: false });
         // Check for nearby reports
-        await checkForNearbyReports(location.coords.latitude, location.coords.longitude);
+        await checkForNearbyReports(latitude, longitude);
       }
     } catch (error) {
       console.error('Error getting location:', error);
@@ -834,6 +824,16 @@ export default function ReportIncidentIndex() {
 
   // Handle address search selection
   const handleAddressSelect = (address: SearchResult) => {
+    const lat = Number(address.lat);
+    const lon = Number(address.lon);
+    if (!isWithinTuguegarao(lat, lon)) {
+      updateUIState({ locationFetchFailed: true });
+      showUnsupportedAreaDialog(
+        'This app currently only supports Tuguegarao City. Please choose a location within Tuguegarao City.'
+      );
+      return;
+    }
+
     updateFormData({
       street_address: address.display_name || address.name || '',
     });
@@ -844,7 +844,7 @@ export default function ReportIncidentIndex() {
     setShowAddressSearch(false);
     updateUIState({ showLocationDialog: false, locationFetchFailed: false });
     // Check for nearby reports
-    checkForNearbyReports(parseFloat(address.lat), parseFloat(address.lon));
+    checkForNearbyReports(lat, lon);
   };
 
   // Initialize map region
@@ -879,6 +879,13 @@ export default function ReportIncidentIndex() {
     setSelectedLocation({ latitude, longitude });
 
     try {
+      if (!isWithinTuguegarao(latitude, longitude)) {
+        setLocationError(
+          'This app currently only supports Tuguegarao City. Please choose a location within Tuguegarao City.'
+        );
+        return;
+      }
+
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Location update timed out')), 10000);
       });
@@ -886,22 +893,6 @@ export default function ReportIncidentIndex() {
       const geocodePromise = reverseGeocode(latitude, longitude);
       const geocodeResults = (await Promise.race([geocodePromise, timeoutPromise])) as any[];
       const address = geocodeResults[0];
-
-      const city = (
-        address?.city ||
-        address?.subregion ||
-        address?.region ||
-        address?.name ||
-        ''
-      ).toString();
-      const isTuguegarao = /tuguegarao/i.test(city);
-
-      if (!isTuguegarao) {
-        setLocationError(
-          'This app currently only supports Tuguegarao City. Please choose a location within Tuguegarao City.'
-        );
-        return;
-      }
 
       updateFormData({
         street_address: address?.name || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
