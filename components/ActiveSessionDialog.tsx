@@ -8,11 +8,18 @@ import {
   Alert,
   Pressable,
 } from 'react-native';
-import { X, Camera as CameraIcon } from 'lucide-react-native';
+import {
+  X,
+  Camera as CameraIcon,
+  Image as ImageIcon,
+  SeparatorHorizontal,
+} from 'lucide-react-native';
 import { useState } from 'react';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
+import RNQRGenerator from 'rn-qr-generator';
 import { useTheme } from './ThemeContext';
-import { verifyNationalIdQR } from 'lib/id';
+import { verifyNationalIdQR } from 'lib/id-client';
 
 interface ActiveSessionDialogProps {
   visible: boolean;
@@ -31,6 +38,7 @@ export default function ActiveSessionDialog({
   const [cameraModalVisible, setCameraModalVisible] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [verifyLoading, setVerifyLoading] = useState(false);
+  const [imagePickerLoading, setImagePickerLoading] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
 
   const openCameraForQr = async () => {
@@ -50,56 +58,87 @@ export default function ActiveSessionDialog({
     }
   };
 
+  const processQrValue = async (qrValue: string) => {
+    try {
+      const result = await verifyNationalIdQR(qrValue);
+
+      if (result.isVerified && result.data) {
+        try {
+          setVerifyLoading(true);
+          await onVerifyWithId(result.data.data.pcn);
+        } catch (error) {
+          console.error('Verification error', error);
+          Alert.alert(
+            'Verification failed',
+            'An error occurred while verifying. Please try again.'
+          );
+        } finally {
+          setVerifyLoading(false);
+        }
+      } else {
+        Alert.alert('Verification failed', 'Unable to verify the scanned QR. Please try again.');
+      }
+    } catch (err) {
+      console.error('Verification error', err);
+      Alert.alert('Verification error', 'An error occurred while verifying. Please try again.');
+    } finally {
+      setIsScanning(false);
+    }
+  };
+
   const handleBarcodeScanned = ({ data }: { data: string }) => {
     if (isScanning) return;
     setIsScanning(true);
     setCameraModalVisible(false);
 
-    verifyNationalIdQR(data)
-      .then(async (result) => {
-        if (result.isVerified && result.data) {
-          try {
-            setVerifyLoading(true);
-            await onVerifyWithId(result.data.data.pcn);
-          } catch (error) {
-            console.error('Verification error', error);
-            Alert.alert(
-              'Verification failed',
-              'An error occurred while verifying. Please try again.',
-              [
-                {
-                  text: 'OK',
-                  onPress: () => {
-                    setIsScanning(false);
-                  },
-                },
-              ]
-            );
-          } finally {
-            setVerifyLoading(false);
-          }
-        } else {
-          Alert.alert('Verification failed', 'Unable to verify the scanned QR. Please try again.', [
-            {
-              text: 'OK',
-              onPress: () => {
-                setIsScanning(false);
-              },
-            },
-          ]);
-        }
-      })
-      .catch((err) => {
-        console.error('Verification error', err);
-        Alert.alert('Verification error', 'An error occurred while verifying. Please try again.', [
-          {
-            text: 'OK',
-            onPress: () => {
-              setIsScanning(false);
-            },
-          },
-        ]);
+    processQrValue(data);
+  };
+
+  const handleUploadQrImage = async () => {
+    try {
+      setImagePickerLoading(true);
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      if (!permissionResult.granted) {
+        Alert.alert(
+          'Permission required',
+          'Media library permission is required to upload the QR image.'
+        );
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        base64: true,
+        quality: 1,
       });
+
+      if (result.canceled) {
+        return;
+      }
+
+      const asset = result.assets?.[0];
+
+      if (!asset || !asset.base64) {
+        Alert.alert('Upload failed', 'Unable to read the selected image. Please try another one.');
+        return;
+      }
+
+      const detection = await RNQRGenerator.detect({ base64: asset.base64 });
+      const qrValue = detection.values?.[0]?.trim();
+
+      if (!qrValue) {
+        Alert.alert('No QR code found', 'The selected image does not contain a valid QR code.');
+        return;
+      }
+
+      await processQrValue(qrValue);
+    } catch (error) {
+      console.error('QR image upload error', error);
+      Alert.alert('Upload failed', 'Unable to process the selected image. Please try again.');
+    } finally {
+      setImagePickerLoading(false);
+    }
   };
 
   return (
@@ -139,7 +178,7 @@ export default function ActiveSessionDialog({
                   className="flex-row items-center justify-center rounded-xl py-4"
                   style={{ backgroundColor: colors.primary }}
                   onPress={openCameraForQr}
-                  disabled={isLoading || verifyLoading}>
+                  disabled={isLoading || verifyLoading || imagePickerLoading}>
                   {verifyLoading ? (
                     <ActivityIndicator color="white" size="small" />
                   ) : (
@@ -147,6 +186,33 @@ export default function ActiveSessionDialog({
                       <CameraIcon size={20} color="white" />
                       <Text className="ml-2 text-center text-base font-semibold text-white">
                         Scan ID Card
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                <View
+                  className="mx-4 my-2"
+                  style={{ borderBottomColor: colors.border, borderBottomWidth: 1 }}
+                />
+
+                <TouchableOpacity
+                  className="flex-row items-center justify-center rounded-xl border py-4"
+                  style={{
+                    backgroundColor: colors.surfaceVariant,
+                    borderColor: colors.border,
+                  }}
+                  onPress={handleUploadQrImage}
+                  disabled={isLoading || verifyLoading || imagePickerLoading}>
+                  {imagePickerLoading ? (
+                    <ActivityIndicator color={colors.text} size="small" />
+                  ) : (
+                    <>
+                      <ImageIcon size={20} color={colors.text} />
+                      <Text
+                        className="ml-2 text-center text-base font-semibold"
+                        style={{ color: colors.text }}>
+                        Upload QR Image
                       </Text>
                     </>
                   )}

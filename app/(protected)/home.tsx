@@ -216,18 +216,6 @@ export default function Home() {
               }}>
               Quick Actions
             </Text>
-            <View
-              style={{
-                marginLeft: 12,
-                borderRadius: 6,
-                backgroundColor: currentColors.headerTagBg,
-                paddingHorizontal: 8,
-                paddingVertical: 4,
-              }}>
-              <Text style={{ fontSize: 12, fontWeight: '500', color: currentColors.headerText }}>
-                Active
-              </Text>
-            </View>
           </View>
 
           <View style={{ flexDirection: 'row', gap: 16 }}>

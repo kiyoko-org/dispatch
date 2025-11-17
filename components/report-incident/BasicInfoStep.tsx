@@ -13,6 +13,7 @@ interface BasicInfoStepProps {
     incident_title: string;
     incident_date: string;
     incident_time: string;
+    what_happened: string;
   };
   onUpdateFormData: (updates: Partial<BasicInfoStepProps['formData']>) => void;
   onOpenDropdown: (dropdownType: 'category' | 'subcategory' | 'time' | 'date') => void;
@@ -114,57 +115,86 @@ export default function BasicInfoStep({
 
         {/* Incident Title */}
         <View>
+        <Text className="mb-2 font-medium" style={{ color: colors.text }}>
+        Incident Title <Text className="text-red-600">*</Text>
+        </Text>
+        <TextInput
+        placeholder="Brief, clear title describing the incident"
+        value={formData.incident_title}
+        onChangeText={(value) => onUpdateFormData({ incident_title: value })}
+        className="mb-3 rounded-lg px-4 py-3"
+        style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, color: colors.text }}
+        placeholderTextColor={colors.textSecondary}
+        />
+        {validationErrors.incident_title && (
+        <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.incident_title}</Text>
+        )}
+        </View>
+
+        {/* What Happened */}
+        <View>
           <Text className="mb-2 font-medium" style={{ color: colors.text }}>
-            Incident Title <Text className="text-red-600">*</Text>
+            What Happened? <Text className="text-red-600">*</Text>
           </Text>
           <TextInput
-            placeholder="Brief, clear title describing the incident"
-            value={formData.incident_title}
-            onChangeText={(value) => onUpdateFormData({ incident_title: value })}
+            placeholder="Describe the incident in detail..."
+            value={formData.what_happened}
+            onChangeText={(value) => onUpdateFormData({ what_happened: value })}
+            multiline
+            numberOfLines={4}
             className="mb-3 rounded-lg px-4 py-3"
-            style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, color: colors.text }}
+            style={{
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+              borderWidth: 1,
+              color: colors.text,
+            }}
             placeholderTextColor={colors.textSecondary}
+            textAlignVertical="top"
           />
-          {validationErrors.incident_title && (
-            <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.incident_title}</Text>
+          {validationErrors.what_happened && (
+            <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.what_happened}</Text>
           )}
         </View>
 
-        {/* Incident Date */}
+        {/* Incident Date & Time */}
         <View>
-          <Text className="mb-2 font-medium" style={{ color: colors.text }}>
-            Incident Date <Text className="text-red-600">*</Text>
-          </Text>
+        <Text className="mb-2 font-medium" style={{ color: colors.text }}>
+        Incident Date & Time <Text className="text-red-600">*</Text>
+        </Text>
+        <View className="flex-row space-x-4 mb-3">
+        <View className="flex-1">
           <TouchableOpacity
             onPress={() => onOpenDropdown('date')}
-            className="mb-3 flex-row items-center justify-between rounded-lg px-4 py-3"
-            style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }}>
+            className="flex-row items-center justify-between rounded-lg px-4 py-3"
+          style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }}>
             <Text style={{ color: formData.incident_date ? colors.text : colors.textSecondary }}>
               {formData.incident_date || 'mm/dd/yyyy'}
-            </Text>
-            <Calendar size={20} color={colors.textSecondary} />
+              </Text>
+              <Calendar size={20} color={colors.textSecondary} />
           </TouchableOpacity>
-          {validationErrors.incident_date && (
-            <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.incident_date}</Text>
-          )}
-        </View>
-
-        {/* Incident Time */}
-        <View>
-          <Text className="mb-2 font-medium" style={{ color: colors.text }}>
-            Incident Time <Text className="text-red-600">*</Text>
-          </Text>
-          <TouchableOpacity
-            onPress={() => onOpenDropdown('time')}
-            className="mb-3 flex-row items-center justify-between rounded-lg px-4 py-3"
-            style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }}>
+          </View>
+            <View className="flex-1">
+              <TouchableOpacity
+                onPress={() => onOpenDropdown('time')}
+                className="flex-row items-center justify-between rounded-lg px-4 py-3"
+              style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1 }}>
             <Text style={{ color: formData.incident_time ? colors.text : colors.textSecondary }}>
-              {formData.incident_time || 'Select time'}
-            </Text>
+                {formData.incident_time || 'Select time'}
+              </Text>
             <Text style={{ color: colors.textSecondary }}>▼</Text>
           </TouchableOpacity>
+        </View>
+        </View>
+        {(validationErrors.incident_date || validationErrors.incident_time) && (
+        <View className="mb-3">
+          {validationErrors.incident_date && (
+              <Text className="mt-1 text-sm text-red-600">{validationErrors.incident_date}</Text>
+            )}
           {validationErrors.incident_time && (
-            <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.incident_time}</Text>
+              <Text className="mt-1 text-sm text-red-600">{validationErrors.incident_time}</Text>
+              )}
+            </View>
           )}
         </View>
 

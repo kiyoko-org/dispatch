@@ -5,7 +5,7 @@
       "name": "dispatch",
       "dependencies": {
         "@expo/metro-runtime": "~5.0.4",
-        "@kiyoko-org/dispatch-lib": "github:kiyoko-org/dispatch-lib#8cce4d62af1219ba6104319108b87b4dd14a5030",
+        "@kiyoko-org/dispatch-lib": "github:kiyoko-org/dispatch-lib#74b8bdba",
         "@react-native-async-storage/async-storage": "^2.2.0",
         "@react-native-community/netinfo": "^11.4.1",
         "@supabase/supabase-js": "^2.54.0",
@@ -43,6 +43,7 @@
         "react-native-svg": "^15.12.1",
         "react-native-volume-manager": "^2.0.8",
         "react-native-web": "^0.20.0",
+        "rn-qr-generator": "^1.4.5",
         "zod": "^4.1.12",
       },
       "devDependencies": {
@@ -368,7 +369,7 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.29", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-uw6guiW/gcAGPDhLmd77/6lW8QLeiV5RUTsAX46Db6oLhGaVj4lhnPwb184s1bkc8kdVg/+h988dro8GRDpmYQ=="],
 
-    "@kiyoko-org/dispatch-lib": ["dispatch-lib@github:kiyoko-org/dispatch-lib#8cce4d6", { "dependencies": { "@supabase/supabase-js": "^2.75.0", "zod": "^4.1.12" }, "peerDependencies": { "react": "^19.0.0", "typescript": "^5" } }, "kiyoko-org-dispatch-lib-8cce4d6"],
+    "@kiyoko-org/dispatch-lib": ["dispatch-lib@github:kiyoko-org/dispatch-lib#74b8bdb", { "dependencies": { "@supabase/supabase-js": "^2.75.0", "zod": "^4.1.12" }, "peerDependencies": { "react": "^19.0.0", "typescript": "^5" } }, "kiyoko-org-dispatch-lib-74b8bdb"],
 
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@0.2.12", "", { "dependencies": { "@emnapi/core": "^1.4.3", "@emnapi/runtime": "^1.4.3", "@tybys/wasm-util": "^0.10.0" } }, "sha512-ZVWUcfwY4E/yPitQJl481FjFo3K22D6qF0DuFH6Y/nbnE11GY5uguDxZMGXPQ8WQ0128MXQD7TnfHyK4oWoIJQ=="],
 
@@ -1565,6 +1566,8 @@
     "reusify": ["reusify@1.1.0", "", {}, "sha512-g6QUff04oZpHs0eG5p83rFLhHeV00ug/Yf9nZM6fLeUrPguBTkTQOdpAWWspMh55TZfVQDPaN3NQJfbVRAxdIw=="],
 
     "rimraf": ["rimraf@3.0.2", "", { "dependencies": { "glob": "^7.1.3" }, "bin": { "rimraf": "bin.js" } }, "sha512-JZkJMZkAGFFPP2YqXZXPbMlMBgsxzE8ILs4lMIX/2o0L9UBw9O/Y3o6wFw/i9YLapcUJWwqbi3kdxIPdC62TIA=="],
+
+    "rn-qr-generator": ["rn-qr-generator@1.4.5", "", { "peerDependencies": { "react-native": ">=0.55" } }, "sha512-zdcYD0LYGY7vQoJ/N7OvSaC97vHD+cZ3rY7nFZ81YJs0tqbhRxZsEQddQnkBkP41WVb40M9J129xNe2zfnwtSw=="],
 
     "run-parallel": ["run-parallel@1.2.0", "", { "dependencies": { "queue-microtask": "^1.2.2" } }, "sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA=="],
 

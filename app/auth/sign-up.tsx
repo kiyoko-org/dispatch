@@ -10,16 +10,19 @@ import {
 	TextInput,
 	ScrollView,
 } from 'react-native';
-import { Shield, Camera as CameraIcon, Check, ChevronDown, Eye, EyeOff } from 'lucide-react-native';
+import { Shield, Camera as CameraIcon, Check, ChevronDown, Eye, EyeOff, Image as ImageIcon } from 'lucide-react-native';
 import { CameraView, useCameraPermissions } from 'expo-camera';
+import * as ImagePicker from 'expo-image-picker';
+import RNQRGenerator from 'rn-qr-generator';
 import { useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from 'lib/supabase';
 import { createURL } from 'expo-linking';
 import { registerForFCMToken } from 'hooks/useFCMToken';
-import { verifyNationalIdQR, type NationalIdData } from 'lib/id';
+import { verifyNationalIdQR, type NationalIdData } from 'lib/id-client';
 import { useTheme } from 'components/ThemeContext';
 import Dropdown from 'components/Dropdown';
+import DatePicker from 'components/DatePicker';
 import { useDispatchClient } from 'components/DispatchProvider';
 import { z } from 'zod';
 import { useBarangays } from '@kiyoko-org/dispatch-lib';
@@ -251,6 +254,10 @@ const withTimeout = async<T>(
 			const [birthYear, setBirthYear] = useState('');
 			const [birthMonth, setBirthMonth] = useState('');
 			const [birthDay, setBirthDay] = useState('');
+			const [showDatePicker, setShowDatePicker] = useState(false);
+			const datePickerSelectionRef = useRef(false);
+			const minBirthYear = 1900;
+			const maxBirthYear = new Date().getFullYear() - 18;
 			const [birthCity, setBirthCity] = useState('');
 			const [birthProvince, setBirthProvince] = useState('');
 
@@ -277,6 +284,7 @@ const withTimeout = async<T>(
 			const [verifying, setVerifying] = useState(false);
 			const [verified, setVerified] = useState(false);
 			const [idData, setIdData] = useState<NationalIdData | null>(null);
+			const [imagePickerLoading, setImagePickerLoading] = useState(false);
 			const isIdLocked = verified && !!idData;
 
 			useEffect(() => {
@@ -286,17 +294,6 @@ const withTimeout = async<T>(
 					setShowBirthCityDropdown(false);
 				}
 			}, [isIdLocked]);
-
-  // Helper function to get days in month (handles leap years)
-  const getDaysInMonth = (year: string, month: string): number => {
-    const y = parseInt(year);
-			const m = parseInt(month);
-			if (isNaN(y) || isNaN(m) || m < 1 || m > 12) {
-      return 31; // Default to 31 if invalid
-    }
-
-			return new Date(y, m, 0).getDate();
-  };
 
   // Validate QR data against form data
   const validateQRData = (idData: NationalIdData): string | null => {
@@ -407,6 +404,17 @@ const withTimeout = async<T>(
 			const suffixOptions: string[] = ['Jr.', 'Sr.', 'I', 'II', 'III', 'IV', 'V'];
 
 			const [validationErrors, setValidationErrors] = useState<Record<string, string>>({ });
+
+			const handleDatePickerClose = () => {
+				setShowDatePicker(false);
+				if (!datePickerSelectionRef.current && (!birthYear || !birthMonth || !birthDay)) {
+					setValidationErrors((prev) => ({
+						...prev,
+						birthYear: 'This field is required',
+					}));
+				}
+				datePickerSelectionRef.current = false;
+			};
 
   const validateField = (fieldName: string, value: any) => {
     try {
@@ -521,6 +529,96 @@ const withTimeout = async<T>(
 				setShowSuffixDropdown(false);
   };
 
+  const resetScanState = () => {
+				setScannedQr(null);
+				setIsScanning(false);
+  };
+
+  const processQrValue = async (qrValue: string) => {
+				setScannedQr(qrValue);
+				setVerifying(true);
+
+				try {
+      const result = await verifyNationalIdQR(qrValue);
+
+				if (!result.isVerified || !result.data) {
+					setVerified(false);
+				setIdData(null);
+				resetScanState();
+				Alert.alert('Verification failed', 'Unable to verify the scanned QR. Please try again.');
+				return;
+      }
+
+				const validationError = validateQRData(result.data);
+				if (validationError) {
+					setVerified(false);
+				setIdData(null);
+				resetScanState();
+				Alert.alert('Verification failed', `Data mismatch:\n${validationError}`);
+				return;
+      }
+
+				if (!client) {
+        const message = isInitialized
+				? 'Unable to verify this ID right now. Please try again in a moment.'
+				: 'We are still getting things ready. Please try again in a moment.';
+				setVerified(false);
+				setIdData(null);
+				resetScanState();
+				Alert.alert('Hold on', message);
+				return;
+      }
+
+				try {
+        const {exists, error: idCheckError } = await withTimeout(
+				client.idExists(result.data.data.pcn),
+				10_000,
+				'ID check timed out'
+				);
+
+				if (idCheckError) {
+          throw new Error(idCheckError);
+        }
+
+				if (exists) {
+					setVerified(false);
+				setIdData(null);
+				resetScanState();
+				Alert.alert(
+				'ID already registered',
+				'This PhilSys Card Number is already linked to another account. If you believe this is an error, please contact support.'
+				);
+				return;
+        }
+      } catch (error) {
+					console.error('ID availability check failed', error);
+				const errorMessage = error instanceof Error ? error.message : String(error);
+				const userMessage =
+				errorMessage === 'ID check timed out'
+				? 'The ID check is taking longer than expected. Please try again.'
+				: 'We could not confirm your ID number just now. Please try again.';
+				setVerified(false);
+				setIdData(null);
+				resetScanState();
+				Alert.alert('Unable to verify ID', userMessage);
+				return;
+      }
+
+				setVerified(true);
+				setIdData(result.data);
+				Alert.alert('Verification successful', 'Your ID has been verified.');
+    } catch (err) {
+					console.error('Verification error', err);
+				setVerified(false);
+				setIdData(null);
+				resetScanState();
+				Alert.alert('Verification error', 'An error occurred while verifying. Please try again.');
+    } finally {
+					setVerifying(false);
+				setIsScanning(false);
+    }
+  };
+
   // Request permission and open camera modal
   const openCameraForQr = async () => {
     if (isIdLocked) {
@@ -549,116 +647,59 @@ const withTimeout = async<T>(
     if (isScanning) return;
 				setIsScanning(true);
 				setCameraModalVisible(false);
-				setScannedQr(data);
-				setVerifying(true);
+				await processQrValue(data);
+  };
 
-    const resetScanState = () => {
-					setScannedQr(null);
-				setIsScanning(false);
-    };
-
-				try {
-      const result = await verifyNationalIdQR(data);
-
-				if (!result.isVerified || !result.data) {
-					setVerified(false);
-				setIdData(null);
-				Alert.alert('Verification failed', 'Unable to verify the scanned QR. Please try again.', [
-				{
-					text: 'OK',
-				onPress: resetScanState,
-          },
-				]);
-				return;
-      }
-
-				const validationError = validateQRData(result.data);
-				if (validationError) {
-					setVerified(false);
-				setIdData(null);
-				Alert.alert('Verification failed', `Data mismatch:\n${validationError}`, [
-				{
-					text: 'OK',
-				onPress: resetScanState,
-          },
-				]);
-				return;
-      }
-
-				if (!client) {
-        const message = isInitialized
-				? 'Unable to verify this ID right now. Please try again in a moment.'
-				: 'We are still getting things ready. Please try again in a moment.';
-				setVerified(false);
-				setIdData(null);
-				Alert.alert('Hold on', message, [
-				{
-					text: 'OK',
-				onPress: resetScanState,
-          },
-				]);
-				return;
-      }
+  const handleUploadQrImage = async () => {
+    if (isIdLocked) {
+      Alert.alert('ID already verified', 'Your national ID has already been verified.');
+      return;
+    }
 
 				try {
-        const {exists, error: idCheckError } = await withTimeout(
-				client.idExists(result.data.data.pcn),
-				10_000,
-				'ID check timed out'
-				);
+      setImagePickerLoading(true);
+      const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-				if (idCheckError) {
-          throw new Error(idCheckError);
-        }
-
-				if (exists) {
-					setVerified(false);
-				setIdData(null);
-				Alert.alert(
-				'ID already registered',
-				'This PhilSys Card Number is already linked to another account. If you believe this is an error, please contact support.',
-				[
-				{
-					text: 'OK',
-				onPress: resetScanState,
-              },
-				]
-				);
-				return;
-        }
-      } catch (error) {
-					console.error('ID availability check failed', error);
-				const errorMessage = error instanceof Error ? error.message : String(error);
-				const userMessage =
-				errorMessage === 'ID check timed out'
-				? 'The ID check is taking longer than expected. Please try again.'
-				: 'We could not confirm your ID number just now. Please try again.';
-				setVerified(false);
-				setIdData(null);
-				Alert.alert('Unable to verify ID', userMessage, [
-				{
-					text: 'OK',
-				onPress: resetScanState,
-          },
-				]);
+				if (!permissionResult.granted) {
+					Alert.alert(
+					'Permission required',
+					'Media library permission is required to upload the QR image.'
+        );
 				return;
       }
 
-				setVerified(true);
-				setIdData(result.data);
-				Alert.alert('Verification successful', 'Your ID has been verified.');
-    } catch (err) {
-					console.error('Verification error', err);
-				setVerified(false);
-				setIdData(null);
-				Alert.alert('Verification error', 'An error occurred while verifying. Please try again.', [
-				{
-					text: 'OK',
-				onPress: resetScanState,
-        },
-				]);
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        base64: true,
+        quality: 1,
+      });
+
+      if (result.canceled) {
+        return;
+      }
+
+      const asset = result.assets?.[0];
+
+				if (!asset || !asset.base64) {
+					Alert.alert('Upload failed', 'Unable to read the selected image. Please try another one.');
+				return;
+      }
+
+      const detection = await RNQRGenerator.detect({base64: asset.base64});
+      const qrValue = detection.values?.[0]?.trim();
+
+      if (!qrValue) {
+        Alert.alert('No QR code found', 'The selected image does not contain a valid QR code.');
+        return;
+      }
+
+				setIsScanning(true);
+				await processQrValue(qrValue);
+    } catch (error) {
+					console.error('QR image upload error', error);
+				Alert.alert('Upload failed', 'Unable to process the selected image. Please try again.');
     } finally {
-					setVerifying(false);
+					setImagePickerLoading(false);
     }
   };
 
@@ -1025,166 +1066,42 @@ const withTimeout = async<T>(
 													(Must be 18 years or older)
 												</Text>
 											</View>
-											<View className="flex-row gap-3">
-												{/* Year */}
-												<View className="flex-1">
-													<Text className="mb-1 text-xs" style={{ color: colors.textSecondary }}>
-														Year
-													</Text>
-													<TextInput
-														className="rounded-xl px-4 py-4 text-base"
-														style={{
-															backgroundColor: colors.surfaceVariant,
-															borderWidth: 1,
-															borderColor: validationErrors.birthYear ? '#EF4444' : colors.border,
-															color: colors.text,
-															opacity: isIdLocked ? 0.6 : 1,
-														}}
-														placeholder="YYYY"
-														editable={!isIdLocked}
-														value={birthYear}
-														onChangeText={(text) => {
-															// Only allow numbers
-															const numericValue = text.replace(/[^0-9]/g, '');
-
-															if (numericValue.length === 0) {
-																setBirthYear('');
-																return;
-															}
-
-															const currentYear = new Date().getFullYear();
-															const maxYear = currentYear - 18; // e.g., 2007 in 2025
-
-															// Validate at each digit
-															if (numericValue.length === 1) {
-																// First digit must be 1 or 2 (for years 1900-2099)
-																// But since max is 2007, if they type 3-9, reject
-																if (numericValue === '1' || numericValue === '2') {
-																	setBirthYear(numericValue);
-																}
-															} else if (numericValue.length === 2) {
-																// 19xx or 20xx, but check if it could lead to valid year
-																// For 18xx: invalid (< 1900)
-																// For 19xx: valid
-																// For 20xx: need to check if it can be <= maxYear
-																if (
-																	numericValue === '19' ||
-																	(numericValue === '20' && maxYear >= 2000)
-																) {
-																	setBirthYear(numericValue);
-																} else if (
-																	numericValue.startsWith('19') ||
-																	(numericValue.startsWith('20') &&
-																		parseInt(numericValue.substring(2)) === 0)
-																) {
-																	setBirthYear(numericValue);
-																}
-															} else if (numericValue.length === 3) {
-																const year3 = parseInt(numericValue);
-																// Check if this 3-digit prefix could lead to a valid year
-																// For 190x-199x: always valid
-																// For 200x-207x: check against maxYear
-																if (
-																	(year3 >= 190 && year3 <= 199) ||
-																	(year3 >= 200 && year3 <= Math.floor(maxYear / 10))
-																) {
-																	setBirthYear(numericValue);
-																}
-															} else if (numericValue.length === 4) {
-																const year = parseInt(numericValue);
-																// Final validation: 1900 <= year <= maxYear
-																if (year >= 1900 && year <= maxYear) {
-																	setBirthYear(numericValue);
-																}
-															}
-														}}
-														placeholderTextColor={colors.textSecondary}
-														keyboardType="numeric"
-														maxLength={4}
-													/>
-												</View>
-
-												{/* Month */}
-												<View className="flex-1">
-													<Text className="mb-1 text-xs" style={{ color: colors.textSecondary }}>
-														Month
-													</Text>
-													<TextInput
-														className="rounded-xl px-4 py-4 text-base"
-														style={{
-															backgroundColor: colors.surfaceVariant,
-															borderWidth: 1,
-															borderColor: validationErrors.birthMonth ? '#EF4444' : colors.border,
-															color: colors.text,
-															opacity: isIdLocked ? 0.6 : 1,
-														}}
-														placeholder="MM"
-														editable={!isIdLocked}
-														value={birthMonth}
-														onChangeText={(text) => {
-															// Only allow numbers
-															const numericValue = text.replace(/[^0-9]/g, '');
-															if (numericValue.length <= 2) {
-																// Validate month range 1-12
-																const monthNum = parseInt(numericValue);
-																if (numericValue === '' || (monthNum >= 1 && monthNum <= 12)) {
-																	setBirthMonth(numericValue);
-																}
-															}
-														}}
-														placeholderTextColor={colors.textSecondary}
-														keyboardType="numeric"
-														maxLength={2}
-													/>
-												</View>
-
-												{/* Day */}
-												<View className="flex-1">
-													<Text className="mb-1 text-xs" style={{ color: colors.textSecondary }}>
-														Day
-													</Text>
-													<TextInput
-														className="rounded-xl px-4 py-4 text-base"
-														style={{
-															backgroundColor: colors.surfaceVariant,
-															borderWidth: 1,
-															borderColor: validationErrors.birthDay ? '#EF4444' : colors.border,
-															color: colors.text,
-															opacity: isIdLocked ? 0.6 : 1,
-														}}
-														placeholder="DD"
-														editable={!isIdLocked}
-														value={birthDay}
-														onChangeText={(text) => {
-															// Only allow numbers
-															const numericValue = text.replace(/[^0-9]/g, '');
-															if (numericValue.length <= 2) {
-																const dayNum = parseInt(numericValue);
-
-																// Get max days for current month/year
-																let maxDays = 31;
-																if (birthYear && birthMonth) {
-																	const year = parseInt(birthYear);
-																	const month = parseInt(birthMonth);
-																	if (!isNaN(year) && !isNaN(month) && month >= 1 && month <= 12) {
-																		maxDays = new Date(year, month, 0).getDate();
-																	}
-																}
-
-																if (numericValue === '' || (dayNum >= 1 && dayNum <= maxDays)) {
-																	setBirthDay(numericValue);
-																}
-															}
-														}}
-														placeholderTextColor={colors.textSecondary}
-														keyboardType="numeric"
-														maxLength={2}
-													/>
-												</View>
-											</View>
+											<TouchableOpacity
+												className="rounded-xl px-4 py-4"
+												style={{
+													backgroundColor: colors.surfaceVariant,
+													borderWidth: 1,
+													borderColor:
+														validationErrors.birthYear ||
+														validationErrors.birthMonth ||
+														validationErrors.birthDay
+															? '#EF4444'
+															: colors.border,
+													opacity: isIdLocked ? 0.6 : 1,
+												}}
+												onPress={() => {
+													if (!isIdLocked) {
+														datePickerSelectionRef.current = false;
+														setShowDatePicker(true);
+													}
+												}}
+												disabled={isIdLocked}>
+												<Text
+													style={{
+														color:
+															birthYear && birthMonth && birthDay
+																? colors.text
+																: colors.textSecondary,
+														fontSize: 16,
+													}}>
+													{birthYear && birthMonth && birthDay
+														? `${birthMonth.padStart(2, '0')}/${birthDay.padStart(2, '0')}/${birthYear}`
+														: 'Select a date'}
+												</Text>
+											</TouchableOpacity>
 											{validationErrors.birthYear ||
-												validationErrors.birthMonth ||
-												validationErrors.birthDay ? (
+											validationErrors.birthMonth ||
+											validationErrors.birthDay ? (
 												<Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
 													{validationErrors.birthYear ||
 														validationErrors.birthMonth ||
@@ -1192,10 +1109,7 @@ const withTimeout = async<T>(
 												</Text>
 											) : (
 												<Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
-													Year: 1900-{new Date().getFullYear() - 18}
-													{birthYear &&
-														birthMonth &&
-														`, Days in ${['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][parseInt(birthMonth)]}: ${getDaysInMonth(birthYear, birthMonth)}`}
+													Year: {minBirthYear}-{maxBirthYear}
 												</Text>
 											)}
 										</View>
@@ -1515,7 +1429,7 @@ const withTimeout = async<T>(
 									</View>
 
 									{/* ID Upload Section */}
-									<View className="mb-6">
+									<View className="mb-6 space-y-3">
 										<Text className="mb-3 text-sm font-medium" style={{ color: colors.text }}>
 											Scan QR Code from Philippine National ID
 										</Text>
@@ -1550,6 +1464,28 @@ const withTimeout = async<T>(
 													Scan the QR code from the back of your national ID
 												</Text>
 											</View>
+										</TouchableOpacity>
+										<TouchableOpacity
+											className="flex-row items-center justify-center rounded-xl border py-4"
+											style={{
+												backgroundColor: colors.surfaceVariant,
+												borderColor: colors.border,
+												opacity: verifying || isIdLocked ? 0.6 : 1,
+											}}
+											onPress={handleUploadQrImage}
+											disabled={verifying || isIdLocked || imagePickerLoading}>
+											{imagePickerLoading ? (
+												<ActivityIndicator size="small" color={colors.text} />
+											) : (
+												<>
+													<ImageIcon size={24} color={colors.text} />
+													<Text
+														className="ml-2 text-base font-semibold"
+														style={{ color: colors.text }}>
+														Upload QR Image
+													</Text>
+												</>
+											)}
 										</TouchableOpacity>
 									</View>
 
@@ -2023,6 +1959,45 @@ const withTimeout = async<T>(
 						title="Select Birth Province"
 						searchable
 						searchPlaceholder="Search province..."
+					/>
+
+					<DatePicker
+						isVisible={showDatePicker}
+						onClose={handleDatePickerClose}
+						onSelectDate={(dateString: string) => {
+							datePickerSelectionRef.current = true;
+							const [month, day, year] = dateString.split('/');
+							setBirthMonth(month);
+							setBirthDay(day);
+							setBirthYear(year);
+							setValidationErrors((prev) => {
+								const { birthYear: _birthYearError, birthMonth: _birthMonthError, birthDay: _birthDayError, ...rest } =
+									prev;
+								return rest;
+							});
+						}}
+						initialDate={
+							birthYear && birthMonth && birthDay
+								? `${birthMonth}/${birthDay}/${birthYear}`
+								: (() => {
+										const today = new Date();
+										const eighteenYearsAgo = new Date(today);
+										eighteenYearsAgo.setFullYear(maxBirthYear);
+										const month = (eighteenYearsAgo.getMonth() + 1).toString().padStart(2, '0');
+										const day = eighteenYearsAgo.getDate().toString().padStart(2, '0');
+										const year = eighteenYearsAgo.getFullYear().toString();
+										return `${month}/${day}/${year}`;
+									})()
+						}
+						isDateValid={(date: Date) => {
+							const today = new Date();
+							today.setHours(0, 0, 0, 0);
+							const minBirthDate = new Date(today);
+							minBirthDate.setFullYear(maxBirthYear);
+							return date <= minBirthDate;
+						}}
+						minYear={minBirthYear}
+						maxYear={maxBirthYear}
 					/>
 				</View>
 				);

@@ -14,19 +14,7 @@ export function ExampleReport() {
     incident_time: '',
     street_address: '',
     nearby_landmark: '',
-    city: 'Tuguegarao City',
-    province: 'Cagayan',
-    brief_description: '',
     what_happened: '',
-    who_was_involved: '',
-    number_of_witnesses: '',
-    injuries_reported: '',
-    property_damage: '',
-    suspect_description: '',
-    witness_contact_info: '',
-    request_follow_up: true,
-    share_with_community: false,
-    is_anonymous: false,
   });
 
   const [submitting, setSubmitting] = useState(false);

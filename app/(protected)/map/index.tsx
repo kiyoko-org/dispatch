@@ -2431,34 +2431,7 @@ export default function MapPage() {
                   </View>
                 )}
 
-                {(selectedReport.number_of_witnesses ||
-                  selectedReport.injuries_reported ||
-                  selectedReport.property_damage) && (
-                  <View
-                    className="mt-2 rounded-lg p-3"
-                    style={{ backgroundColor: colors.background }}>
-                    <Text
-                      className="mb-2 text-xs font-semibold uppercase"
-                      style={{ color: colors.textSecondary }}>
-                      Additional Details
-                    </Text>
-                    {selectedReport.number_of_witnesses && (
-                      <Text className="mb-1 text-sm" style={{ color: colors.text }}>
-                        • Witnesses: {selectedReport.number_of_witnesses}
-                      </Text>
-                    )}
-                    {selectedReport.injuries_reported && (
-                      <Text className="mb-1 text-sm" style={{ color: colors.text }}>
-                        • Injuries: {selectedReport.injuries_reported}
-                      </Text>
-                    )}
-                    {selectedReport.property_damage && (
-                      <Text className="text-sm" style={{ color: colors.text }}>
-                        • Property Damage: {selectedReport.property_damage}
-                      </Text>
-                    )}
-                  </View>
-                )}
+                
               </ScrollView>
             </View>
           )}
