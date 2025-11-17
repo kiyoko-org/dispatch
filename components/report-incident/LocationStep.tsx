@@ -15,6 +15,7 @@ import AddressSearch from '../AddressSearch';
 import { useTheme } from '../ThemeContext';
 import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import { reverseGeocode } from '../../lib/services/geocoding';
+import { isWithinTuguegarao } from '../../lib/locations/tuguegarao-boundary';
 
 interface LocationStepProps {
   formData: {
@@ -81,6 +82,13 @@ export default function LocationStep({
     setSelectedLocation({ latitude, longitude });
 
     try {
+      if (!isWithinTuguegarao(latitude, longitude)) {
+        setLocationError(
+          'This app currently only supports Tuguegarao City. Please choose a location within Tuguegarao City.'
+        );
+        return;
+      }
+
       // Create a timeout promise
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Location update timed out')), 10000); // 10 second timeout
@@ -92,24 +100,6 @@ export default function LocationStep({
       // Race between geocoding and timeout
       const geocodeResults = (await Promise.race([geocodePromise, timeoutPromise])) as any[];
       const address = geocodeResults[0];
-
-      // Ensure the selected location is within Tuguegarao City
-      const city = (
-        address?.city ||
-        address?.subregion ||
-        address?.region ||
-        address?.name ||
-        ''
-      ).toString();
-      const isTuguegarao = /tuguegarao/i.test(city);
-
-      if (!isTuguegarao) {
-        // Show a clear error and do not persist this location
-        setLocationError(
-          'This app currently only supports Tuguegarao City. Please choose a location within Tuguegarao City.'
-        );
-        return;
-      }
 
       // Update form data with new coordinates and address
       onUpdateFormData({

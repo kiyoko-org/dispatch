@@ -11,6 +11,7 @@ import {
   Text,
 } from 'react-native';
 import { SearchResponse, SearchResult } from '../lib/types/search';
+import { isWithinTuguegarao } from '../lib/locations/tuguegarao-boundary';
 
 interface AddressSearchProps {
   visible: boolean;
@@ -46,10 +47,12 @@ export default function AddressSearch({ visible, onClose, onSelect }: AddressSea
           throw new Error(`HTTP error! status: ${response.status}`);
         }
         const data: SearchResponse = await response.json();
-        // Filter suggestions to only include results within Tuguegarao City
-        const filtered = data.filter((item) =>
-          /tuguegarao/i.test(item.display_name || item.name || '')
-        );
+        // Filter suggestions to only include locations within the Tuguegarao polygon
+        const filtered = data.filter((item) => {
+          const lat = Number(item.lat);
+          const lon = Number(item.lon);
+          return isWithinTuguegarao(lat, lon);
+        });
         setSuggestions(filtered);
         setLoading(false);
       } catch (error: any) {
@@ -73,15 +76,16 @@ export default function AddressSearch({ visible, onClose, onSelect }: AddressSea
   const [selectionError, setSelectionError] = useState<string | null>(null);
 
   const handleSelect = (address: SearchResult) => {
-    // Check if the selected address is within Tuguegarao City
-    const isTuguegarao = /tuguegarao/i.test(address.display_name || address.name || '');
-    if (!isTuguegarao) {
+    const lat = Number(address.lat);
+    const lon = Number(address.lon);
+    if (!isWithinTuguegarao(lat, lon)) {
       setSelectionError(
         'This app currently only supports Tuguegarao City. Please choose a location within Tuguegarao City.'
       );
       return;
     }
 
+    setSelectionError(null);
     onSelect(address);
     setQuery('');
     setSuggestions([]);
@@ -130,6 +134,11 @@ export default function AddressSearch({ visible, onClose, onSelect }: AddressSea
                 keyExtractor={(item) => item.place_id.toString()}
               />
             )
+          )}
+          {selectionError && (
+            <View style={styles.errorMessageContainer}>
+              <Text style={styles.errorMessageText}>{selectionError}</Text>
+            </View>
           )}
         </View>
       </View>
@@ -204,5 +213,14 @@ const styles = StyleSheet.create({
   },
   suggestionText: {
     fontSize: 14,
+  },
+  errorMessageContainer: {
+    paddingHorizontal: 8,
+    paddingBottom: 8,
+  },
+  errorMessageText: {
+    color: '#d32f2f',
+    textAlign: 'center',
+    fontSize: 13,
   },
 });
