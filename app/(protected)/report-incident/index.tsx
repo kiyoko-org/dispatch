@@ -897,7 +897,6 @@ export default function ReportIncidentIndex() {
   const updateLocationFromMap = async (latitude: number, longitude: number) => {
     setIsUpdatingLocation(true);
     setLocationError(null);
-    setSelectedLocation({ latitude, longitude });
 
     try {
       if (!isWithinTuguegarao(latitude, longitude)) {
@@ -906,6 +905,9 @@ export default function ReportIncidentIndex() {
         );
         return;
       }
+
+      // Only set the marker after validation passes
+      setSelectedLocation({ latitude, longitude });
 
       const timeoutPromise = new Promise((_, reject) => {
         setTimeout(() => reject(new Error('Location update timed out')), 10000);
