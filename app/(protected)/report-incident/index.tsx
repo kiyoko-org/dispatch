@@ -22,7 +22,7 @@ import {
 import { useRouter } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
 import * as Location from 'expo-location';
-import MapView, { Marker, PROVIDER_GOOGLE, Region } from 'react-native-maps';
+import MapView, { Marker, Polygon, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import { reverseGeocode } from 'lib/services/geocoding';
 import { ReportData } from 'lib/types';
 import { geocodingService } from 'lib/services/geocoding';
@@ -31,7 +31,7 @@ import { useDispatchClient } from 'components/DispatchProvider';
 import { useAuthContext } from 'components/AuthProvider';
 import { useReports } from '@kiyoko-org/dispatch-lib';
 import { distanceInMeters } from 'lib/locations';
-import { isWithinTuguegarao } from 'lib/locations/tuguegarao-boundary';
+import { isWithinTuguegarao, TUGUEGARAO_BOUNDARY } from 'lib/locations/tuguegarao-boundary';
 import type { Database } from '@kiyoko-org/dispatch-lib/database.types';
 import AppDialog from 'components/AppDialog';
 import {
@@ -1987,6 +1987,14 @@ export default function ReportIncidentIndex() {
               onPress={handleMapPress}
               showsUserLocation={true}
               showsMyLocationButton={true}>
+              {/* Tuguegarao City Boundary */}
+              <Polygon
+                coordinates={TUGUEGARAO_BOUNDARY}
+                strokeColor={colors.primary}
+                strokeWidth={3}
+                fillColor={`${colors.primary}15`}
+              />
+
               {/* Selected Location Marker */}
               {selectedLocation && (
                 <Marker
