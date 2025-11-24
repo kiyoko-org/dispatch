@@ -95,6 +95,7 @@ export default function ReportIncidentIndex() {
   const { addReport, reports } = useReports();
   const reportsRef = useRef(reports); // Keep ref in sync with reports state
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const locationAbortControllerRef = useRef<AbortController | null>(null);
   const [recorder, setRecorder] = useState<AudioRecorder | null>(null);
   const [recordingDuration, setRecordingDuration] = useState(0);
 
@@ -268,7 +269,9 @@ export default function ReportIncidentIndex() {
             report.creatorId ||
             report.owner_id;
 
-          console.log(`[Nearby Reports] Checking report ${report.id}, creatorId: ${creatorId}, currentUserId: ${currentUserId}, match: ${String(creatorId) === String(currentUserId)}`);
+          console.log(
+            `[Nearby Reports] Checking report ${report.id}, creatorId: ${creatorId}, currentUserId: ${currentUserId}, match: ${String(creatorId) === String(currentUserId)}`
+          );
 
           if (creatorId && String(creatorId) === String(currentUserId)) {
             console.log(`[Nearby Reports] Ignoring report ${report.id} - created by current user`);
@@ -416,7 +419,7 @@ export default function ReportIncidentIndex() {
 
   // Quick link handlers
   const handleQuickLinkTheft = () => {
-    const category = categories.find(cat => cat.name === 'Property Crimes');
+    const category = categories.find((cat) => cat.name === 'Property Crimes');
     if (category) {
       updateFormData({
         incident_category: category.id.toString(),
@@ -426,7 +429,7 @@ export default function ReportIncidentIndex() {
   };
 
   const handleQuickLinkCarCrash = () => {
-    const category = categories.find(cat => cat.name === 'Traffic Incidents');
+    const category = categories.find((cat) => cat.name === 'Traffic Incidents');
     if (category) {
       updateFormData({
         incident_category: category.id.toString(),
@@ -521,6 +524,8 @@ export default function ReportIncidentIndex() {
   // Function to handle using current location
   const handleUseCurrentLocation = async (silent = false) => {
     try {
+      // Create a new AbortController for this location fetch
+      locationAbortControllerRef.current = new AbortController();
       updateUIState({ isGettingLocation: true, locationFetchFailed: false });
 
       // Request location permissions
@@ -611,6 +616,13 @@ export default function ReportIncidentIndex() {
         await checkForNearbyReports(latitude, longitude);
       }
     } catch (error) {
+      // Check if error is due to cancellation
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.log('Location fetch was cancelled by user');
+        updateUIState({ isGettingLocation: false, locationFetchFailed: false });
+        return;
+      }
+
       console.error('Error getting location:', error);
       updateUIState({ locationFetchFailed: true });
       if (!silent) {
@@ -621,6 +633,15 @@ export default function ReportIncidentIndex() {
         );
       }
     } finally {
+      updateUIState({ isGettingLocation: false });
+      locationAbortControllerRef.current = null;
+    }
+  };
+
+  // Function to cancel current location fetch
+  const handleCancelLocationFetch = () => {
+    if (locationAbortControllerRef.current) {
+      locationAbortControllerRef.current.abort();
       updateUIState({ isGettingLocation: false });
     }
   };
@@ -967,14 +988,14 @@ export default function ReportIncidentIndex() {
     .sort((a, b) => a.name.localeCompare(b.name));
 
   // Create subcategories mapping from categories data
-const subcategories: Record<string, string[]> = {};
-categories.forEach((category) => {
-  if (category.sub_categories && category.sub_categories.length > 0) {
-  subcategories[category.id.toString()] = ['Other', ...category.sub_categories].sort();
-  } else {
-  subcategories[category.id.toString()] = ['Other'];
-  }
-});
+  const subcategories: Record<string, string[]> = {};
+  categories.forEach((category) => {
+    if (category.sub_categories && category.sub_categories.length > 0) {
+      subcategories[category.id.toString()] = ['Other', ...category.sub_categories].sort();
+    } else {
+      subcategories[category.id.toString()] = ['Other'];
+    }
+  });
 
   // Handle adding +1 to a report
   const handleAddPlusOne = async (reportId: number) => {
@@ -1199,23 +1220,35 @@ categories.forEach((category) => {
         <View className="px-4 pt-4">
           {/* Quick Links */}
           <View className="mb-6">
-            <Text className="mb-2 text-sm font-semibold" style={{ color: colors.textSecondary }}>Quick Links</Text>
+            <Text className="mb-2 text-sm font-semibold" style={{ color: colors.textSecondary }}>
+              Quick Links
+            </Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
               <TouchableOpacity
                 onPress={handleQuickLinkTheft}
                 className="mr-3 rounded-xl px-4 py-3"
-                style={{ backgroundColor: colors.error + '15', borderColor: colors.error, borderWidth: 1 }}
-                activeOpacity={0.7}
-              >
-                <Text className="text-sm font-medium" style={{ color: colors.text }}>🛡️ Someone stole from me</Text>
+                style={{
+                  backgroundColor: colors.error + '15',
+                  borderColor: colors.error,
+                  borderWidth: 1,
+                }}
+                activeOpacity={0.7}>
+                <Text className="text-sm font-medium" style={{ color: colors.text }}>
+                  🛡️ Someone stole from me
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={handleQuickLinkCarCrash}
                 className="mr-3 rounded-xl px-4 py-3"
-                style={{ backgroundColor: colors.primary + '15', borderColor: colors.primary, borderWidth: 1 }}
-                activeOpacity={0.7}
-              >
-                <Text className="text-sm font-medium" style={{ color: colors.text }}>🚗 Got into a car crash</Text>
+                style={{
+                  backgroundColor: colors.primary + '15',
+                  borderColor: colors.primary,
+                  borderWidth: 1,
+                }}
+                activeOpacity={0.7}>
+                <Text className="text-sm font-medium" style={{ color: colors.text }}>
+                  🚗 Got into a car crash
+                </Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -1240,11 +1273,17 @@ categories.forEach((category) => {
                     ? (() => {
                         // Parse MM/DD/YYYY format
                         const [month, day, year] = formData.incident_date.split('/');
-                        const date = new Date(parseInt(year, 10), parseInt(month, 10) - 1, parseInt(day, 10));
+                        const date = new Date(
+                          parseInt(year, 10),
+                          parseInt(month, 10) - 1,
+                          parseInt(day, 10)
+                        );
                         const monthName = date.toLocaleDateString('en-US', { month: 'short' });
                         const currentYear = new Date().getFullYear();
                         const includeYear = date.getFullYear() !== currentYear;
-                        const dateDisplay = includeYear ? `${monthName} ${day}, ${year}` : `${monthName} ${day}`;
+                        const dateDisplay = includeYear
+                          ? `${monthName} ${day}, ${year}`
+                          : `${monthName} ${day}`;
                         return `${dateDisplay} at ${formData.incident_time}`;
                       })()
                     : 'Select date & time'}
@@ -1267,7 +1306,13 @@ categories.forEach((category) => {
                 </Text>
               )}
               {uiState.isGettingLocation ? (
-                <ActivityIndicator size="small" color={colors.primary} />
+                <TouchableOpacity
+                  onPress={handleCancelLocationFetch}
+                  activeOpacity={0.7}
+                  className="flex-row items-center gap-2">
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <X size={16} color={colors.error} />
+                </TouchableOpacity>
               ) : (
                 <MapPin
                   size={24}
@@ -1365,7 +1410,8 @@ categories.forEach((category) => {
                 style={{ color: formData.incident_category ? colors.text : colors.textSecondary }}>
                 {categoriesLoading
                   ? 'Loading categories...'
-                  : (categories.find(cat => cat.id.toString() === formData.incident_category)?.name || 'Select incident category')}
+                  : categories.find((cat) => cat.id.toString() === formData.incident_category)
+                      ?.name || 'Select incident category'}
               </Text>
               <ChevronDown size={20} color={colors.textSecondary} />
             </TouchableOpacity>
@@ -1839,7 +1885,10 @@ categories.forEach((category) => {
         isVisible={uiState.showCategoryDropdown}
         onClose={() => updateUIState({ showCategoryDropdown: false })}
         onSelect={(item) =>
-          updateFormData({ incident_category: item?.id?.toString() || '', incident_subcategory: 'Other' })
+          updateFormData({
+            incident_category: item?.id?.toString() || '',
+            incident_subcategory: 'Other',
+          })
         }
         data={incidentCategories}
         keyExtractor={(item, index) => item?.id?.toString() || index.toString()}
