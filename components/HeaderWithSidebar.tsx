@@ -222,6 +222,12 @@ export default function HeaderWithSidebar({
           icon: Phone,
           route: '/(protected)/hotlines',
         },
+        {
+          id: 'trust-score',
+          label: 'Trust Score',
+          icon: Shield,
+          route: '/(protected)/trust-score',
+        },
       ],
     },
     {

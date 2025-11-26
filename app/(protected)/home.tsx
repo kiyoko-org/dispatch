@@ -10,7 +10,8 @@ import {
   Bell,
 } from 'lucide-react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import HeaderWithSidebar from '../../components/HeaderWithSidebar';
 import { useAuthContext } from 'components/AuthProvider';
 import { useTheme } from 'components/ThemeContext';
@@ -22,6 +23,7 @@ import { LogoutOverlay } from 'components/LogoutOverlay';
 
 type Profile = {
   first_name: string;
+  trust_score?: number | null;
 };
 
 export default function Home() {
@@ -121,6 +123,28 @@ export default function Home() {
     }
   }, [session?.user?.id, fetchReports]);
 
+  // Load trust score from AsyncStorage when screen is focused
+  useFocusEffect(
+    useCallback(() => {
+      loadTrustScore();
+    }, [profile])
+  );
+
+  const loadTrustScore = async () => {
+    try {
+      const stored = await AsyncStorage.getItem('trust_score');
+      if (stored !== null) {
+        setProfile(prev => ({
+          ...prev!,
+          first_name: prev?.first_name || '',
+          trust_score: parseInt(stored),
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading trust score:', error);
+    }
+  };
+
   if (loading) {
     return <Splash />;
   }
@@ -129,16 +153,24 @@ export default function Home() {
     try {
       setLoading(true);
       if (!session?.user) throw new Error('No user on the session!');
+      
       const { data, error, status } = await supabase
         .from('profiles')
-        .select(`first_name`)
+        .select(`first_name, trust_score`)
         .eq('id', session?.user.id)
         .single();
+      
       if (error && status !== 406) {
         throw error;
       }
+      
       if (data) {
-        setProfile(data);
+        // Check AsyncStorage for trust score override
+        const storedScore = await AsyncStorage.getItem('trust_score');
+        setProfile({
+          ...data,
+          trust_score: storedScore !== null ? parseInt(storedScore) : (data.trust_score ?? 3),
+        });
       }
     } catch (error) {
       if (error instanceof Error) {
@@ -200,6 +232,55 @@ export default function Home() {
             <Text style={{ fontSize: 16, color: currentColors.headerSubtext }}>
               Your community safety dashboard
             </Text>
+            {/* Trust Score Badge */}
+            <TouchableOpacity
+              onPress={() => router.push('/trust-score')}
+              style={{
+                marginTop: 16,
+                flexDirection: 'row',
+                alignItems: 'center',
+                alignSelf: 'flex-start',
+                backgroundColor: 'rgba(255, 255, 255, 0.25)',
+                paddingHorizontal: 14,
+                paddingVertical: 8,
+                borderRadius: 24,
+                borderWidth: 1,
+                borderColor: 'rgba(255, 255, 255, 0.3)',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 3,
+              }}>
+              <Shield size={18} color={currentColors.headerText} strokeWidth={2.5} />
+              {/* Mini Level Bars */}
+              <View style={{ flexDirection: 'row', gap: 2, marginLeft: 8, marginRight: 8 }}>
+                {[1, 2, 3].map((level) => {
+                  const trustScore = profile?.trust_score ?? 3;
+                  return (
+                    <View
+                      key={level}
+                      style={{
+                        width: 16,
+                        height: 3,
+                        borderRadius: 1.5,
+                        backgroundColor: trustScore >= level 
+                          ? currentColors.headerText 
+                          : 'rgba(255, 255, 255, 0.3)',
+                      }}
+                    />
+                  );
+                })}
+              </View>
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontWeight: '700',
+                  color: currentColors.headerText,
+                }}>
+                Level {profile?.trust_score ?? 3}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -468,6 +549,85 @@ export default function Home() {
                 </Text>
               </View>
             </View>
+            <TouchableOpacity
+              style={{
+                width: '48%',
+                borderRadius: 8,
+                borderWidth: 1,
+                borderColor: currentColors.cardBorder,
+                backgroundColor: currentColors.cardBg,
+                padding: 12,
+              }}
+              onPress={() => router.push('/trust-score')}>
+              <View style={{ alignItems: 'center' }}>
+                {/* Shield Icon with Background */}
+                <View
+                  style={{
+                    marginBottom: 10,
+                    height: 40,
+                    width: 40,
+                    borderRadius: 20,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: (() => {
+                      const trustScore = profile?.trust_score ?? 3;
+                      if (trustScore === 3) return '#10B98120';
+                      if (trustScore === 2) return '#F59E0B20';
+                      if (trustScore === 1) return '#F9731620';
+                      return '#DC262620';
+                    })(),
+                  }}>
+                  <Shield 
+                    size={22} 
+                    color={(() => {
+                      const trustScore = profile?.trust_score ?? 3;
+                      if (trustScore === 3) return '#10B981';
+                      if (trustScore === 2) return '#F59E0B';
+                      if (trustScore === 1) return '#F97316';
+                      return '#DC2626';
+                    })()} 
+                    strokeWidth={2.5}
+                  />
+                </View>
+                {/* Visual Trust Level Bars */}
+                <View style={{ flexDirection: 'row', gap: 3, marginBottom: 8, width: '90%', justifyContent: 'center' }}>
+                  {[1, 2, 3].map((level) => {
+                    const trustScore = profile?.trust_score ?? 3;
+                    const isActive = trustScore >= level;
+                    const getColor = () => {
+                      if (!isActive) return currentColors.cardBorder;
+                      if (trustScore === 3) return '#10B981'; // Green
+                      if (trustScore === 2) return '#F59E0B'; // Amber
+                      if (trustScore === 1) return '#F97316'; // Orange
+                      return '#DC2626'; // Dark Red
+                    };
+                    return (
+                      <View
+                        key={level}
+                        style={{
+                          flex: 1,
+                          height: 6,
+                          borderRadius: 3,
+                          backgroundColor: getColor(),
+                        }}
+                      />
+                    );
+                  })}
+                </View>
+                <Text style={{ fontSize: 18, fontWeight: 'bold', color: currentColors.cardText, marginBottom: 2 }}>
+                  Level {profile?.trust_score ?? 3}
+                </Text>
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    fontSize: 12,
+                    fontWeight: '500',
+                    color: currentColors.cardSubtext,
+                  }}>
+                  Trust Score
+                </Text>
+              </View>
+            </TouchableOpacity>
           </View>
         </View>
 
