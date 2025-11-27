@@ -8,6 +8,7 @@ import {
   Text,
   View,
   TouchableOpacity,
+  TouchableHighlight,
   TouchableWithoutFeedback,
   Alert,
   ScrollView,
@@ -52,6 +53,17 @@ import {
   UserPlus,
   MessageSquare,
   DoorClosed,
+  List,
+  ListOrdered,
+  Heading1,
+  Heading2,
+  Heading3,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  Link,
+  Undo,
+  Redo,
 } from 'lucide-react-native';
 import {
   UploadManager,
@@ -60,6 +72,7 @@ import {
   SupabaseStorageService,
   ExpoFilePickerService,
 } from 'lib/services';
+import { RichEditor, RichToolbar, actions } from 'react-native-pell-rich-editor';
 import { FileUtils } from 'lib/services/file-utils';
 import { AudioRecorder } from 'expo-audio';
 import { UploadProgress } from 'components/ui/UploadProgress';
@@ -98,6 +111,8 @@ export default function ReportIncidentIndex() {
   const locationAbortControllerRef = useRef<AbortController | null>(null);
   const [recorder, setRecorder] = useState<AudioRecorder | null>(null);
   const [recordingDuration, setRecordingDuration] = useState(0);
+  const richEditorRef = useRef<RichEditor>(null);
+  const [activeFormats, setActiveFormats] = useState<Set<string>>(new Set());
 
   // Consolidated form data state
   const [formData, setFormData] = useState<ReportData>({
@@ -180,6 +195,7 @@ export default function ReportIncidentIndex() {
     visible: false,
     report: null,
   });
+  const [quickLinksScrollable, setQuickLinksScrollable] = useState(false);
 
   // Helper functions for updating state
   const updateFormData = (updates: Partial<ReportData>) => {
@@ -418,25 +434,28 @@ export default function ReportIncidentIndex() {
   }, [uploadedFiles]);
 
   // Quick link handlers
-  const handleQuickLinkTheft = () => {
-    const category = categories.find((cat) => cat.name === 'Property Crimes');
+  const handleQuickLink = (categoryName: string, subcategory: string) => {
+    const category = categories.find((cat) => cat.name === categoryName);
     if (category) {
       updateFormData({
         incident_category: category.id.toString(),
-        incident_subcategory: 'Theft',
+        incident_subcategory: subcategory,
       });
     }
   };
 
-  const handleQuickLinkCarCrash = () => {
-    const category = categories.find((cat) => cat.name === 'Traffic Incidents');
-    if (category) {
-      updateFormData({
-        incident_category: category.id.toString(),
-        incident_subcategory: 'Vehicular Accident',
-      });
-    }
-  };
+  const handleQuickLinkTheft = () => handleQuickLink('Property Crimes', 'Theft');
+  const handleQuickLinkCarCrash = () => handleQuickLink('Traffic Incidents', 'Vehicular Accident');
+  const handleQuickLinkRobbery = () => handleQuickLink('Property Crimes', 'Robbery');
+  const handleQuickLinkBurglary = () => handleQuickLink('Property Crimes', 'Burglary');
+  const handleQuickLinkVandalism = () => handleQuickLink('Property Crimes', 'Vandalism');
+  const handleQuickLinkMurder = () => handleQuickLink('Violent Crimes', 'Murder');
+  const handleQuickLinkAssault = () => handleQuickLink('Violent Crimes', 'Assault');
+  const handleQuickLinkShooting = () => handleQuickLink('Violent Crimes', 'Shooting');
+  const handleQuickLinkStabbing = () => handleQuickLink('Violent Crimes', 'Stabbing');
+  const handleQuickLinkDrug = () => handleQuickLink('Drug-Related', 'Drug Possession');
+  const handleQuickLinkHitAndRun = () => handleQuickLink('Traffic Incidents', 'Hit and Run');
+  const handleQuickLinkHacking = () => handleQuickLink('Other Crimes', 'Hacking');
 
   // Helper function to transform ReportData to dispatch-lib schema
   const transformToDispatchLibSchema = (data: ReportData, attachments: string[]) => {
@@ -1182,6 +1201,21 @@ export default function ReportIncidentIndex() {
   const nearbyReportCount = uiState.nearbyReportDialog.nearbyReports.length;
   const hasNearbyReports = nearbyReportCount > 0;
 
+  const quickLinks = [
+    { icon: '🛡️', label: 'Someone stole from me', onPress: handleQuickLinkTheft, color: '#F59E0B' },
+    { icon: '💰', label: 'I was robbed', onPress: handleQuickLinkRobbery, color: '#F59E0B' },
+    { icon: '🏠', label: 'My house was broken into', onPress: handleQuickLinkBurglary, color: '#F59E0B' },
+    { icon: '🎨', label: 'Property vandalized', onPress: handleQuickLinkVandalism, color: '#F59E0B' },
+    { icon: '🚗', label: 'Got into a car crash', onPress: handleQuickLinkCarCrash, color: '#3B82F6' },
+    { icon: '🚙', label: 'Hit and run', onPress: handleQuickLinkHitAndRun, color: '#3B82F6' },
+    { icon: '☠️', label: 'Witnessed a murder', onPress: handleQuickLinkMurder, color: '#DC2626' },
+    { icon: '🔫', label: 'Shooting incident', onPress: handleQuickLinkShooting, color: '#DC2626' },
+    { icon: '🔪', label: 'Stabbing incident', onPress: handleQuickLinkStabbing, color: '#DC2626' },
+    { icon: '👊', label: 'Physical assault', onPress: handleQuickLinkAssault, color: '#DC2626' },
+    { icon: '💻', label: 'I was hacked', onPress: handleQuickLinkHacking, color: '#6B7280' },
+    { icon: '💊', label: 'Drug activity', onPress: handleQuickLinkDrug, color: '#7C3AED' },
+  ];
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -1222,40 +1256,75 @@ export default function ReportIncidentIndex() {
         <View className="px-4 pt-4">
           {/* Quick Links */}
           <View className="mb-6">
-            <Text className="mb-2 text-sm font-semibold" style={{ color: colors.textSecondary }}>
-              Quick Links
-            </Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="flex-row">
+            <View className="mb-2 flex-row items-center justify-between">
+              <Text className="text-sm font-semibold" style={{ color: colors.textSecondary }}>
+                Quick Links
+              </Text>
               <TouchableOpacity
-                onPress={handleQuickLinkTheft}
-                className="mr-3 rounded-xl px-4 py-3"
-                style={{
-                  backgroundColor: colors.error + '15',
-                  borderColor: colors.error,
-                  borderWidth: 1,
-                }}
+                onPress={() => setQuickLinksScrollable(!quickLinksScrollable)}
+                className="flex-row items-center"
                 activeOpacity={0.7}>
-                <Text className="text-sm font-medium" style={{ color: colors.text }}>
-                  🛡️ Someone stole from me
+                <Text className="mr-2 text-xs" style={{ color: colors.textSecondary }}>
+                  {quickLinksScrollable ? 'Scroll' : 'Wrap'}
                 </Text>
+                <View
+                  className="h-6 w-11 rounded-full justify-center"
+                  style={{ backgroundColor: quickLinksScrollable ? colors.primary : colors.border }}>
+                  <View
+                    className="h-4 w-4 rounded-full"
+                    style={{
+                      backgroundColor: colors.card,
+                      marginLeft: quickLinksScrollable ? 24 : 4,
+                    }}
+                  />
+                </View>
               </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleQuickLinkCarCrash}
-                className="mr-3 rounded-xl px-4 py-3"
-                style={{
-                  backgroundColor: colors.primary + '15',
-                  borderColor: colors.primary,
-                  borderWidth: 1,
-                }}
-                activeOpacity={0.7}>
-                <Text className="text-sm font-medium" style={{ color: colors.text }}>
-                  🚗 Got into a car crash
-                </Text>
-              </TouchableOpacity>
-            </ScrollView>
-          </View>
-
-          {/* Date/Time and Location Header */}
+            </View>
+            {quickLinksScrollable ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                {quickLinks.map((link, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={link.onPress}
+                    className="rounded-2xl p-3 items-center justify-center"
+                    style={{
+                      backgroundColor: link.color + '10',
+                      borderColor: link.color + '40',
+                      borderWidth: 1,
+                      minWidth: 100,
+                      minHeight: 100,
+                    }}
+                    activeOpacity={0.7}>
+                    <Text className="text-3xl mb-2">{link.icon}</Text>
+                    <Text className="text-xs font-medium text-center leading-tight" style={{ color: colors.text }}>
+                      {link.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            ) : (
+              <View className="flex-row flex-wrap" style={{ gap: 6 }}>
+                {quickLinks.map((link, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    onPress={link.onPress}
+                    className="rounded-2xl p-2 items-center justify-center flex-grow basis-[21%]"
+                    style={{
+                      backgroundColor: link.color + '10',
+                      borderColor: link.color + '40',
+                      borderWidth: 1,
+                      minHeight: 90,
+                    }}
+                    activeOpacity={0.7}>
+                    <Text className="text-2xl mb-1">{link.icon}</Text>
+                    <Text className="text-[10px] font-bold text-center leading-tight" style={{ color: colors.text }}>
+                      {link.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+        </View>          {/* Date/Time and Location Header */}
           <View className="mb-6 flex-row items-center justify-between">
             {/* Date/Time */}
             <TouchableOpacity
@@ -1335,7 +1404,8 @@ export default function ReportIncidentIndex() {
             <Text
               className="mb-2 text-xs font-semibold uppercase"
               style={{ color: colors.textSecondary }}>
-              Incident Title <Text style={{ color: colors.error }}>*</Text>
+              <Text>Incident Title </Text>
+              <Text style={{ color: colors.error }}>*</Text>
             </Text>
             <TextInput
               placeholder="Brief title of the incident"
@@ -1357,43 +1427,13 @@ export default function ReportIncidentIndex() {
             )}
           </View>
 
-          {/* What Happened */}
-          <View className="mb-4">
-            <Text
-              className="mb-2 text-xs font-semibold uppercase"
-              style={{ color: colors.textSecondary }}>
-              What Happened? <Text style={{ color: colors.error }}>*</Text>
-            </Text>
-            <TextInput
-              placeholder="Describe the incident in detail..."
-              value={formData.what_happened}
-              onChangeText={(value) => updateFormData({ what_happened: value })}
-              multiline
-              numberOfLines={6}
-              className="rounded-xl px-4 py-4 text-base"
-              style={{
-                backgroundColor: colors.surface,
-                borderColor: uiState.validationErrors.what_happened ? colors.error : colors.border,
-                borderWidth: 1,
-                color: colors.text,
-                minHeight: 120,
-              }}
-              placeholderTextColor={colors.textSecondary}
-              textAlignVertical="top"
-            />
-            {uiState.validationErrors.what_happened && (
-              <Text className="mt-1 text-xs" style={{ color: colors.error }}>
-                {uiState.validationErrors.what_happened}
-              </Text>
-            )}
-          </View>
-
           {/* Category */}
           <View className="mb-4">
             <Text
               className="mb-2 text-xs font-semibold uppercase"
               style={{ color: colors.textSecondary }}>
-              Category <Text style={{ color: colors.error }}>*</Text>
+              <Text>Category </Text>
+              <Text style={{ color: colors.error }}>*</Text>
             </Text>
             <TouchableOpacity
               onPress={() => !categoriesLoading && updateUIState({ showCategoryDropdown: true })}
@@ -1419,7 +1459,8 @@ export default function ReportIncidentIndex() {
             </TouchableOpacity>
             {categoriesError && (
               <Text className="mt-1 text-xs" style={{ color: colors.error }}>
-                Failed to load categories: {categoriesError}
+                <Text>Failed to load categories: </Text>
+                <Text>{categoriesError}</Text>
               </Text>
             )}
             {uiState.validationErrors.incident_category && (
@@ -1456,6 +1497,177 @@ export default function ReportIncidentIndex() {
               </TouchableOpacity>
             </View>
           )}
+
+          {/* What Happened */}
+          <View className="mb-4">
+            <Text
+              className="mb-2 text-xs font-semibold uppercase"
+              style={{ color: colors.textSecondary }}>
+              <Text>What Happened? </Text>
+              <Text style={{ color: colors.error }}>*</Text>
+            </Text>
+            
+            {/* Rich Text Toolbar */}
+            <View
+              className="mb-2 rounded-t-xl overflow-hidden"
+              style={{ 
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+                borderWidth: 1,
+                borderBottomWidth: 0.5,
+                maxHeight: 50,
+              }}>
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 8 }}>
+                <View className="flex-row items-center gap-1">
+                  {/* Text Formatting */}
+                  <TouchableHighlight 
+                    className="rounded px-2 py-1.5"
+                    style={{ backgroundColor: activeFormats.has('bold') ? (isDark ? '#374151' : '#E5E7EB') : 'transparent' }}
+                    underlayColor={isDark ? '#4B5563' : '#D1D5DB'}
+                    onPress={() => {
+                      richEditorRef.current?.sendAction(actions.setBold, 'result');
+                      setActiveFormats(prev => {
+                        const newSet = new Set(prev);
+                        if (newSet.has('bold')) newSet.delete('bold');
+                        else newSet.add('bold');
+                        return newSet;
+                      });
+                    }}>
+                    <Text style={{ color: colors.text, fontWeight: 'bold', fontSize: 14 }}>B</Text>
+                  </TouchableHighlight>
+                  <TouchableHighlight 
+                    className="rounded px-2 py-1.5"
+                    style={{ backgroundColor: activeFormats.has('italic') ? (isDark ? '#374151' : '#E5E7EB') : 'transparent' }}
+                    underlayColor={isDark ? '#4B5563' : '#D1D5DB'}
+                    onPress={() => {
+                      richEditorRef.current?.sendAction(actions.setItalic, 'result');
+                      setActiveFormats(prev => {
+                        const newSet = new Set(prev);
+                        if (newSet.has('italic')) newSet.delete('italic');
+                        else newSet.add('italic');
+                        return newSet;
+                      });
+                    }}>
+                    <Text style={{ color: colors.text, fontStyle: 'italic', fontSize: 14 }}>i</Text>
+                  </TouchableHighlight>
+                  <TouchableHighlight 
+                    className="rounded px-2 py-1.5"
+                    style={{ backgroundColor: activeFormats.has('underline') ? (isDark ? '#374151' : '#E5E7EB') : 'transparent' }}
+                    underlayColor={isDark ? '#4B5563' : '#D1D5DB'}
+                    onPress={() => {
+                      richEditorRef.current?.sendAction(actions.setUnderline, 'result');
+                      setActiveFormats(prev => {
+                        const newSet = new Set(prev);
+                        if (newSet.has('underline')) newSet.delete('underline');
+                        else newSet.add('underline');
+                        return newSet;
+                      });
+                    }}>
+                    <Text style={{ color: colors.text, textDecorationLine: 'underline', fontSize: 14 }}>U</Text>
+                  </TouchableHighlight>
+                  <TouchableHighlight 
+                    className="rounded px-2 py-1.5"
+                    style={{ backgroundColor: activeFormats.has('strikethrough') ? (isDark ? '#374151' : '#E5E7EB') : 'transparent' }}
+                    underlayColor={isDark ? '#4B5563' : '#D1D5DB'}
+                    onPress={() => {
+                      richEditorRef.current?.sendAction(actions.setStrikethrough, 'result');
+                      setActiveFormats(prev => {
+                        const newSet = new Set(prev);
+                        if (newSet.has('strikethrough')) newSet.delete('strikethrough');
+                        else newSet.add('strikethrough');
+                        return newSet;
+                      });
+                    }}>
+                    <Text style={{ color: colors.text, textDecorationLine: 'line-through', fontSize: 14 }}>S</Text>
+                  </TouchableHighlight>
+                  
+                  <View className="h-6 mx-2" style={{ width: 1, backgroundColor: colors.border }} />
+                  
+                  {/* Lists */}
+                  <TouchableHighlight 
+                    className="rounded px-2 py-1.5"
+                    style={{ backgroundColor: 'transparent' }}
+                    underlayColor={isDark ? '#4B5563' : '#D1D5DB'}
+                    onPress={() => richEditorRef.current?.sendAction(actions.insertBulletsList, 'result')}>
+                    <List size={18} color={colors.text} />
+                  </TouchableHighlight>
+                  <TouchableHighlight 
+                    className="rounded px-2 py-1.5"
+                    style={{ backgroundColor: 'transparent' }}
+                    underlayColor={isDark ? '#4B5563' : '#D1D5DB'}
+                    onPress={() => richEditorRef.current?.sendAction(actions.insertOrderedList, 'result')}>
+                    <ListOrdered size={18} color={colors.text} />
+                  </TouchableHighlight>
+                  
+                  <View className="h-6 mx-2" style={{ width: 1, backgroundColor: colors.border }} />
+                  
+                  {/* Headings */}
+                  <TouchableHighlight 
+                    className="rounded px-2 py-1.5"
+                    style={{ backgroundColor: 'transparent' }}
+                    underlayColor={isDark ? '#4B5563' : '#D1D5DB'}
+                    onPress={() => richEditorRef.current?.sendAction(actions.heading1, 'result')}>
+                    <Heading1 size={18} color={colors.text} />
+                  </TouchableHighlight>
+                  <TouchableHighlight 
+                    className="rounded px-2 py-1.5"
+                    style={{ backgroundColor: 'transparent' }}
+                    underlayColor={isDark ? '#4B5563' : '#D1D5DB'}
+                    onPress={() => richEditorRef.current?.sendAction(actions.heading2, 'result')}>
+                    <Heading2 size={18} color={colors.text} />
+                  </TouchableHighlight>
+                  
+                  <View className="h-6 mx-2" style={{ width: 1, backgroundColor: colors.border }} />
+                  
+                  {/* Undo/Redo */}
+                  <TouchableHighlight 
+                    className="rounded px-2 py-1.5"
+                    style={{ backgroundColor: 'transparent' }}
+                    underlayColor={isDark ? '#4B5563' : '#D1D5DB'}
+                    onPress={() => richEditorRef.current?.sendAction(actions.undo, 'result')}>
+                    <Undo size={18} color={colors.text} />
+                  </TouchableHighlight>
+                  <TouchableHighlight 
+                    className="rounded px-2 py-1.5"
+                    style={{ backgroundColor: 'transparent' }}
+                    underlayColor={isDark ? '#4B5563' : '#D1D5DB'}
+                    onPress={() => richEditorRef.current?.sendAction(actions.redo, 'result')}>
+                    <Redo size={18} color={colors.text} />
+                  </TouchableHighlight>
+                </View>
+              </ScrollView>
+            </View>
+            
+            <View style={{ height: 150, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, overflow: 'hidden' }}>
+              <RichEditor
+                ref={richEditorRef}
+                placeholder="Describe the incident in detail..."
+                initialContentHTML={formData.what_happened}
+                onChange={(html) => updateFormData({ what_happened: html })}
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.surface,
+                  borderColor: uiState.validationErrors.what_happened ? colors.error : colors.border,
+                  borderWidth: 1,
+                  borderTopWidth: 0,
+                }}
+                editorStyle={{
+                  backgroundColor: colors.surface,
+                  color: colors.text,
+                  placeholderColor: colors.textSecondary,
+                  contentCSSText: `font-size: 16px; padding: 16px; color: ${colors.text}; min-height: 120px;`,
+                }}
+              />
+            </View>
+            {uiState.validationErrors.what_happened && (
+              <Text className="mt-1 text-xs" style={{ color: colors.error }}>
+                {uiState.validationErrors.what_happened}
+              </Text>
+            )}
+          </View>
 
           {/* Evidence Section */}
           <View className="mb-4">
@@ -1789,8 +2001,9 @@ export default function ReportIncidentIndex() {
                   <Mic size={40} color="white" />
                 </View>
                 <Text className="mb-2 text-2xl font-bold text-red-600">
-                  {Math.floor(recordingDuration / 60)}:
-                  {(recordingDuration % 60).toString().padStart(2, '0')}
+                  <Text>{Math.floor(recordingDuration / 60)}</Text>
+                  <Text>:</Text>
+                  <Text>{(recordingDuration % 60).toString().padStart(2, '0')}</Text>
                 </Text>
                 <Text className="mb-6 text-sm" style={{ color: colors.textSecondary }}>
                   Recording in progress...
