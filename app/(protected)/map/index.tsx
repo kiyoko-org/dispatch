@@ -17,6 +17,7 @@ import MapView, {
   Circle,
   Region,
   Polyline,
+  Polygon,
 } from 'react-native-maps';
 import { useRealtimeReports, useCategories } from '@kiyoko-org/dispatch-lib';
 import type { Database } from '@kiyoko-org/dispatch-lib/database.types';
@@ -25,6 +26,7 @@ import DatePicker from 'components/DatePicker';
 import { useTheme } from 'components/ThemeContext';
 import Papa from 'papaparse';
 import { dbscan, kMeans, gridBinning, regionAggregation, Point, Cluster } from 'lib/clustering';
+import { TUGUEGARAO_BOUNDARY } from 'lib/locations/tuguegarao-boundary';
 import {
   MapPin,
   AlertTriangle,
@@ -89,6 +91,7 @@ export default function MapPage() {
   const [showHeatmap, setShowHeatmap] = useState(true);
   const [showMarkers, setShowMarkers] = useState(true);
   const [showReports, setShowReports] = useState(true);
+  const [showBoundary, setShowBoundary] = useState(false);
   const [filterCategory, setFilterCategory] = useState<CrimeCategory | 'all'>('all');
   const [filterSubcategory, setFilterSubcategory] = useState<string | null>(null);
   const [filterStartDate, setFilterStartDate] = useState<Date | null>(null);
@@ -1447,6 +1450,19 @@ export default function MapPage() {
                   return null;
                 }
               })}
+
+            {/* Tuguegarao City Boundary */}
+            {showBoundary && (
+              <Polygon
+                coordinates={TUGUEGARAO_BOUNDARY.map((point) => ({
+                  latitude: point.latitude,
+                  longitude: point.longitude,
+                }))}
+                strokeColor={colors.primary}
+                strokeWidth={3}
+                fillColor="rgba(59, 130, 246, 0.1)"
+              />
+            )}
           </MapView>
         )}
 
@@ -2246,6 +2262,25 @@ export default function MapPage() {
                       className="h-4 w-4 rounded-full bg-white"
                       style={{
                         transform: [{ translateX: showReports ? 20 : 0 }],
+                      }}
+                    />
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  className="flex-row items-center justify-between rounded-lg p-3"
+                  style={{ backgroundColor: colors.background }}
+                  onPress={() => setShowBoundary(!showBoundary)}>
+                  <Text className="font-medium" style={{ color: colors.text }}>
+                    Show City Boundary
+                  </Text>
+                  <View
+                    className="h-6 w-11 rounded-full p-1"
+                    style={{ backgroundColor: showBoundary ? colors.primary : colors.border }}>
+                    <View
+                      className="h-4 w-4 rounded-full bg-white"
+                      style={{
+                        transform: [{ translateX: showBoundary ? 20 : 0 }],
                       }}
                     />
                   </View>
