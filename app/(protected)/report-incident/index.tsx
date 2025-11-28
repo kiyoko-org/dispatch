@@ -8,7 +8,6 @@ import {
   Text,
   View,
   TouchableOpacity,
-  TouchableHighlight,
   TouchableWithoutFeedback,
   Alert,
   ScrollView,
@@ -53,17 +52,6 @@ import {
   UserPlus,
   MessageSquare,
   DoorClosed,
-  List,
-  ListOrdered,
-  Heading1,
-  Heading2,
-  Heading3,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  Link,
-  Undo,
-  Redo,
 } from 'lucide-react-native';
 import {
   UploadManager,
@@ -72,7 +60,6 @@ import {
   SupabaseStorageService,
   ExpoFilePickerService,
 } from 'lib/services';
-import { RichEditor, RichToolbar, actions } from 'react-native-pell-rich-editor';
 import { FileUtils } from 'lib/services/file-utils';
 import { AudioRecorder } from 'expo-audio';
 import { UploadProgress } from 'components/ui/UploadProgress';
@@ -111,8 +98,6 @@ export default function ReportIncidentIndex() {
   const locationAbortControllerRef = useRef<AbortController | null>(null);
   const [recorder, setRecorder] = useState<AudioRecorder | null>(null);
   const [recordingDuration, setRecordingDuration] = useState(0);
-  const richEditorRef = useRef<RichEditor>(null);
-  const [activeFormats, setActiveFormats] = useState<Set<string>>(new Set());
 
   // Consolidated form data state
   const [formData, setFormData] = useState<ReportData>({
@@ -1506,162 +1491,23 @@ export default function ReportIncidentIndex() {
               <Text>What Happened? </Text>
               <Text style={{ color: colors.error }}>*</Text>
             </Text>
-            
-            {/* Rich Text Toolbar */}
-            <View
-              className="mb-2 rounded-t-xl overflow-hidden"
-              style={{ 
+            <TextInput
+              placeholder="Describe the incident in detail..."
+              value={formData.what_happened}
+              onChangeText={(value) => updateFormData({ what_happened: value })}
+              multiline
+              numberOfLines={6}
+              className="rounded-xl px-4 py-4 text-base"
+              style={{
                 backgroundColor: colors.surface,
-                borderColor: colors.border,
+                borderColor: uiState.validationErrors.what_happened ? colors.error : colors.border,
                 borderWidth: 1,
-                borderBottomWidth: 0.5,
-                maxHeight: 50,
-              }}>
-              <ScrollView 
-                horizontal 
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ paddingHorizontal: 12, paddingVertical: 8 }}>
-                <View className="flex-row items-center gap-1">
-                  {/* Text Formatting */}
-                  <TouchableHighlight 
-                    className="rounded px-2 py-1.5"
-                    style={{ backgroundColor: activeFormats.has('bold') ? (isDark ? '#374151' : '#E5E7EB') : 'transparent' }}
-                    underlayColor={isDark ? '#4B5563' : '#D1D5DB'}
-                    onPress={() => {
-                      richEditorRef.current?.sendAction(actions.setBold, 'result');
-                      setActiveFormats(prev => {
-                        const newSet = new Set(prev);
-                        if (newSet.has('bold')) newSet.delete('bold');
-                        else newSet.add('bold');
-                        return newSet;
-                      });
-                    }}>
-                    <Text style={{ color: colors.text, fontWeight: 'bold', fontSize: 14 }}>B</Text>
-                  </TouchableHighlight>
-                  <TouchableHighlight 
-                    className="rounded px-2 py-1.5"
-                    style={{ backgroundColor: activeFormats.has('italic') ? (isDark ? '#374151' : '#E5E7EB') : 'transparent' }}
-                    underlayColor={isDark ? '#4B5563' : '#D1D5DB'}
-                    onPress={() => {
-                      richEditorRef.current?.sendAction(actions.setItalic, 'result');
-                      setActiveFormats(prev => {
-                        const newSet = new Set(prev);
-                        if (newSet.has('italic')) newSet.delete('italic');
-                        else newSet.add('italic');
-                        return newSet;
-                      });
-                    }}>
-                    <Text style={{ color: colors.text, fontStyle: 'italic', fontSize: 14 }}>i</Text>
-                  </TouchableHighlight>
-                  <TouchableHighlight 
-                    className="rounded px-2 py-1.5"
-                    style={{ backgroundColor: activeFormats.has('underline') ? (isDark ? '#374151' : '#E5E7EB') : 'transparent' }}
-                    underlayColor={isDark ? '#4B5563' : '#D1D5DB'}
-                    onPress={() => {
-                      richEditorRef.current?.sendAction(actions.setUnderline, 'result');
-                      setActiveFormats(prev => {
-                        const newSet = new Set(prev);
-                        if (newSet.has('underline')) newSet.delete('underline');
-                        else newSet.add('underline');
-                        return newSet;
-                      });
-                    }}>
-                    <Text style={{ color: colors.text, textDecorationLine: 'underline', fontSize: 14 }}>U</Text>
-                  </TouchableHighlight>
-                  <TouchableHighlight 
-                    className="rounded px-2 py-1.5"
-                    style={{ backgroundColor: activeFormats.has('strikethrough') ? (isDark ? '#374151' : '#E5E7EB') : 'transparent' }}
-                    underlayColor={isDark ? '#4B5563' : '#D1D5DB'}
-                    onPress={() => {
-                      richEditorRef.current?.sendAction(actions.setStrikethrough, 'result');
-                      setActiveFormats(prev => {
-                        const newSet = new Set(prev);
-                        if (newSet.has('strikethrough')) newSet.delete('strikethrough');
-                        else newSet.add('strikethrough');
-                        return newSet;
-                      });
-                    }}>
-                    <Text style={{ color: colors.text, textDecorationLine: 'line-through', fontSize: 14 }}>S</Text>
-                  </TouchableHighlight>
-                  
-                  <View className="h-6 mx-2" style={{ width: 1, backgroundColor: colors.border }} />
-                  
-                  {/* Lists */}
-                  <TouchableHighlight 
-                    className="rounded px-2 py-1.5"
-                    style={{ backgroundColor: 'transparent' }}
-                    underlayColor={isDark ? '#4B5563' : '#D1D5DB'}
-                    onPress={() => richEditorRef.current?.sendAction(actions.insertBulletsList, 'result')}>
-                    <List size={18} color={colors.text} />
-                  </TouchableHighlight>
-                  <TouchableHighlight 
-                    className="rounded px-2 py-1.5"
-                    style={{ backgroundColor: 'transparent' }}
-                    underlayColor={isDark ? '#4B5563' : '#D1D5DB'}
-                    onPress={() => richEditorRef.current?.sendAction(actions.insertOrderedList, 'result')}>
-                    <ListOrdered size={18} color={colors.text} />
-                  </TouchableHighlight>
-                  
-                  <View className="h-6 mx-2" style={{ width: 1, backgroundColor: colors.border }} />
-                  
-                  {/* Headings */}
-                  <TouchableHighlight 
-                    className="rounded px-2 py-1.5"
-                    style={{ backgroundColor: 'transparent' }}
-                    underlayColor={isDark ? '#4B5563' : '#D1D5DB'}
-                    onPress={() => richEditorRef.current?.sendAction(actions.heading1, 'result')}>
-                    <Heading1 size={18} color={colors.text} />
-                  </TouchableHighlight>
-                  <TouchableHighlight 
-                    className="rounded px-2 py-1.5"
-                    style={{ backgroundColor: 'transparent' }}
-                    underlayColor={isDark ? '#4B5563' : '#D1D5DB'}
-                    onPress={() => richEditorRef.current?.sendAction(actions.heading2, 'result')}>
-                    <Heading2 size={18} color={colors.text} />
-                  </TouchableHighlight>
-                  
-                  <View className="h-6 mx-2" style={{ width: 1, backgroundColor: colors.border }} />
-                  
-                  {/* Undo/Redo */}
-                  <TouchableHighlight 
-                    className="rounded px-2 py-1.5"
-                    style={{ backgroundColor: 'transparent' }}
-                    underlayColor={isDark ? '#4B5563' : '#D1D5DB'}
-                    onPress={() => richEditorRef.current?.sendAction(actions.undo, 'result')}>
-                    <Undo size={18} color={colors.text} />
-                  </TouchableHighlight>
-                  <TouchableHighlight 
-                    className="rounded px-2 py-1.5"
-                    style={{ backgroundColor: 'transparent' }}
-                    underlayColor={isDark ? '#4B5563' : '#D1D5DB'}
-                    onPress={() => richEditorRef.current?.sendAction(actions.redo, 'result')}>
-                    <Redo size={18} color={colors.text} />
-                  </TouchableHighlight>
-                </View>
-              </ScrollView>
-            </View>
-            
-            <View style={{ height: 150, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, overflow: 'hidden' }}>
-              <RichEditor
-                ref={richEditorRef}
-                placeholder="Describe the incident in detail..."
-                initialContentHTML={formData.what_happened}
-                onChange={(html) => updateFormData({ what_happened: html })}
-                style={{
-                  flex: 1,
-                  backgroundColor: colors.surface,
-                  borderColor: uiState.validationErrors.what_happened ? colors.error : colors.border,
-                  borderWidth: 1,
-                  borderTopWidth: 0,
-                }}
-                editorStyle={{
-                  backgroundColor: colors.surface,
-                  color: colors.text,
-                  placeholderColor: colors.textSecondary,
-                  contentCSSText: `font-size: 16px; padding: 16px; color: ${colors.text}; min-height: 120px;`,
-                }}
-              />
-            </View>
+                color: colors.text,
+                minHeight: 150,
+              }}
+              placeholderTextColor={colors.textSecondary}
+              textAlignVertical="top"
+            />
             {uiState.validationErrors.what_happened && (
               <Text className="mt-1 text-xs" style={{ color: colors.error }}>
                 {uiState.validationErrors.what_happened}
