@@ -1238,218 +1238,337 @@ export default function ReportIncidentIndex() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 100 }}
         className="flex-1">
-        <View className="px-4 pt-4">
+        <View style={{ paddingHorizontal: 16, paddingTop: 20 }}>
           {/* Quick Links */}
-          <View className="mb-6">
-            <View className="mb-2 flex-row items-center justify-between">
-              <Text className="text-sm font-semibold" style={{ color: colors.textSecondary }}>
-                Quick Links
-              </Text>
-              <TouchableOpacity
-                onPress={() => setQuickLinksScrollable(!quickLinksScrollable)}
-                className="flex-row items-center"
-                activeOpacity={0.7}>
-                <Text className="mr-2 text-xs" style={{ color: colors.textSecondary }}>
-                  {quickLinksScrollable ? 'Scroll' : 'Wrap'}
-                </Text>
-                <View
-                  className="h-6 w-11 rounded-full justify-center"
-                  style={{ backgroundColor: quickLinksScrollable ? colors.primary : colors.border }}>
-                  <View
-                    className="h-4 w-4 rounded-full"
-                    style={{
-                      backgroundColor: colors.card,
-                      marginLeft: quickLinksScrollable ? 24 : 4,
-                    }}
-                  />
-                </View>
-              </TouchableOpacity>
-            </View>
+          <View style={{ marginBottom: 24 }}>
+            <Text
+              style={{
+                fontSize: 13,
+                fontWeight: '600',
+                color: colors.textSecondary,
+                letterSpacing: 0.5,
+                textTransform: 'uppercase',
+                marginBottom: 12,
+              }}>
+              What happened?
+            </Text>
             {quickLinksScrollable ? (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
                 {quickLinks.map((link, index) => (
                   <TouchableOpacity
                     key={index}
                     onPress={link.onPress}
-                    className="rounded-2xl p-3 items-center justify-center"
                     style={{
-                      backgroundColor: link.color + '10',
-                      borderColor: link.color + '40',
+                      backgroundColor: link.color + '08',
+                      borderColor: link.color + '20',
                       borderWidth: 1,
-                      minWidth: 100,
-                      minHeight: 100,
+                      borderRadius: 16,
+                      paddingVertical: 14,
+                      paddingHorizontal: 12,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minWidth: 95,
+                      minHeight: 90,
                     }}
                     activeOpacity={0.7}>
-                    <Text className="text-3xl mb-2">{link.icon}</Text>
-                    <Text className="text-xs font-medium text-center leading-tight" style={{ color: colors.text }}>
+                    <Text style={{ fontSize: 26, marginBottom: 6 }}>{link.icon}</Text>
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        fontWeight: '600',
+                        color: colors.text,
+                        textAlign: 'center',
+                        lineHeight: 14,
+                      }}>
                       {link.label}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
             ) : (
-              <View className="flex-row flex-wrap" style={{ gap: 6 }}>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 {quickLinks.map((link, index) => (
                   <TouchableOpacity
                     key={index}
                     onPress={link.onPress}
-                    className="rounded-2xl p-2 items-center justify-center flex-grow basis-[21%]"
                     style={{
-                      backgroundColor: link.color + '10',
-                      borderColor: link.color + '40',
+                      backgroundColor: link.color + '08',
+                      borderColor: link.color + '20',
                       borderWidth: 1,
-                      minHeight: 90,
+                      borderRadius: 16,
+                      paddingVertical: 12,
+                      paddingHorizontal: 8,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexGrow: 1,
+                      flexBasis: '21%',
+                      minHeight: 82,
                     }}
                     activeOpacity={0.7}>
-                    <Text className="text-2xl mb-1">{link.icon}</Text>
-                    <Text className="text-[10px] font-bold text-center leading-tight" style={{ color: colors.text }}>
+                    <Text style={{ fontSize: 22, marginBottom: 4 }}>{link.icon}</Text>
+                    <Text
+                      style={{
+                        fontSize: 10,
+                        fontWeight: '600',
+                        color: colors.text,
+                        textAlign: 'center',
+                        lineHeight: 13,
+                      }}>
                       {link.label}
                     </Text>
                   </TouchableOpacity>
                 ))}
               </View>
             )}
-        </View>          {/* Date/Time and Location Header */}
-          <View className="mb-6 flex-row items-center justify-between">
-            {/* Date/Time */}
+            <TouchableOpacity
+              onPress={() => setQuickLinksScrollable(!quickLinksScrollable)}
+              style={{
+                alignSelf: 'center',
+                marginTop: 10,
+                flexDirection: 'row',
+                alignItems: 'center',
+              }}
+              activeOpacity={0.7}>
+              <Text style={{ fontSize: 12, color: colors.textSecondary, marginRight: 6 }}>
+                {quickLinksScrollable ? 'Show grid' : 'Show scroll'}
+              </Text>
+              <View
+                style={{
+                  width: 36,
+                  height: 20,
+                  borderRadius: 10,
+                  backgroundColor: quickLinksScrollable ? colors.primary : colors.border,
+                  justifyContent: 'center',
+                }}>
+                <View
+                  style={{
+                    width: 16,
+                    height: 16,
+                    borderRadius: 8,
+                    backgroundColor: '#FFFFFF',
+                    marginLeft: quickLinksScrollable ? 18 : 2,
+                  }}
+                />
+              </View>
+            </TouchableOpacity>
+          </View>
+
+          {/* Date/Time and Location */}
+          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
+            {/* Date/Time Card */}
             <TouchableOpacity
               onPress={() => updateUIState({ showDateTimeDialog: true })}
-              className="flex-row items-center"
+              style={{
+                flex: 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderRadius: 14,
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.04,
+                shadowRadius: 3,
+                elevation: 1,
+              }}
               activeOpacity={0.7}>
-              <Calendar size={20} color={colors.textSecondary} className="mr-2" />
-
-              <View className="w-2" />
-
-              <View>
-                <Text className="text-xs font-medium" style={{ color: colors.textSecondary }}>
-                  WHEN
+              <View
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  backgroundColor: colors.primary + '12',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 10,
+                }}>
+                <Calendar size={16} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 10, fontWeight: '600', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  When
                 </Text>
-                <Text className="text-sm font-semibold" style={{ color: colors.text }}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }} numberOfLines={1}>
                   {formData.incident_date && formData.incident_time
                     ? (() => {
-                        // Parse MM/DD/YYYY format
-                        const [month, day, year] = formData.incident_date.split('/');
-                        const date = new Date(
-                          parseInt(year, 10),
-                          parseInt(month, 10) - 1,
-                          parseInt(day, 10)
-                        );
-                        const monthName = date.toLocaleDateString('en-US', { month: 'short' });
-                        const currentYear = new Date().getFullYear();
-                        const includeYear = date.getFullYear() !== currentYear;
-                        const dateDisplay = includeYear
-                          ? `${monthName} ${day}, ${year}`
-                          : `${monthName} ${day}`;
-                        return `${dateDisplay} at ${formData.incident_time}`;
-                      })()
-                    : 'Select date & time'}
+                      const [month, day, year] = formData.incident_date.split('/');
+                      const date = new Date(
+                        parseInt(year, 10),
+                        parseInt(month, 10) - 1,
+                        parseInt(day, 10)
+                      );
+                      const monthName = date.toLocaleDateString('en-US', { month: 'short' });
+                      const currentYear = new Date().getFullYear();
+                      const includeYear = date.getFullYear() !== currentYear;
+                      const dateDisplay = includeYear
+                        ? `${monthName} ${day}, ${year}`
+                        : `${monthName} ${day}`;
+                      return `${dateDisplay}, ${formData.incident_time}`;
+                    })()
+                    : 'Set date & time'}
                 </Text>
               </View>
             </TouchableOpacity>
 
-            {/* Location */}
+            {/* Location Card */}
             <TouchableOpacity
               onPress={() => updateUIState({ showLocationDialog: true })}
               disabled={uiState.isGettingLocation}
-              className="flex-row items-center"
+              style={{
+                flex: 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: uiState.locationFetchFailed ? colors.error + '60' : colors.border,
+                borderRadius: 14,
+                paddingHorizontal: 14,
+                paddingVertical: 12,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.04,
+                shadowRadius: 3,
+                elevation: 1,
+              }}
               activeOpacity={0.7}>
-              {formData.street_address && !uiState.locationFetchFailed && (
-                <Text
-                  className="mr-2 max-w-[150px] text-xs"
-                  style={{ color: colors.textSecondary }}
-                  numberOfLines={1}>
-                  {formData.street_address}
-                </Text>
-              )}
-              {uiState.isGettingLocation ? (
-                <TouchableOpacity
-                  onPress={handleCancelLocationFetch}
-                  activeOpacity={0.7}
-                  className="flex-row items-center gap-2">
+              <View
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  backgroundColor: uiState.locationFetchFailed
+                    ? colors.error + '12'
+                    : formData.street_address
+                      ? (colors.success || '#10B981') + '12'
+                      : colors.primary + '12',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 10,
+                }}>
+                {uiState.isGettingLocation ? (
                   <ActivityIndicator size="small" color={colors.primary} />
-                  <X size={16} color={colors.error} />
+                ) : (
+                  <MapPin
+                    size={16}
+                    color={
+                      uiState.locationFetchFailed
+                        ? colors.error
+                        : formData.street_address
+                          ? colors.success || '#10B981'
+                          : colors.primary
+                    }
+                  />
+                )}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontSize: 10, fontWeight: '600', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  Where
+                </Text>
+                <Text
+                  style={{ fontSize: 13, fontWeight: '600', color: colors.text }}
+                  numberOfLines={1}>
+                  {uiState.isGettingLocation
+                    ? 'Getting location...'
+                    : formData.street_address && !uiState.locationFetchFailed
+                      ? formData.street_address
+                      : 'Set location'}
+                </Text>
+              </View>
+              {uiState.isGettingLocation && (
+                <TouchableOpacity onPress={handleCancelLocationFetch} activeOpacity={0.7}>
+                  <X size={14} color={colors.error} />
                 </TouchableOpacity>
-              ) : (
-                <MapPin
-                  size={24}
-                  color={
-                    uiState.locationFetchFailed
-                      ? colors.error
-                      : formData.street_address
-                        ? colors.success
-                        : colors.textSecondary
-                  }
-                />
               )}
             </TouchableOpacity>
           </View>
 
           {/* Incident Title */}
-          <View className="mb-4">
+          <View style={{ marginBottom: 16 }}>
             <Text
-              className="mb-2 text-xs font-semibold uppercase"
-              style={{ color: colors.textSecondary }}>
-              <Text>Incident Title </Text>
-              <Text style={{ color: colors.error }}>*</Text>
+              style={{
+                fontSize: 13,
+                fontWeight: '600',
+                color: colors.textSecondary,
+                letterSpacing: 0.5,
+                textTransform: 'uppercase',
+                marginBottom: 8,
+              }}>
+              Incident Title <Text style={{ color: colors.error }}>*</Text>
             </Text>
             <TextInput
               placeholder="Brief title of the incident"
               value={formData.incident_title}
               onChangeText={(value) => updateFormData({ incident_title: value })}
-              className="rounded-xl px-4 py-4 text-base"
               style={{
                 backgroundColor: colors.surface,
                 borderColor: uiState.validationErrors.incident_title ? colors.error : colors.border,
                 borderWidth: 1,
+                borderRadius: 14,
+                paddingHorizontal: 16,
+                paddingVertical: 14,
+                fontSize: 15,
                 color: colors.text,
               }}
               placeholderTextColor={colors.textSecondary}
             />
             {uiState.validationErrors.incident_title && (
-              <Text className="mt-1 text-xs" style={{ color: colors.error }}>
+              <Text style={{ color: colors.error, fontSize: 12, marginTop: 4 }}>
                 {uiState.validationErrors.incident_title}
               </Text>
             )}
           </View>
 
           {/* Category */}
-          <View className="mb-4">
+          <View style={{ marginBottom: 16 }}>
             <Text
-              className="mb-2 text-xs font-semibold uppercase"
-              style={{ color: colors.textSecondary }}>
-              <Text>Category </Text>
-              <Text style={{ color: colors.error }}>*</Text>
+              style={{
+                fontSize: 13,
+                fontWeight: '600',
+                color: colors.textSecondary,
+                letterSpacing: 0.5,
+                textTransform: 'uppercase',
+                marginBottom: 8,
+              }}>
+              Category <Text style={{ color: colors.error }}>*</Text>
             </Text>
             <TouchableOpacity
               onPress={() => !categoriesLoading && updateUIState({ showCategoryDropdown: true })}
-              className="flex-row items-center justify-between rounded-xl px-4 py-4"
               disabled={categoriesLoading}
               activeOpacity={0.7}
               style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'space-between',
                 backgroundColor: colors.surface,
-                borderColor: uiState.validationErrors.incident_category
-                  ? colors.error
-                  : colors.border,
+                borderColor: uiState.validationErrors.incident_category ? colors.error : colors.border,
                 borderWidth: 1,
+                borderRadius: 14,
+                paddingHorizontal: 16,
+                paddingVertical: 14,
                 opacity: categoriesLoading ? 0.6 : 1,
               }}>
               <Text
-                style={{ color: formData.incident_category ? colors.text : colors.textSecondary }}>
+                style={{
+                  fontSize: 15,
+                  color: formData.incident_category ? colors.text : colors.textSecondary,
+                }}>
                 {categoriesLoading
                   ? 'Loading categories...'
                   : categories.find((cat) => cat.id.toString() === formData.incident_category)
-                      ?.name || 'Select incident category'}
+                    ?.name || 'Select incident category'}
               </Text>
-              <ChevronDown size={20} color={colors.textSecondary} />
+              <ChevronDown size={18} color={colors.textSecondary} />
             </TouchableOpacity>
             {categoriesError && (
-              <Text className="mt-1 text-xs" style={{ color: colors.error }}>
-                <Text>Failed to load categories: </Text>
-                <Text>{categoriesError}</Text>
+              <Text style={{ color: colors.error, fontSize: 12, marginTop: 4 }}>
+                Failed to load categories: {categoriesError}
               </Text>
             )}
             {uiState.validationErrors.incident_category && (
-              <Text className="mt-1 text-xs" style={{ color: colors.error }}>
+              <Text style={{ color: colors.error, fontSize: 12, marginTop: 4 }}>
                 {uiState.validationErrors.incident_category}
               </Text>
             )}
@@ -1457,39 +1576,56 @@ export default function ReportIncidentIndex() {
 
           {/* Subcategory - shown after category selection */}
           {formData.incident_category && (
-            <View className="mb-4">
+            <View style={{ marginBottom: 16 }}>
               <Text
-                className="mb-2 text-xs font-semibold uppercase"
-                style={{ color: colors.textSecondary }}>
+                style={{
+                  fontSize: 13,
+                  fontWeight: '600',
+                  color: colors.textSecondary,
+                  letterSpacing: 0.5,
+                  textTransform: 'uppercase',
+                  marginBottom: 8,
+                }}>
                 Subcategory
               </Text>
               <TouchableOpacity
                 onPress={() => updateUIState({ showSubcategoryDropdown: true })}
-                className="flex-row items-center justify-between rounded-xl px-4 py-4"
                 activeOpacity={0.7}
                 style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
                   backgroundColor: colors.surface,
                   borderColor: colors.border,
                   borderWidth: 1,
+                  borderRadius: 14,
+                  paddingHorizontal: 16,
+                  paddingVertical: 14,
                 }}>
                 <Text
                   style={{
+                    fontSize: 15,
                     color: formData.incident_subcategory ? colors.text : colors.textSecondary,
                   }}>
                   {formData.incident_subcategory || 'Other'}
                 </Text>
-                <ChevronDown size={20} color={colors.textSecondary} />
+                <ChevronDown size={18} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
           )}
 
           {/* What Happened */}
-          <View className="mb-4">
+          <View style={{ marginBottom: 16 }}>
             <Text
-              className="mb-2 text-xs font-semibold uppercase"
-              style={{ color: colors.textSecondary }}>
-              <Text>What Happened? </Text>
-              <Text style={{ color: colors.error }}>*</Text>
+              style={{
+                fontSize: 13,
+                fontWeight: '600',
+                color: colors.textSecondary,
+                letterSpacing: 0.5,
+                textTransform: 'uppercase',
+                marginBottom: 8,
+              }}>
+              What Happened? <Text style={{ color: colors.error }}>*</Text>
             </Text>
             <TextInput
               placeholder="Describe the incident in detail..."
@@ -1497,38 +1633,53 @@ export default function ReportIncidentIndex() {
               onChangeText={(value) => updateFormData({ what_happened: value })}
               multiline
               numberOfLines={6}
-              className="rounded-xl px-4 py-4 text-base"
               style={{
                 backgroundColor: colors.surface,
                 borderColor: uiState.validationErrors.what_happened ? colors.error : colors.border,
                 borderWidth: 1,
+                borderRadius: 14,
+                paddingHorizontal: 16,
+                paddingVertical: 14,
+                fontSize: 15,
                 color: colors.text,
-                minHeight: 150,
+                minHeight: 140,
+                textAlignVertical: 'top',
               }}
               placeholderTextColor={colors.textSecondary}
-              textAlignVertical="top"
             />
             {uiState.validationErrors.what_happened && (
-              <Text className="mt-1 text-xs" style={{ color: colors.error }}>
+              <Text style={{ color: colors.error, fontSize: 12, marginTop: 4 }}>
                 {uiState.validationErrors.what_happened}
               </Text>
             )}
           </View>
 
           {/* Evidence Section */}
-          <View className="mb-4">
-            <View className="mb-2 flex-row items-center justify-between">
+          <View style={{ marginBottom: 16 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
               <Text
-                className="text-xs font-semibold uppercase"
-                style={{ color: colors.textSecondary }}>
+                style={{
+                  fontSize: 13,
+                  fontWeight: '600',
+                  color: colors.textSecondary,
+                  letterSpacing: 0.5,
+                  textTransform: 'uppercase',
+                }}>
                 Evidence
               </Text>
               <TouchableOpacity
                 onPress={() => updateUIState({ showEvidenceModal: true })}
-                className="flex-row items-center"
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: colors.primary + '12',
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                  borderRadius: 20,
+                }}
                 activeOpacity={0.7}>
-                <Plus size={16} color={colors.primary} />
-                <Text className="ml-1 text-sm font-semibold" style={{ color: colors.primary }}>
+                <Plus size={14} color={colors.primary} />
+                <Text style={{ marginLeft: 4, fontSize: 13, fontWeight: '600', color: colors.primary }}>
                   Add
                 </Text>
               </TouchableOpacity>
@@ -1536,38 +1687,41 @@ export default function ReportIncidentIndex() {
 
             {/* Upload Progress */}
             {isUploading && uploadProgress && (
-              <View className="mb-3">
+              <View style={{ marginBottom: 10 }}>
                 <UploadProgress progress={uploadProgress} fileName="Uploading..." />
               </View>
             )}
 
             {/* Uploaded Files */}
             {uploadedFiles.length > 0 ? (
-              <View className="flex gap-2 space-y-2">
+              <View style={{ gap: 8 }}>
                 {uploadedFiles.map((file, index) => (
                   <View
                     key={index}
-                    className="flex-row items-center justify-between rounded-xl p-3"
                     style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
                       backgroundColor: colors.surface,
                       borderColor: colors.border,
                       borderWidth: 1,
+                      borderRadius: 14,
+                      padding: 12,
                     }}>
                     {renderFilePreview(file)}
-                    <View className="flex-1">
+                    <View style={{ flex: 1 }}>
                       <Text
-                        className="text-sm font-medium"
-                        style={{ color: colors.text }}
+                        style={{ fontSize: 14, fontWeight: '500', color: colors.text }}
                         numberOfLines={1}>
                         {file.name}
                       </Text>
-                      <Text className="text-xs" style={{ color: colors.textSecondary }}>
+                      <Text style={{ fontSize: 12, color: colors.textSecondary }}>
                         {FileUtils.formatFileSize(file.size)}
                       </Text>
                     </View>
                     <TouchableOpacity
                       onPress={() => removeFile(index)}
-                      className="ml-2 p-1"
+                      style={{ marginLeft: 8, padding: 4 }}
                       activeOpacity={0.7}
                       hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                       <X size={16} color={colors.error} />
@@ -1576,25 +1730,38 @@ export default function ReportIncidentIndex() {
                 ))}
               </View>
             ) : (
-              <View
-                className="items-center justify-center rounded-xl py-6"
+              <TouchableOpacity
+                onPress={() => updateUIState({ showEvidenceModal: true })}
+                activeOpacity={0.7}
                 style={{
-                  backgroundColor: colors.surface,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: 14,
+                  paddingVertical: 24,
+                  borderWidth: 1.5,
+                  borderStyle: 'dashed',
                   borderColor: colors.border,
-                  borderWidth: 1,
+                  backgroundColor: colors.surface,
                 }}>
-                <Text className="text-sm" style={{ color: colors.textSecondary }}>
-                  No evidence added yet
+                <Upload size={22} color={colors.textSecondary} style={{ marginBottom: 6 }} />
+                <Text style={{ fontSize: 13, color: colors.textSecondary, fontWeight: '500' }}>
+                  Tap to add photos, audio, or documents
                 </Text>
-              </View>
+              </TouchableOpacity>
             )}
           </View>
 
           {/* Disclaimer */}
-          <View className="mb-4 rounded-xl p-4" style={{ backgroundColor: colors.surfaceVariant }}>
-            <Text className="text-center text-xs" style={{ color: colors.textSecondary }}>
-              Your report will be reviewed by our team and may be subject to verification. Please
-              provide accurate information.
+          <View
+            style={{
+              marginBottom: 16,
+              borderRadius: 14,
+              paddingVertical: 14,
+              paddingHorizontal: 16,
+              backgroundColor: colors.surfaceVariant,
+            }}>
+            <Text style={{ fontSize: 12, color: colors.textSecondary, textAlign: 'center', lineHeight: 18 }}>
+              Your report will be reviewed and may be subject to verification. Please provide accurate information.
             </Text>
           </View>
         </View>
@@ -1602,42 +1769,57 @@ export default function ReportIncidentIndex() {
 
       {/* Floating Action Buttons */}
       <View
-        className="absolute bottom-0 left-0 right-0 px-4 pb-6 pt-4"
         style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          paddingHorizontal: 16,
+          paddingBottom: 24,
+          paddingTop: 14,
           backgroundColor: colors.background,
           borderTopWidth: 1,
           borderTopColor: colors.border,
         }}>
-        <View className="flex-row space-x-4">
+        <View style={{ flexDirection: 'row', gap: 10 }}>
           <TouchableOpacity
             onPress={() => router.back()}
-            className="flex-1 items-center rounded-xl px-6 py-4"
             activeOpacity={0.8}
             style={{
+              flex: 1,
+              alignItems: 'center',
+              borderRadius: 14,
+              paddingVertical: 15,
               backgroundColor: colors.surface,
               borderColor: colors.border,
               borderWidth: 1,
             }}>
-            <Text className="text-base font-semibold" style={{ color: colors.text }}>
+            <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>
               Cancel
             </Text>
           </TouchableOpacity>
 
-          <View className="w-2" />
-
           <TouchableOpacity
             onPress={handleSubmitReport}
             disabled={uiState.isSubmitting}
-            className="flex-1 items-center rounded-xl px-6 py-4"
             activeOpacity={0.8}
             style={{
+              flex: 1,
+              alignItems: 'center',
+              borderRadius: 14,
+              paddingVertical: 15,
               backgroundColor: uiState.isSubmitting ? colors.surfaceVariant : colors.primary,
               opacity: uiState.isSubmitting ? 0.6 : 1,
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: uiState.isSubmitting ? 0 : 0.25,
+              shadowRadius: 8,
+              elevation: uiState.isSubmitting ? 0 : 4,
             }}>
             {uiState.isSubmitting ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text className="text-base font-semibold text-white">Submit Report</Text>
+              <Text style={{ fontSize: 15, fontWeight: '600', color: '#FFFFFF' }}>Submit Report</Text>
             )}
           </TouchableOpacity>
         </View>
@@ -2243,7 +2425,7 @@ export default function ReportIncidentIndex() {
         </View>
       </Modal>
 
-      <Modal visible={isUploading} transparent animationType="fade" onRequestClose={() => {}}>
+      <Modal visible={isUploading} transparent animationType="fade" onRequestClose={() => { }}>
         <TouchableWithoutFeedback>
           <View
             className="flex-1 items-center justify-center"

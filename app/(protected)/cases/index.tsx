@@ -16,7 +16,7 @@ export default function MyReports() {
   const { categories } = useDispatchClient();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Filter and sort state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -138,7 +138,7 @@ export default function MyReports() {
     // Sort reports
     filtered.sort((a, b) => {
       let comparison = 0;
-      
+
       switch (sortBy) {
         case 'date':
           const dateA = new Date(a.created_at || 0).getTime();
@@ -149,7 +149,7 @@ export default function MyReports() {
           comparison = (a.incident_title || '').localeCompare(b.incident_title || '');
           break;
       }
-      
+
       return sortOrder === 'asc' ? comparison : -comparison;
     });
 
@@ -160,7 +160,7 @@ export default function MyReports() {
   const getActivityIcon = (categoryId: number | null) => {
     const category = categories.find(cat => cat.id === categoryId);
     const categoryName = category?.name || 'Unknown Category';
-    
+
     const categoryIcons: Record<string, any> = {
       'Emergency Situation': { icon: AlertTriangle, color: '#DC2626' }, // Red for critical
       'Crime in Progress': { icon: AlertCircle, color: '#EA580C' }, // Orange for high
@@ -195,7 +195,7 @@ export default function MyReports() {
                 }}>
                 Your Reports
               </Text>
-              
+
               {/* Archive Toggle Button */}
               <TouchableOpacity
                 onPress={() => setShowArchived(!showArchived)}
@@ -215,24 +215,24 @@ export default function MyReports() {
                   elevation: 2,
                 }}>
                 <Archive size={16} color={showArchived ? colors.text : colors.surface} />
-                <Text style={{ 
-                  marginLeft: 6, 
-                  fontSize: 13, 
-                  fontWeight: '600', 
-                  color: showArchived ? colors.text : colors.surface 
+                <Text style={{
+                  marginLeft: 6,
+                  fontSize: 13,
+                  fontWeight: '600',
+                  color: showArchived ? colors.text : colors.surface
                 }}>
                   {showArchived ? 'Active' : 'Archived'}
                 </Text>
               </TouchableOpacity>
             </View>
-            
+
             <Text
               style={{
                 fontSize: 14,
                 color: colors.textSecondary,
               }}>
-              {showArchived 
-                ? 'View completed and cancelled reports' 
+              {showArchived
+                ? 'View completed and cancelled reports'
                 : 'Track and manage your incident reports'
               }
             </Text>
@@ -451,7 +451,7 @@ export default function MyReports() {
                 const categoryName = categories.find(cat => cat.id === report.category_id)?.name || 'Unknown Category';
                 const statusColor = getStatusColor(report.status || 'pending');
                 const isArchived = report.status === 'resolved' || report.status === 'cancelled';
-                
+
                 return (
                   <TouchableOpacity
                     key={report.id}
@@ -469,24 +469,6 @@ export default function MyReports() {
                       elevation: 3,
                       opacity: isArchived ? 0.7 : 1,
                     }}>
-                    {isArchived && (
-                      <View style={{ 
-                        position: 'absolute', 
-                        top: 12, 
-                        right: 12,
-                        backgroundColor: colors.textSecondary + '20',
-                        borderRadius: 8,
-                        paddingHorizontal: 8,
-                        paddingVertical: 4,
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                      }}>
-                        <Archive size={12} color={colors.textSecondary} />
-                        <Text style={{ fontSize: 10, fontWeight: '600', color: colors.textSecondary, marginLeft: 4 }}>
-                          Archived
-                        </Text>
-                      </View>
-                    )}
                     <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
                       <View
                         style={{
@@ -513,10 +495,10 @@ export default function MyReports() {
                             {report.incident_title || 'Incident Report'}
                           </Text>
                         </View>
-                        
+
                         <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
-                          <View style={{ 
-                            flexDirection: 'row', 
+                          <View style={{
+                            flexDirection: 'row',
                             alignItems: 'center',
                             backgroundColor: colors.surfaceVariant,
                             paddingHorizontal: 8,
@@ -528,9 +510,9 @@ export default function MyReports() {
                               {categoryName}
                             </Text>
                           </View>
-                          
+
                           {report.id && (
-                            <View style={{ 
+                            <View style={{
                               backgroundColor: colors.surfaceVariant,
                               paddingHorizontal: 8,
                               paddingVertical: 4,
@@ -542,16 +524,16 @@ export default function MyReports() {
                             </View>
                           )}
                         </View>
-                        
+
                         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <View style={{ 
+                          <View style={{
                             paddingHorizontal: 10,
                             paddingVertical: 4,
                             borderRadius: 8,
                             backgroundColor: `${statusColor}15`,
                           }}>
-                            <Text style={{ 
-                              fontSize: 11, 
+                            <Text style={{
+                              fontSize: 11,
                               fontWeight: '600',
                               color: statusColor,
                               textTransform: 'capitalize',
@@ -559,7 +541,7 @@ export default function MyReports() {
                               {report.status?.replace('_', ' ') || 'Pending'}
                             </Text>
                           </View>
-                          
+
                           <Text style={{ fontSize: 12, fontWeight: '500', color: colors.textSecondary }}>
                             {report.created_at ? formatTimeAgo(report.created_at) : 'Recently'}
                           </Text>
@@ -619,7 +601,7 @@ export default function MyReports() {
                   lineHeight: 22,
                   paddingHorizontal: 10,
                 }}>
-                {showArchived 
+                {showArchived
                   ? 'Completed and cancelled reports will appear here once they are archived.'
                   : 'You haven\'t submitted any incident reports. Start by reporting an incident to keep your community safe.'
                 }
@@ -671,15 +653,15 @@ export default function MyReports() {
             <View style={{ alignItems: 'center', paddingVertical: 12 }}>
               <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
             </View>
-            
+
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
               <Text style={{ fontSize: 22, fontWeight: 'bold', color: colors.text }}>Filter by Category</Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => setShowCategoryModal(false)}
-                style={{ 
-                  padding: 8, 
-                  borderRadius: 8, 
-                  backgroundColor: colors.surfaceVariant 
+                style={{
+                  padding: 8,
+                  borderRadius: 8,
+                  backgroundColor: colors.surfaceVariant
                 }}>
                 <X size={20} color={colors.text} />
               </TouchableOpacity>
@@ -718,15 +700,15 @@ export default function MyReports() {
             <View style={{ alignItems: 'center', paddingVertical: 12 }}>
               <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
             </View>
-            
+
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
               <Text style={{ fontSize: 22, fontWeight: 'bold', color: colors.text }}>Sort by</Text>
-              <TouchableOpacity 
+              <TouchableOpacity
                 onPress={() => setShowSortModal(false)}
-                style={{ 
-                  padding: 8, 
-                  borderRadius: 8, 
-                  backgroundColor: colors.surfaceVariant 
+                style={{
+                  padding: 8,
+                  borderRadius: 8,
+                  backgroundColor: colors.surfaceVariant
                 }}>
                 <X size={20} color={colors.text} />
               </TouchableOpacity>

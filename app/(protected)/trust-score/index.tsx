@@ -3,6 +3,7 @@ import {
   Text,
   ScrollView,
   StatusBar,
+  Animated,
 } from 'react-native';
 import {
   Shield,
@@ -14,12 +15,114 @@ import {
   FileText,
   Clock,
   MapPin,
+  Star,
+  ShieldAlert,
+  ShieldOff,
 } from 'lucide-react-native';
 import HeaderWithSidebar from 'components/HeaderWithSidebar';
 import { useTheme } from 'components/ThemeContext';
+import { useState, useEffect, useRef } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const TRUST_LEVELS = [
+  {
+    level: 0,
+    label: 'Untrusted',
+    color: '#EF4444',
+    bg: '#EF444420',
+    border: '#EF444440',
+    priority: 'None',
+    description: 'Your reports are not prioritized. Build trust through responsible use.',
+    icon: ShieldOff,
+  },
+  {
+    level: 1,
+    label: 'Low Trust',
+    color: '#F97316',
+    bg: '#F9731620',
+    border: '#F9731640',
+    priority: 'Low',
+    description: 'Your reports receive standard processing. Keep contributing to restore trust.',
+    icon: ShieldAlert,
+  },
+  {
+    level: 2,
+    label: 'Trusted',
+    color: '#F59E0B',
+    bg: '#F59E0B20',
+    border: '#F59E0B40',
+    priority: 'Medium',
+    description: 'Your reports are given moderate priority. You\'re a valued community member.',
+    icon: Shield,
+  },
+  {
+    level: 3,
+    label: 'Highly Trusted',
+    color: '#22C55E',
+    bg: '#22C55E20',
+    border: '#22C55E40',
+    priority: 'High',
+    description: 'Your reports are fast-tracked with high priority. Thank you for your trust.',
+    icon: Star,
+  },
+];
+
+const STORAGE_KEY = '@dispatch_trust_level';
 
 export default function TrustScorePage() {
   const { colors, isDark } = useTheme();
+  const [currentLevel, setCurrentLevel] = useState(3);
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    loadTrustLevel();
+  }, []);
+
+  useEffect(() => {
+    // Pulse animation for the icon circle
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1.08,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 1500,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+
+    pulse.start();
+
+    return () => {
+      pulse.stop();
+    };
+  }, []);
+
+  const loadTrustLevel = async () => {
+    try {
+      const saved = await AsyncStorage.getItem(STORAGE_KEY);
+      if (saved !== null) {
+        setCurrentLevel(parseInt(saved, 10));
+      }
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const saveTrustLevel = async (level: number) => {
+    try {
+      await AsyncStorage.setItem(STORAGE_KEY, level.toString());
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const trustInfo = TRUST_LEVELS[currentLevel];
+  const TrustIcon = trustInfo.icon;
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
@@ -27,32 +130,43 @@ export default function TrustScorePage() {
         barStyle={isDark ? 'light-content' : 'dark-content'}
         backgroundColor={colors.background}
       />
-      
+
       <HeaderWithSidebar title="Trust Score" showBackButton={true} backRoute="/home" />
-      
+
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Trust Score Display */}
         <View className="items-center py-8">
-          <View
-            className="w-32 h-32 rounded-full items-center justify-center mb-4"
-            style={{ backgroundColor: colors.primary + '20' }}
+          {/* Animated pulsating icon circle */}
+          <Animated.View
+            style={{
+              transform: [{ scale: pulseAnim }],
+              width: 144,
+              height: 144,
+              borderRadius: 72,
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: 16,
+              backgroundColor: trustInfo.bg,
+              borderWidth: 3,
+              borderColor: trustInfo.color,
+            }}
           >
-            <Shield size={64} color={colors.primary} />
-          </View>
-          <Text className="text-5xl font-bold mb-2" style={{ color: colors.text }}>
-            0%
-          </Text>
-          <Text className="text-lg" style={{ color: colors.textSecondary }}>
-            Your Trust Score
+            <TrustIcon size={56} color={trustInfo.color} />
+          </Animated.View>
+          <Text className="text-2xl font-bold mb-1" style={{ color: colors.text }}>
+            {trustInfo.label}
           </Text>
           <View
-            className="px-4 py-2 rounded-full mt-4"
-            style={{ backgroundColor: colors.surfaceVariant }}
+            className="px-4 py-2 rounded-full mt-2"
+            style={{ backgroundColor: trustInfo.bg, borderWidth: 1, borderColor: trustInfo.border }}
           >
-            <Text className="text-sm font-medium" style={{ color: colors.text }}>
-              Building Trust
+            <Text className="text-sm font-semibold" style={{ color: trustInfo.color }}>
+              Level {currentLevel} • Priority: {trustInfo.priority}
             </Text>
           </View>
+          <Text className="text-sm text-center mt-3 px-8" style={{ color: colors.textSecondary }}>
+            {trustInfo.description}
+          </Text>
         </View>
 
         {/* Honor System Explanation */}
@@ -77,16 +191,16 @@ export default function TrustScorePage() {
               </Text>
             </View>
             <Text className="text-base leading-6" style={{ color: colors.textSecondary }}>
-              Trust Score is an honor system. If you're trusted, you're trusted. Your score reflects your responsible use of the Dispatch platform and helps maintain the integrity of our community safety network.
+              Trust Score is an honor system with 3 levels. Your level determines the priority of your reports and emergency requests. Responsible use increases your level, while misuse decreases it — even down to Level 0 (Untrusted).
             </Text>
           </View>
 
           {/* Building Trust Section */}
           <View className="mb-6">
             <Text className="text-lg font-bold mb-4" style={{ color: colors.text }}>
-              Building Trust
+              How to Level Up
             </Text>
-            
+
             <View
               className="rounded-2xl overflow-hidden"
               style={{
@@ -97,8 +211,8 @@ export default function TrustScorePage() {
             >
               <TrustItem
                 icon={FileText}
-                iconBg={colors.success + '20'}
-                iconColor={colors.success}
+                iconBg={'#22C55E20'}
+                iconColor={'#22C55E'}
                 title="Submit Verified Reports"
                 description="Accurate incident reports that are confirmed by authorities"
                 colors={colors}
@@ -106,8 +220,8 @@ export default function TrustScorePage() {
               <Divider colors={colors} />
               <TrustItem
                 icon={CheckCircle}
-                iconBg={colors.success + '20'}
-                iconColor={colors.success}
+                iconBg={'#22C55E20'}
+                iconColor={'#22C55E'}
                 title="Timely Emergency Responses"
                 description="Quick and appropriate responses to emergency situations"
                 colors={colors}
@@ -115,8 +229,8 @@ export default function TrustScorePage() {
               <Divider colors={colors} />
               <TrustItem
                 icon={MapPin}
-                iconBg={colors.success + '20'}
-                iconColor={colors.success}
+                iconBg={'#22C55E20'}
+                iconColor={'#22C55E'}
                 title="Accurate Location Information"
                 description="Providing precise location details for incidents"
                 colors={colors}
@@ -124,8 +238,8 @@ export default function TrustScorePage() {
               <Divider colors={colors} />
               <TrustItem
                 icon={Clock}
-                iconBg={colors.success + '20'}
-                iconColor={colors.success}
+                iconBg={'#22C55E20'}
+                iconColor={'#22C55E'}
                 title="Consistent Platform Use"
                 description="Regular, responsible engagement with the community"
                 colors={colors}
@@ -136,9 +250,9 @@ export default function TrustScorePage() {
           {/* Reasons for Low Trust */}
           <View className="mb-6">
             <Text className="text-lg font-bold mb-4" style={{ color: colors.text }}>
-              What Lowers Trust
+              What Lowers Your Level
             </Text>
-            
+
             <View
               className="rounded-2xl overflow-hidden"
               style={{
@@ -149,8 +263,8 @@ export default function TrustScorePage() {
             >
               <TrustItem
                 icon={Phone}
-                iconBg={colors.error + '20'}
-                iconColor={colors.error}
+                iconBg={'#EF444420'}
+                iconColor={'#EF4444'}
                 title="Prank Emergency Calls"
                 description="Making false emergency calls wastes critical resources and endangers lives"
                 colors={colors}
@@ -159,8 +273,8 @@ export default function TrustScorePage() {
               <Divider colors={colors} />
               <TrustItem
                 icon={AlertTriangle}
-                iconBg={colors.error + '20'}
-                iconColor={colors.error}
+                iconBg={'#EF444420'}
+                iconColor={'#EF4444'}
                 title="False Report Submissions"
                 description="Submitting fabricated or misleading incident reports"
                 colors={colors}
@@ -169,8 +283,8 @@ export default function TrustScorePage() {
               <Divider colors={colors} />
               <TrustItem
                 icon={TrendingDown}
-                iconBg={colors.error + '20'}
-                iconColor={colors.error}
+                iconBg={'#EF444420'}
+                iconColor={'#EF4444'}
                 title="Spam or Abuse"
                 description="Excessive irrelevant reports or platform misuse"
                 colors={colors}
@@ -179,8 +293,8 @@ export default function TrustScorePage() {
               <Divider colors={colors} />
               <TrustItem
                 icon={MapPin}
-                iconBg={colors.error + '20'}
-                iconColor={colors.error}
+                iconBg={'#EF444420'}
+                iconColor={'#EF4444'}
                 title="Inaccurate Location Data"
                 description="Repeatedly providing wrong locations for incidents"
                 colors={colors}
@@ -189,8 +303,8 @@ export default function TrustScorePage() {
               <Divider colors={colors} />
               <TrustItem
                 icon={FileText}
-                iconBg={colors.error + '20'}
-                iconColor={colors.error}
+                iconBg={'#EF444420'}
+                iconColor={'#EF4444'}
                 title="Unverified Information"
                 description="Sharing unconfirmed or sensationalized information"
                 colors={colors}
@@ -199,8 +313,8 @@ export default function TrustScorePage() {
               <Divider colors={colors} />
               <TrustItem
                 icon={AlertTriangle}
-                iconBg={colors.error + '20'}
-                iconColor={colors.error}
+                iconBg={'#EF444420'}
+                iconColor={'#EF4444'}
                 title="Community Guidelines Violations"
                 description="Behavior that disrupts community safety or violates terms"
                 colors={colors}
@@ -225,7 +339,7 @@ export default function TrustScorePage() {
               </Text>
             </View>
             <Text className="text-base leading-6" style={{ color: colors.textSecondary }}>
-              A high Trust Score helps emergency responders prioritize reports, ensures faster response times, and maintains the credibility of the platform. Together, we create a safer community through responsible reporting.
+              Higher trust levels mean your reports get faster responses and higher priority from emergency responders. Level 3 users are fast-tracked, while Level 0 reports may be deprioritized. Build and maintain your trust to keep the community safe.
             </Text>
           </View>
 
@@ -239,10 +353,10 @@ export default function TrustScorePage() {
             }}
           >
             <Text className="text-lg font-bold mb-3" style={{ color: colors.text }}>
-              Restoring Your Trust Score
+              Restoring Your Trust Level
             </Text>
             <Text className="text-base leading-6 mb-4" style={{ color: colors.textSecondary }}>
-              If your Trust Score has been affected, you can rebuild it by:
+              If your Trust Level has been lowered, you can rebuild it by:
             </Text>
             <View className="space-y-2">
               <BulletPoint text="Submitting accurate and verified reports" colors={colors} />
@@ -322,4 +436,3 @@ function BulletPoint({ text, colors }: { text: string; colors: any }) {
     </View>
   );
 }
-

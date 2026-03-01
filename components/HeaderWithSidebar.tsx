@@ -211,6 +211,12 @@ export default function HeaderWithSidebar({
       title: 'Quick Access',
       items: [
         {
+          id: 'trust-score',
+          label: 'Trust Score',
+          icon: Shield,
+          route: '/(protected)/trust-score',
+        },
+        {
           id: 'map',
           label: 'Map',
           icon: MapPin,

@@ -12,6 +12,7 @@ import {
   BackHandler,
   Platform,
   PermissionsAndroid,
+  PanResponder,
 } from 'react-native';
 import {
   AlertTriangle,
@@ -28,7 +29,7 @@ import {
   Zap,
 } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Container } from 'components/ui/Container';
 import { ScreenContent } from 'components/ui/ScreenContent';
 import { Card } from 'components/ui/Card';
@@ -47,6 +48,100 @@ try {
   ImmediatePhoneCallModule = require('react-native-immediate-phone-call');
 } catch (e) {
   ImmediatePhoneCallModule = null;
+}
+
+function SwipeableContactCard({
+  children,
+  onDelete,
+  colors,
+}: {
+  children: React.ReactNode;
+  onDelete: () => void;
+  colors: any;
+}) {
+  const translateX = useRef(new Animated.Value(0)).current;
+  const deleteThreshold = -80;
+
+  const panResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gestureState) => {
+          return Math.abs(gestureState.dx) > 10 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+        },
+        onPanResponderMove: (_, gestureState) => {
+          if (gestureState.dx < 0) {
+            translateX.setValue(Math.max(gestureState.dx, -120));
+          }
+        },
+        onPanResponderRelease: (_, gestureState) => {
+          if (gestureState.dx < deleteThreshold) {
+            Animated.spring(translateX, {
+              toValue: -80,
+              useNativeDriver: true,
+              tension: 80,
+              friction: 10,
+            }).start();
+          } else {
+            Animated.spring(translateX, {
+              toValue: 0,
+              useNativeDriver: true,
+              tension: 80,
+              friction: 10,
+            }).start();
+          }
+        },
+      }),
+    [translateX]
+  );
+
+  const resetSwipe = () => {
+    Animated.spring(translateX, {
+      toValue: 0,
+      useNativeDriver: true,
+      tension: 80,
+      friction: 10,
+    }).start();
+  };
+
+  return (
+    <View style={{ position: 'relative', borderRadius: 14, overflow: 'hidden' }}>
+      {/* Delete action behind the card */}
+      <View
+        style={{
+          position: 'absolute',
+          right: 0,
+          top: 0,
+          bottom: 0,
+          width: 80,
+          backgroundColor: '#DC2626',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderTopRightRadius: 14,
+          borderBottomRightRadius: 14,
+        }}>
+        <TouchableOpacity
+          onPress={() => {
+            resetSwipe();
+            onDelete();
+          }}
+          style={{ alignItems: 'center', justifyContent: 'center', flex: 1, width: '100%' }}
+          activeOpacity={0.7}>
+          <Trash2 size={20} color="#FFFFFF" />
+          <Text style={{ color: '#FFFFFF', fontSize: 11, fontWeight: '600', marginTop: 4 }}>
+            Delete
+          </Text>
+        </TouchableOpacity>
+      </View>
+      {/* Swipeable foreground card */}
+      <Animated.View
+        {...panResponder.panHandlers}
+        style={{
+          transform: [{ translateX }],
+        }}>
+        {children}
+      </Animated.View>
+    </View>
+  );
 }
 
 export default function EmergencyScreen() {
@@ -206,23 +301,7 @@ export default function EmergencyScreen() {
     };
   }, []);
 
-  useEffect(() => {
-    const flash = () => {
-      Animated.sequence([
-        Animated.timing(flashAnim, {
-          toValue: 1,
-          duration: 400,
-          useNativeDriver: false,
-        }),
-        Animated.timing(flashAnim, {
-          toValue: 0,
-          duration: 400,
-          useNativeDriver: false,
-        }),
-      ]).start(() => flash());
-    };
-    flash();
-  }, [flashAnim]);
+  // Flash animation removed for accessibility (photosensitive epilepsy safety)
 
   // Haptic feedback functions
   const triggerHapticFeedback = async (
@@ -673,75 +752,178 @@ export default function EmergencyScreen() {
               onPress={() => setIsQuickContactsExpanded(!isQuickContactsExpanded)}
               activeOpacity={0.7}>
               <View className="flex-row items-center">
-                <Phone size={isTablet ? 26 : 24} color={colors.primary} />
-                <Text
-                  className={`font-bold ${isTablet ? 'text-xl' : 'text-lg'} ml-3`}
-                  style={{ color: colors.text }}>
-                  Quick Contacts
-                </Text>
+                <View
+                  style={{
+                    width: isTablet ? 40 : 36,
+                    height: isTablet ? 40 : 36,
+                    borderRadius: isTablet ? 20 : 18,
+                    backgroundColor: colors.primary + '15',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                  <Phone size={isTablet ? 20 : 18} color={colors.primary} />
+                </View>
+                <View style={{ marginLeft: 12 }}>
+                  <Text
+                    style={{
+                      fontSize: isTablet ? 18 : 16,
+                      fontWeight: '700',
+                      color: colors.text,
+                    }}>
+                    Quick Contacts
+                  </Text>
+                  <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 1 }}>
+                    {quickContacts.length} {quickContacts.length === 1 ? 'contact' : 'contacts'} saved
+                  </Text>
+                </View>
               </View>
-              <View className="flex-row items-center">
-                <Text
-                  className={`${isTablet ? 'text-base' : 'text-sm'} mr-2 font-medium`}
-                  style={{ color: colors.primary }}>
-                  {isQuickContactsExpanded ? 'COLLAPSE' : 'EXPAND'}
-                </Text>
+              <View
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: colors.surfaceVariant,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
                 {isQuickContactsExpanded ? (
-                  <ChevronUp size={isTablet ? 24 : 20} color={colors.primary} />
+                  <ChevronUp size={18} color={colors.textSecondary} />
                 ) : (
-                  <ChevronDown size={isTablet ? 24 : 20} color={colors.primary} />
+                  <ChevronDown size={18} color={colors.textSecondary} />
                 )}
               </View>
             </TouchableOpacity>
 
             {isQuickContactsExpanded && (
               <View
-                className={`${isTablet ? 'mt-6' : 'mt-4'} ${isTablet ? 'pt-6' : 'pt-4'}`}
-                style={{ borderTopColor: colors.border, borderTopWidth: 1 }}>
+                style={{
+                  marginTop: isTablet ? 20 : 16,
+                  paddingTop: isTablet ? 20 : 16,
+                  borderTopColor: colors.border,
+                  borderTopWidth: 1,
+                }}>
                 {quickContacts.length > 0 ? (
-                  <View className="space-y-3">
+                  <View style={{ gap: 10 }}>
                     {quickContacts.map((contact) => (
-                      <View
+                      <SwipeableContactCard
                         key={contact.id}
-                        className="flex-row items-center justify-between rounded-xl p-3"
-                        style={{
-                          backgroundColor: colors.error + '20',
-                          borderColor: colors.error + '40',
-                          borderWidth: 1,
-                        }}>
-                        <TouchableOpacity
-                          className="flex-1 flex-row items-center"
-                          onPress={() => handleContactCall(contact.phoneNumber)}
-                          activeOpacity={0.7}>
+                        colors={colors}
+                        onDelete={() => handleDeleteContact(contact.id, contact.phoneNumber)}>
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            borderRadius: 14,
+                            backgroundColor: colors.surface,
+                            borderWidth: 1,
+                            borderColor: colors.border,
+                            overflow: 'hidden',
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 1 },
+                            shadowOpacity: 0.05,
+                            shadowRadius: 3,
+                            elevation: 2,
+                          }}>
+                          {/* Left accent bar */}
                           <View
-                            className="mr-3 h-10 w-10 items-center justify-center rounded-full"
-                            style={{ backgroundColor: colors.error + '30' }}>
-                            <Phone size={20} color={colors.error} />
-                          </View>
-                          <View className="flex-1">
-                            <Text className="font-semibold" style={{ color: colors.text }}>
-                              {contact.name || contact.phoneNumber}
-                            </Text>
-                            <Text className="text-sm" style={{ color: colors.textSecondary }}>
-                              {contact.name ? contact.phoneNumber : 'Emergency Contact'}
-                            </Text>
-                          </View>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          className="ml-3 p-2"
-                          onPress={() => handleDeleteContact(contact.id, contact.phoneNumber)}
-                          activeOpacity={0.7}>
-                          <Trash2 size={18} color={colors.error} />
-                        </TouchableOpacity>
-                      </View>
+                            style={{
+                              width: 4,
+                              alignSelf: 'stretch',
+                              backgroundColor: colors.primary,
+                            }}
+                          />
+                          <TouchableOpacity
+                            style={{
+                              flex: 1,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              paddingHorizontal: 14,
+                              paddingVertical: 14,
+                            }}
+                            onPress={() => handleContactCall(contact.phoneNumber)}
+                            activeOpacity={0.7}>
+                            <View
+                              style={{
+                                width: 44,
+                                height: 44,
+                                borderRadius: 22,
+                                backgroundColor: colors.primary + '12',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                marginRight: 12,
+                              }}>
+                              <User size={20} color={colors.primary} />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text
+                                style={{
+                                  fontSize: 15,
+                                  fontWeight: '600',
+                                  color: colors.text,
+                                  marginBottom: 2,
+                                }}>
+                                {contact.name || contact.phoneNumber}
+                              </Text>
+                              <Text
+                                style={{
+                                  fontSize: 14,
+                                  color: colors.textSecondary,
+                                }}>
+                                {contact.name ? contact.phoneNumber : 'Emergency Contact'}
+                              </Text>
+                            </View>
+                          </TouchableOpacity>
+                          {/* Call button */}
+                          <TouchableOpacity
+                            onPress={() => makeCall(contact.phoneNumber)}
+                            style={{
+                              width: 40,
+                              height: 40,
+                              borderRadius: 20,
+                              backgroundColor: colors.primary,
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              marginRight: 14,
+                            }}
+                            activeOpacity={0.7}>
+                            <Phone size={18} color="#FFFFFF" />
+                          </TouchableOpacity>
+                        </View>
+                      </SwipeableContactCard>
                     ))}
                   </View>
                 ) : (
-                  <Text
-                    className={`text-center ${isTablet ? 'text-lg' : 'text-base'} ${isTablet ? 'py-8' : 'py-6'}`}
-                    style={{ color: colors.textSecondary }}>
-                    No contacts added yet.{'\n'}Save quick contacts for quick access.
-                  </Text>
+                  <View style={{ alignItems: 'center', paddingVertical: isTablet ? 32 : 24 }}>
+                    <View
+                      style={{
+                        width: 56,
+                        height: 56,
+                        borderRadius: 28,
+                        backgroundColor: colors.surfaceVariant,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: 12,
+                      }}>
+                      <User size={24} color={colors.textSecondary} />
+                    </View>
+                    <Text
+                      style={{
+                        fontSize: isTablet ? 16 : 14,
+                        fontWeight: '600',
+                        color: colors.text,
+                        marginBottom: 4,
+                      }}>
+                      No contacts yet
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        color: colors.textSecondary,
+                        textAlign: 'center',
+                      }}>
+                      Save quick contacts for fast access.
+                    </Text>
+                  </View>
                 )}
               </View>
             )}
@@ -754,76 +936,160 @@ export default function EmergencyScreen() {
               onPress={() => setIsEmergencyContactsExpanded(!isEmergencyContactsExpanded)}
               activeOpacity={0.7}>
               <View className="flex-row items-center">
-                <AlertTriangle size={isTablet ? 26 : 24} color={colors.error} />
-                <Text
-                  className={`font-bold ${isTablet ? 'text-xl' : 'text-lg'} ml-3`}
-                  style={{ color: colors.text }}>
-                  Hotline
-                </Text>
+                <View
+                  style={{
+                    width: isTablet ? 40 : 36,
+                    height: isTablet ? 40 : 36,
+                    borderRadius: isTablet ? 20 : 18,
+                    backgroundColor: colors.error + '15',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                  <Phone size={isTablet ? 20 : 18} color={colors.error} />
+                </View>
+                <View style={{ marginLeft: 12 }}>
+                  <Text
+                    style={{
+                      fontSize: isTablet ? 18 : 16,
+                      fontWeight: '700',
+                      color: colors.text,
+                    }}>
+                    Hotlines
+                  </Text>
+                  <Text style={{ fontSize: 12, color: colors.textSecondary, marginTop: 1 }}>
+                    {hotlineContacts.length} {hotlineContacts.length === 1 ? 'number' : 'numbers'} available
+                  </Text>
+                </View>
               </View>
-              <View className="flex-row items-center">
-                <Text
-                  className={`${isTablet ? 'text-base' : 'text-sm'} mr-2 font-medium`}
-                  style={{ color: colors.error }}>
-                  {isEmergencyContactsExpanded ? 'COLLAPSE' : 'EXPAND'}
-                </Text>
+              <View
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: colors.surfaceVariant,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}>
                 {isEmergencyContactsExpanded ? (
-                  <ChevronUp size={isTablet ? 24 : 20} color={colors.error} />
+                  <ChevronUp size={18} color={colors.textSecondary} />
                 ) : (
-                  <ChevronDown size={isTablet ? 24 : 20} color={colors.error} />
+                  <ChevronDown size={18} color={colors.textSecondary} />
                 )}
               </View>
             </TouchableOpacity>
 
             {isEmergencyContactsExpanded && (
               <View
-                className={`${isTablet ? 'mt-6' : 'mt-4'} ${isTablet ? 'pt-6' : 'pt-4'}`}
-                style={{ borderTopColor: colors.border, borderTopWidth: 1 }}>
+                style={{
+                  marginTop: isTablet ? 20 : 16,
+                  paddingTop: isTablet ? 20 : 16,
+                  borderTopColor: colors.border,
+                  borderTopWidth: 1,
+                }}>
                 {hotlineContacts.length > 0 ? (
-                  <View className="space-y-4">
-                    {hotlineContacts.map((contact, index) => (
-                      <View
-                        key={contact.id || `hotline-${index}`}
-                        className="flex-row items-center justify-between rounded-xl px-3 py-4"
-                        style={{
-                          backgroundColor: '#FEE2E2',
-                          borderColor: '#FCA5A5',
-                          borderWidth: 1,
-                          shadowColor: colors.error,
-                          shadowOffset: { width: 0, height: 2 },
-                          shadowOpacity: 0.1,
-                          shadowRadius: 4,
-                          elevation: 4,
-                        }}>
-                        <TouchableOpacity
-                          className="flex-1 flex-row items-center"
-                          onPress={() => handleEmergencyContactPress(contact.number)}
-                          activeOpacity={0.7}>
+                  <View style={{ gap: 10 }}>
+                    {hotlineContacts.map((contact, index) => {
+                      const isDeletable = contact.isSaved && contact.source === 'user';
+                      const cardContent = (
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            borderRadius: 14,
+                            backgroundColor: colors.surface,
+                            borderWidth: 1,
+                            borderColor: colors.border,
+                            overflow: 'hidden',
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 1 },
+                            shadowOpacity: 0.05,
+                            shadowRadius: 3,
+                            elevation: 2,
+                          }}>
+                          {/* Left accent bar */}
                           <View
-                            className="mr-3 h-10 w-10 items-center justify-center rounded-full"
-                            style={{ backgroundColor: colors.error + '30' }}>
-                            <Phone size={20} color={colors.error} />
-                          </View>
-                          <View className="flex-1">
-                            <Text className="font-medium" style={{ color: colors.textSecondary }}>
-                              {contact.service}
-                            </Text>
-                            <Text className="text-lg font-bold" style={{ color: colors.error }}>
-                              {contact.number}
-                            </Text>
-                            {contact.description && (
-                              <Text
-                                className="mt-1 text-xs"
-                                style={{ color: colors.textSecondary }}>
-                                {contact.description}
-                              </Text>
-                            )}
-                          </View>
-                        </TouchableOpacity>
-                        {contact.isSaved && contact.source === 'user' && (
+                            style={{
+                              width: 4,
+                              alignSelf: 'stretch',
+                              backgroundColor: colors.error,
+                            }}
+                          />
                           <TouchableOpacity
-                            className="ml-3 p-2"
-                            onPress={() => {
+                            style={{
+                              flex: 1,
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                              paddingHorizontal: 14,
+                              paddingVertical: 14,
+                            }}
+                            onPress={() => handleEmergencyContactPress(contact.number)}
+                            activeOpacity={0.7}>
+                            <View
+                              style={{
+                                width: 44,
+                                height: 44,
+                                borderRadius: 22,
+                                backgroundColor: colors.error + '12',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                marginRight: 12,
+                              }}>
+                              <Phone size={20} color={colors.error} />
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text
+                                style={{
+                                  fontSize: 15,
+                                  fontWeight: '600',
+                                  color: colors.text,
+                                  marginBottom: 2,
+                                }}>
+                                {contact.service}
+                              </Text>
+                              <Text
+                                style={{
+                                  fontSize: 14,
+                                  color: colors.textSecondary,
+                                }}>
+                                {contact.number}
+                              </Text>
+                              {contact.description && (
+                                <Text
+                                  style={{
+                                    fontSize: 12,
+                                    color: colors.textSecondary,
+                                    marginTop: 3,
+                                  }}
+                                  numberOfLines={1}>
+                                  {contact.description}
+                                </Text>
+                              )}
+                            </View>
+                          </TouchableOpacity>
+                          {/* Call button */}
+                          <TouchableOpacity
+                            onPress={() => makeCall(contact.number)}
+                            style={{
+                              width: 40,
+                              height: 40,
+                              borderRadius: 20,
+                              backgroundColor: colors.error,
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              marginRight: 14,
+                            }}
+                            activeOpacity={0.7}>
+                            <Phone size={18} color="#FFFFFF" />
+                          </TouchableOpacity>
+                        </View>
+                      );
+
+                      if (isDeletable) {
+                        return (
+                          <SwipeableContactCard
+                            key={contact.id || `hotline-${index}`}
+                            colors={colors}
+                            onDelete={() => {
                               const hotlineId = contact.id.replace('user-', '');
                               Alert.alert(
                                 'Delete Hotline',
@@ -842,58 +1108,86 @@ export default function EmergencyScreen() {
                                   },
                                 ]
                               );
-                            }}
-                            activeOpacity={0.7}>
-                            <Trash2 size={18} color={colors.error} />
-                          </TouchableOpacity>
-                        )}
-                      </View>
-                    ))}
+                            }}>
+                            {cardContent}
+                          </SwipeableContactCard>
+                        );
+                      }
+
+                      return (
+                        <View key={contact.id || `hotline-${index}`}>
+                          {cardContent}
+                        </View>
+                      );
+                    })}
                   </View>
                 ) : (
-                  <Text
-                    className={`text-center ${isTablet ? 'text-lg' : 'text-base'} ${isTablet ? 'py-8' : 'py-6'}`}
-                    style={{ color: colors.textSecondary }}>
-                    No hotlines available yet.{'\n'}Officer-defined hotlines will appear here.
-                  </Text>
+                  <View style={{ alignItems: 'center', paddingVertical: isTablet ? 32 : 24 }}>
+                    <View
+                      style={{
+                        width: 56,
+                        height: 56,
+                        borderRadius: 28,
+                        backgroundColor: colors.surfaceVariant,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        marginBottom: 12,
+                      }}>
+                      <Phone size={24} color={colors.textSecondary} />
+                    </View>
+                    <Text
+                      style={{
+                        fontSize: isTablet ? 16 : 14,
+                        fontWeight: '600',
+                        color: colors.text,
+                        marginBottom: 4,
+                      }}>
+                      No hotlines yet
+                    </Text>
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        color: colors.textSecondary,
+                        textAlign: 'center',
+                      }}>
+                      Officer-defined hotlines will appear here.
+                    </Text>
+                  </View>
                 )}
               </View>
             )}
           </Card>
 
           {/* Emergency Button */}
-          <Animated.View
+          <View
             style={{
-              backgroundColor: flashAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: ['#DC2626', '#FEE2E2'],
-              }),
+              backgroundColor: '#DC2626',
               borderRadius: isTablet ? 20 : 16,
               marginBottom: isTablet ? 32 : 24,
               shadowColor: '#DC2626',
-              shadowOffset: { width: 0, height: 8 },
-              shadowOpacity: flashAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: [0.4, 0.8],
-              }),
-              shadowRadius: 16,
-              elevation: 12,
+              shadowOffset: { width: 0, height: 6 },
+              shadowOpacity: 0.35,
+              shadowRadius: 12,
+              elevation: 10,
             }}>
             <TouchableOpacity
               className={`${isTablet ? 'p-10' : 'p-8'} items-center`}
               onPress={handleEmergencyButton}
-              activeOpacity={1}
+              activeOpacity={0.8}
               onPressIn={() => handleButtonPressIn('emergency')}
               onPressOut={() => handleButtonPressOut('emergency')}
               style={pressedButtons.has('emergency') ? { transform: [{ scale: 0.98 }] } : {}}
               accessibilityLabel="Emergency button"
               accessibilityHint="Tap to activate emergency protocol">
               <View className="flex-row items-center">
-                <User size={isTablet ? 40 : 32} color="white" />
+                <AlertTriangle size={isTablet ? 36 : 28} color="white" />
                 <Text className={`font-bold text-white ${isTablet ? 'text-3xl' : 'text-2xl'} ml-3`}>
                   EMERGENCY
                 </Text>
               </View>
+              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 6 }}>
+                Tap to alert authorities with your location
+              </Text>
               {emergencySettings.powerButtonEnabled && (
                 <View className="mt-2 flex-row items-center">
                   <Zap size={16} color="white" />
@@ -901,7 +1195,7 @@ export default function EmergencyScreen() {
                 </View>
               )}
             </TouchableOpacity>
-          </Animated.View>
+          </View>
 
           {/* Number Input Field */}
           <Card className={isTablet ? 'mb-8' : 'mb-6'}>

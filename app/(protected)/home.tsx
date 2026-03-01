@@ -10,7 +10,7 @@ import {
   Bell,
 } from 'lucide-react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import HeaderWithSidebar from '../../components/HeaderWithSidebar';
 import { useAuthContext } from 'components/AuthProvider';
 import { useTheme } from 'components/ThemeContext';
@@ -19,6 +19,14 @@ import { useReports } from '@kiyoko-org/dispatch-lib';
 import { useRealtimeReports } from 'hooks/useRealtimeReports';
 import Splash from 'components/ui/Splash';
 import { LogoutOverlay } from 'components/LogoutOverlay';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const TRUST_LEVEL_COLORS = [
+  { color: '#EF4444', label: 'Untrusted' },
+  { color: '#F97316', label: 'Low Trust' },
+  { color: '#F59E0B', label: 'Trusted' },
+  { color: '#22C55E', label: 'Highly Trusted' },
+];
 
 type Profile = {
   first_name: string;
@@ -32,6 +40,26 @@ export default function Home() {
   const { reports: userReports, loading: realtimeLoading } = useRealtimeReports();
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<Profile>();
+  const [trustLevel, setTrustLevel] = useState(3);
+
+  const loadTrustLevel = useCallback(async () => {
+    try {
+      const saved = await AsyncStorage.getItem('@dispatch_trust_level');
+      if (saved !== null) {
+        setTrustLevel(parseInt(saved, 10));
+      }
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadTrustLevel();
+    }, [loadTrustLevel])
+  );
+
+  const trustInfo = TRUST_LEVEL_COLORS[trustLevel];
 
   const recentReports = allReports.slice(0, 5);
   const reportCount = userReports.length;
@@ -399,6 +427,41 @@ export default function Home() {
             Key Metrics
           </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+            <TouchableOpacity
+              style={{
+                width: '48%',
+                borderRadius: 8,
+                borderWidth: 2,
+                borderColor: trustInfo.color + '60',
+                backgroundColor: trustInfo.color + '15',
+                padding: 12,
+              }}
+              onPress={() => router.push('/trust-score')}>
+              <View style={{ alignItems: 'center' }}>
+                <View
+                  style={{
+                    marginBottom: 8,
+                    height: 32,
+                    width: 32,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                  <Shield size={20} color={trustInfo.color} />
+                </View>
+                <Text style={{ fontSize: 18, fontWeight: 'bold', color: trustInfo.color }}>
+                  Lvl {trustLevel}
+                </Text>
+                <Text
+                  style={{
+                    textAlign: 'center',
+                    fontSize: 12,
+                    fontWeight: '600',
+                    color: trustInfo.color,
+                  }}>
+                  {trustInfo.label}
+                </Text>
+              </View>
+            </TouchableOpacity>
             <TouchableOpacity
               style={{
                 width: '48%',
