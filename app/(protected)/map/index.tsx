@@ -123,21 +123,21 @@ export default function MapPage() {
   const debouncedStateUpdate = useCallback((updateFn: () => void, delay: number = 150) => {
     const now = Date.now();
     lastInteractionRef.current = now;
-    
+
     if (transitionTimeoutRef.current) {
       clearTimeout(transitionTimeoutRef.current);
     }
     if (maxTransitionTimeoutRef.current) {
       clearTimeout(maxTransitionTimeoutRef.current);
     }
-    
+
     setIsTransitioning(true);
-    
+
     // Maximum transition time to prevent infinite loading
     maxTransitionTimeoutRef.current = setTimeout(() => {
       setIsTransitioning(false);
     }, 2000);
-    
+
     transitionTimeoutRef.current = setTimeout(() => {
       // Only execute if this is still the latest interaction
       if (lastInteractionRef.current === now) {
@@ -183,7 +183,7 @@ export default function MapPage() {
       console.warn('Invalid reports data:', reports);
       return [];
     }
-    
+
     return reports.map((report) => {
       const category =
         report.category_id !== null && report.category_id !== undefined
@@ -712,84 +712,84 @@ export default function MapPage() {
           locationKey: string;
         }[];
 
-    // Use dynamic cell size based on zoom level, but with a larger minimum
-    // This prevents clusters from breaking apart on small map movements
-    const cellSizeLat = Math.max(mapRegion.latitudeDelta / 15, 0.001);
-    const cellSizeLon = Math.max(mapRegion.longitudeDelta / 15, 0.001);
+      // Use dynamic cell size based on zoom level, but with a larger minimum
+      // This prevents clusters from breaking apart on small map movements
+      const cellSizeLat = Math.max(mapRegion.latitudeDelta / 15, 0.001);
+      const cellSizeLon = Math.max(mapRegion.longitudeDelta / 15, 0.001);
 
-    // Key by location only to cluster at same location
-    const cellKey = (lat: number, lon: number) => {
-      const r = Math.floor((lat - mapRegion.latitude + mapRegion.latitudeDelta / 2) / cellSizeLat);
-      const c = Math.floor(
-        (lon - mapRegion.longitude + mapRegion.longitudeDelta / 2) / cellSizeLon
-      );
-      return `${r}:${c}`;
-    };
+      // Key by location only to cluster at same location
+      const cellKey = (lat: number, lon: number) => {
+        const r = Math.floor((lat - mapRegion.latitude + mapRegion.latitudeDelta / 2) / cellSizeLat);
+        const c = Math.floor(
+          (lon - mapRegion.longitude + mapRegion.longitudeDelta / 2) / cellSizeLon
+        );
+        return `${r}:${c}`;
+      };
 
-    // Group reports by location only
-    const grid: Record<string, ReportWithCategory[]> = {};
-    for (const report of resolvedReports) {
-      const lat = report.latitude;
-      const lon = report.longitude;
-      if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
-        continue;
+      // Group reports by location only
+      const grid: Record<string, ReportWithCategory[]> = {};
+      for (const report of resolvedReports) {
+        const lat = report.latitude;
+        const lon = report.longitude;
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+          continue;
+        }
+
+        const key = cellKey(lat, lon);
+        if (!grid[key]) grid[key] = [];
+        grid[key].push(report);
       }
 
-      const key = cellKey(lat, lon);
-      if (!grid[key]) grid[key] = [];
-      grid[key].push(report);
-    }
+      // Create clusters - one per location
+      const result: {
+        lat: number;
+        lon: number;
+        originalLat: number;
+        originalLon: number;
+        items: ReportWithCategory[];
+        locationKey: string;
+      }[] = [];
 
-    // Create clusters - one per location
-    const result: {
-      lat: number;
-      lon: number;
-      originalLat: number;
-      originalLon: number;
-      items: ReportWithCategory[];
-      locationKey: string;
-    }[] = [];
+      for (const key in grid) {
+        const items = grid[key];
 
-    for (const key in grid) {
-      const items = grid[key];
+        // Calculate centroid
+        const validItems = items.filter(
+          (report) => Number.isFinite(report.latitude) && Number.isFinite(report.longitude)
+        );
+        if (validItems.length === 0) {
+          continue;
+        }
 
-      // Calculate centroid
-      const validItems = items.filter(
-        (report) => Number.isFinite(report.latitude) && Number.isFinite(report.longitude)
-      );
-      if (validItems.length === 0) {
-        continue;
+        let sumLat = 0;
+        let sumLon = 0;
+        for (const report of validItems) {
+          sumLat += report.latitude;
+          sumLon += report.longitude;
+        }
+        const centroidLat = sumLat / validItems.length;
+        const centroidLon = sumLon / validItems.length;
+        if (!Number.isFinite(centroidLat) || !Number.isFinite(centroidLon)) {
+          continue;
+        }
+
+        const locationKey = `${centroidLat.toFixed(6)},${centroidLon.toFixed(6)}`;
+
+        result.push({
+          lat: centroidLat,
+          lon: centroidLon,
+          originalLat: centroidLat,
+          originalLon: centroidLon,
+          items: validItems,
+          locationKey,
+        });
       }
 
-      let sumLat = 0;
-      let sumLon = 0;
-      for (const report of validItems) {
-        sumLat += report.latitude;
-        sumLon += report.longitude;
-      }
-      const centroidLat = sumLat / validItems.length;
-      const centroidLon = sumLon / validItems.length;
-      if (!Number.isFinite(centroidLat) || !Number.isFinite(centroidLon)) {
-        continue;
-      }
+      clusteringTimeoutRef.current = setTimeout(() => {
+        setIsClusteringInProgress(false);
+      }, 300);
 
-      const locationKey = `${centroidLat.toFixed(6)},${centroidLon.toFixed(6)}`;
-
-      result.push({
-        lat: centroidLat,
-        lon: centroidLon,
-        originalLat: centroidLat,
-        originalLon: centroidLon,
-        items: validItems,
-        locationKey,
-      });
-    }
-
-    clusteringTimeoutRef.current = setTimeout(() => {
-      setIsClusteringInProgress(false);
-    }, 300);
-
-    return result;
+      return result;
     } catch (error) {
       console.warn('Error in report clustering:', error);
       setIsClusteringInProgress(false);
@@ -823,7 +823,7 @@ export default function MapPage() {
     const hasCluster = selectedCluster !== null;
     const hasReport = selectedReportId !== null;
     const hasReportCluster = selectedReportCluster !== null;
-    
+
     // If multiple states are active, reset to prevent conflicts
     const activeStates = [hasCrime, hasCluster, hasReport, hasReportCluster].filter(Boolean).length;
     if (activeStates > 1) {
@@ -1327,34 +1327,81 @@ export default function MapPage() {
             {showReports &&
               reportClusters.map((cluster, idx) => {
                 try {
-                const total = cluster.items.length;
-                const markerColor = '#FF6B35';
-                const markerKey = cluster.locationKey;
+                  const total = cluster.items.length;
+                  const markerColor = '#FF6B35';
+                  const markerKey = cluster.locationKey;
 
-                if (
-                  !Number.isFinite(cluster.lat) ||
-                  !Number.isFinite(cluster.lon) ||
-                  cluster.lat === 0 ||
-                  cluster.lon === 0 ||
-                  total === 0
-                ) {
-                  return null;
-                }
-
-                if (total === 1) {
-                  const report = cluster.items[0];
                   if (
-                    !Number.isFinite(report.latitude) ||
-                    !Number.isFinite(report.longitude) ||
-                    report.latitude === 0 ||
-                    report.longitude === 0
+                    !Number.isFinite(cluster.lat) ||
+                    !Number.isFinite(cluster.lon) ||
+                    cluster.lat === 0 ||
+                    cluster.lon === 0 ||
+                    total === 0
                   ) {
                     return null;
                   }
 
+                  if (total === 1) {
+                    const report = cluster.items[0];
+                    if (
+                      !Number.isFinite(report.latitude) ||
+                      !Number.isFinite(report.longitude) ||
+                      report.latitude === 0 ||
+                      report.longitude === 0
+                    ) {
+                      return null;
+                    }
+
+                    const safeCoordinate = {
+                      latitude: Number(report.latitude),
+                      longitude: Number(report.longitude),
+                    };
+
+                    // Additional validation to prevent Google Maps crashes
+                    if (
+                      !Number.isFinite(safeCoordinate.latitude) ||
+                      !Number.isFinite(safeCoordinate.longitude) ||
+                      Math.abs(safeCoordinate.latitude) > 90 ||
+                      Math.abs(safeCoordinate.longitude) > 180
+                    ) {
+                      console.warn('Invalid report coordinates:', safeCoordinate);
+                      return null;
+                    }
+
+                    try {
+                      return (
+                        <Marker
+                          key={`report-marker-${markerKey}`}
+                          coordinate={safeCoordinate}
+                          onPress={() => {
+                            if (isClusteringInProgress || isTransitioning) return;
+                            debouncedStateUpdate(() => {
+                              setSelectedCrime(null);
+                              setSelectedCluster(null);
+                              setSelectedReportId(report.id);
+                              setSelectedReportCluster(null);
+                            });
+                          }}
+                          zIndex={3}
+                          pointerEvents={isClusteringInProgress ? 'none' : 'auto'}>
+                          <View
+                            style={[
+                              styles.reportMarkerContainer,
+                              { backgroundColor: markerColor },
+                              (isClusteringInProgress || isTransitioning) && { opacity: 0.5 },
+                            ]}
+                          />
+                        </Marker>
+                      );
+                    } catch (error) {
+                      console.warn('Error rendering single report marker:', error);
+                      return null;
+                    }
+                  }
+
                   const safeCoordinate = {
-                    latitude: Number(report.latitude),
-                    longitude: Number(report.longitude),
+                    latitude: Number(cluster.lat),
+                    longitude: Number(cluster.lon),
                   };
 
                   // Additional validation to prevent Google Maps crashes
@@ -1364,7 +1411,7 @@ export default function MapPage() {
                     Math.abs(safeCoordinate.latitude) > 90 ||
                     Math.abs(safeCoordinate.longitude) > 180
                   ) {
-                    console.warn('Invalid report coordinates:', safeCoordinate);
+                    console.warn('Invalid cluster coordinates:', safeCoordinate);
                     return null;
                   }
 
@@ -1373,78 +1420,31 @@ export default function MapPage() {
                       <Marker
                         key={`report-marker-${markerKey}`}
                         coordinate={safeCoordinate}
-                      onPress={() => {
-                        if (isClusteringInProgress || isTransitioning) return;
-                        debouncedStateUpdate(() => {
-                          setSelectedCrime(null);
-                          setSelectedCluster(null);
-                          setSelectedReportId(report.id);
-                          setSelectedReportCluster(null);
-                        });
-                      }}
+                        onPress={() => {
+                          if (isClusteringInProgress || isTransitioning) return;
+                          debouncedStateUpdate(() => {
+                            setSelectedCrime(null);
+                            setSelectedCluster(null);
+                            setSelectedReportId(null);
+                            setSelectedReportCluster(cluster.items);
+                          });
+                        }}
                         zIndex={3}
                         pointerEvents={isClusteringInProgress ? 'none' : 'auto'}>
-                      <View
-                        style={[
-                          styles.reportMarkerContainer,
-                          { backgroundColor: markerColor },
-                          (isClusteringInProgress || isTransitioning) && { opacity: 0.5 },
-                        ]}
-                      />
+                        <View
+                          style={[
+                            styles.clusterContainer,
+                            { backgroundColor: markerColor },
+                            (isClusteringInProgress || isTransitioning) && { opacity: 0.5 },
+                          ]}>
+                          <Text style={styles.clusterText}>{total}</Text>
+                        </View>
                       </Marker>
                     );
                   } catch (error) {
-                    console.warn('Error rendering single report marker:', error);
+                    console.warn('Error rendering report cluster marker:', error);
                     return null;
                   }
-                }
-
-                const safeCoordinate = {
-                  latitude: Number(cluster.lat),
-                  longitude: Number(cluster.lon),
-                };
-
-                // Additional validation to prevent Google Maps crashes
-                if (
-                  !Number.isFinite(safeCoordinate.latitude) ||
-                  !Number.isFinite(safeCoordinate.longitude) ||
-                  Math.abs(safeCoordinate.latitude) > 90 ||
-                  Math.abs(safeCoordinate.longitude) > 180
-                ) {
-                  console.warn('Invalid cluster coordinates:', safeCoordinate);
-                  return null;
-                }
-
-                try {
-                  return (
-                    <Marker
-                      key={`report-marker-${markerKey}`}
-                      coordinate={safeCoordinate}
-                      onPress={() => {
-                        if (isClusteringInProgress || isTransitioning) return;
-                        debouncedStateUpdate(() => {
-                          setSelectedCrime(null);
-                          setSelectedCluster(null);
-                          setSelectedReportId(null);
-                          setSelectedReportCluster(cluster.items);
-                        });
-                      }}
-                      zIndex={3}
-                      pointerEvents={isClusteringInProgress ? 'none' : 'auto'}>
-                      <View
-                        style={[
-                          styles.clusterContainer,
-                          { backgroundColor: markerColor },
-                          (isClusteringInProgress || isTransitioning) && { opacity: 0.5 },
-                        ]}>
-                        <Text style={styles.clusterText}>{total}</Text>
-                      </View>
-                    </Marker>
-                  );
-                } catch (error) {
-                  console.warn('Error rendering report cluster marker:', error);
-                  return null;
-                }
                 } catch (error) {
                   console.warn('Error in report marker rendering:', error);
                   return null;
@@ -1469,10 +1469,10 @@ export default function MapPage() {
         {/* Filter Panel */}
         {showFilters && (
           <View
-            className="absolute left-4 right-4 top-4 rounded-xl p-4 shadow-2xl"
-            style={{ backgroundColor: colors.card, maxHeight: '80%' }}>
-            <View className="mb-4 flex-row items-center justify-between">
-              <Text className="text-lg font-bold" style={{ color: colors.text }}>
+            className="absolute left-3 right-3 top-3 rounded-2xl p-3 shadow-2xl"
+            style={{ backgroundColor: colors.card, maxHeight: '85%' }}>
+            <View className="mb-3 flex-row items-center justify-between">
+              <Text className="text-base font-bold" style={{ color: colors.text }}>
                 Filters
               </Text>
               <TouchableOpacity onPress={() => setShowFilters(false)}>
@@ -2293,8 +2293,8 @@ export default function MapPage() {
         {/* Crime Details Card */}
         {selectedCrime && !showFilters && !selectedCluster && !selectedReport && (
           <View
-            className="absolute bottom-24 left-4 right-4 rounded-xl p-4 shadow-2xl"
-            style={{ backgroundColor: colors.card }}>
+            className="absolute bottom-6 left-3 right-3 rounded-2xl p-4"
+            style={{ backgroundColor: colors.card, shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 6 }}>
             <View className="mb-3 flex-row items-start justify-between">
               <View className="flex-1">
                 <View
@@ -2360,8 +2360,8 @@ export default function MapPage() {
           !selectedCrime &&
           !selectedReportCluster && (
             <View
-              className="absolute bottom-24 left-4 right-4 rounded-xl p-4 shadow-2xl"
-              style={{ backgroundColor: colors.card, maxHeight: '70%' }}>
+              className="absolute bottom-6 left-3 right-3 rounded-2xl p-4"
+              style={{ backgroundColor: colors.card, maxHeight: '70%', shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 6 }}>
               <View className="mb-3 flex-row items-start justify-between">
                 <View className="flex-1">
                   <View
@@ -2466,7 +2466,7 @@ export default function MapPage() {
                   </View>
                 )}
 
-                
+
               </ScrollView>
             </View>
           )}
@@ -2474,8 +2474,8 @@ export default function MapPage() {
         {/* Report Cluster Details Card */}
         {selectedReportCluster && !showFilters && (
           <View
-            className="absolute bottom-24 left-4 right-4 rounded-xl p-4 shadow-2xl"
-            style={{ backgroundColor: colors.card, maxHeight: '70%' }}>
+            className="absolute bottom-6 left-3 right-3 rounded-2xl p-4"
+            style={{ backgroundColor: colors.card, maxHeight: '70%', shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 6 }}>
             {/* Blocking overlay when clustering is in progress */}
             {isClusteringInProgress && (
               <View
@@ -2604,13 +2604,12 @@ export default function MapPage() {
         {/* Cluster Details Card with Category Breakdown */}
         {selectedCluster && !showFilters && (
           <View
-            className="absolute bottom-24 left-4 right-4 rounded-xl p-4 shadow-2xl"
-            style={{ backgroundColor: colors.card, maxHeight: '70%' }}>
+            className="absolute bottom-6 left-3 right-3 rounded-2xl p-4"
+            style={{ backgroundColor: colors.card, maxHeight: '70%', shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 6 }}>
             <View className="mb-3 flex-row items-start justify-between">
               <View style={{ flex: 1, marginRight: 12 }}>
-                <Text className="text-lg font-bold" style={{ color: colors.text }}>
-                  {selectedCluster.length} Incident{selectedCluster.length > 1 ? 's' : ''} at this
-                  location
+                <Text className="text-base font-bold" style={{ color: colors.text }}>
+                  {selectedCluster.length} Incident{selectedCluster.length > 1 ? 's' : ''} here
                 </Text>
                 {/* Category Summary - Scrollable horizontally if too many */}
                 <ScrollView
@@ -2797,389 +2796,241 @@ export default function MapPage() {
         {/* Control Buttons */}
         {!showFilters && (
           <>
-            {/* Filter Button */}
-            <TouchableOpacity
-              className="absolute left-4 top-4 flex-row items-center rounded-xl px-4 py-3 shadow-lg"
-              style={{ backgroundColor: colors.card }}
-              onPress={() => setShowFilters(true)}>
-              <Filter size={20} color={colors.primary} />
-              <Text className="ml-2 font-semibold" style={{ color: colors.text }}>
-                Filters
-              </Text>
-            </TouchableOpacity>
+            {/* Compact icon-only buttons - stacked vertically top-left */}
+            <View className="absolute left-3 top-3" style={{ gap: 8 }}>
+              <TouchableOpacity
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  backgroundColor: colors.card,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 6,
+                  elevation: 4,
+                }}
+                onPress={() => setShowFilters(true)}>
+                <Filter size={20} color={colors.primary} />
+              </TouchableOpacity>
 
-            {/* Reset Camera Button */}
-            <TouchableOpacity
-              className="absolute left-4 top-20 flex-row items-center rounded-xl px-4 py-3 shadow-lg"
-              style={{ backgroundColor: colors.card }}
-              onPress={resetMapRegion}>
-              <RotateCcw size={20} color={colors.primary} />
-              <Text className="ml-2 font-semibold" style={{ color: colors.text }}>
-                Reset View
-              </Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  backgroundColor: colors.card,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 6,
+                  elevation: 4,
+                }}
+                onPress={resetMapRegion}>
+                <RotateCcw size={18} color={colors.primary} />
+              </TouchableOpacity>
 
-            {/* Crime Count Badge */}
+              <TouchableOpacity
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  backgroundColor: colors.card,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.15,
+                  shadowRadius: 6,
+                  elevation: 4,
+                }}
+                onPress={() => {
+                  const types: MapType[] = ['standard', 'satellite', 'hybrid', 'terrain'];
+                  const idx = types.indexOf(mapType);
+                  setMapType(types[(idx + 1) % types.length]);
+                }}>
+                <MapIcon size={18} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Compact Crime Count Badge - top-right */}
             <View
-              className="absolute right-4 top-4 rounded-xl px-4 py-3 shadow-lg"
-              style={{ backgroundColor: colors.card }}>
-              <Text
-                className="text-xs font-semibold uppercase"
-                style={{ color: colors.textSecondary }}>
-                Showing
-              </Text>
-              <Text className="text-lg font-bold" style={{ color: colors.primary }}>
+              className="absolute right-3 top-3 flex-row items-center rounded-full px-3 py-2"
+              style={{
+                backgroundColor: colors.card,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.15,
+                shadowRadius: 6,
+                elevation: 4,
+              }}>
+              <Text className="text-sm font-bold" style={{ color: colors.primary }}>
                 {filteredCrimes.length}
               </Text>
+              <Text className="text-xs mx-1" style={{ color: colors.textSecondary }}>
+                /
+              </Text>
               <Text className="text-xs" style={{ color: colors.textSecondary }}>
-                of {crimes.length}
+                {crimes.length}
               </Text>
             </View>
 
-            {/* Comprehensive Legend */}
+            {/* Compact Legend */}
             <View
-              className="absolute right-4 top-32 rounded-xl shadow-lg"
-              style={{ backgroundColor: colors.card, maxWidth: width - 100 }}>
+              className="absolute right-3 top-14 rounded-2xl"
+              style={{
+                backgroundColor: colors.card,
+                maxWidth: width - 80,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.15,
+                shadowRadius: 6,
+                elevation: 4,
+              }}>
               {/* Clickable Header */}
               <TouchableOpacity
                 className="px-3 py-2"
                 onPress={() => setLegendExpanded(!legendExpanded)}
-                activeOpacity={0.8}>
-                <View className="mb-1 flex-row items-center justify-between">
+                activeOpacity={0.7}>
+                <View className="flex-row items-center">
+                  <Layers size={14} color={colors.textSecondary} />
                   <Text
-                    className="text-xs font-bold uppercase"
-                    style={{ color: colors.textSecondary }}>
-                    Legend
+                    className="ml-1.5 text-xs font-semibold flex-1"
+                    style={{ color: colors.text }}>
+                    {heatmapType === 'density' && 'Density'}
+                    {heatmapType === 'choropleth' && 'Choropleth'}
+                    {heatmapType === 'graduated' && 'Graduated'}
+                    {heatmapType === 'grid' && 'Grid'}
+                    {heatmapType === 'bubble' && 'Bubble'}
                   </Text>
-                  <Text className="text-xs" style={{ color: colors.primary }}>
-                    {legendExpanded ? '▼' : '▶'}
+                  <Text className="text-xs ml-2" style={{ color: colors.textSecondary }}>
+                    {legendExpanded ? '▾' : '▸'}
                   </Text>
                 </View>
-
-                {/* Always show current visualization type */}
-                <Text className="mb-2 text-xs font-semibold" style={{ color: colors.text }}>
-                  {heatmapType === 'density' && '📊 Density Heatmap'}
-                  {heatmapType === 'choropleth' && '🗺️ Choropleth (Area) Map'}
-                  {heatmapType === 'graduated' && '⭕ Graduated Symbol Map'}
-                  {heatmapType === 'grid' && '🔲 Grid-Based Heatmap'}
-                  {heatmapType === 'bubble' && '🎯 Bubble Map (Categories)'}
-                </Text>
               </TouchableOpacity>
 
               {/* Scrollable Content */}
               {legendExpanded && (
-                <ScrollView style={{ maxHeight: 400 }} showsVerticalScrollIndicator={false}>
+                <ScrollView style={{ maxHeight: 350 }} showsVerticalScrollIndicator={false}>
                   <View className="px-3 pb-2">
                     {/* Heatmap Visualization Legend */}
                     {showHeatmap && (
                       <>
-                        <View className="mb-3 border-b pb-3" style={{ borderColor: colors.border }}>
+                        <View className="mb-2 border-b pb-2" style={{ borderColor: colors.border }}>
                           <Text
                             className="mb-1 text-xs font-semibold"
                             style={{ color: colors.textSecondary }}>
-                            HEATMAP INTENSITY
+                            INTENSITY
                           </Text>
 
                           {heatmapType === 'density' && (
-                            <>
-                              <Text
-                                className="mb-2 text-xs"
-                                style={{ color: colors.textSecondary }}>
-                                Color gradient shows crime concentration hotspots
-                              </Text>
-                              <View className="space-y-1.5">
-                                <View className="flex-row items-center">
+                            <View style={{ gap: 3 }}>
+                              {[
+                                { color: 'rgba(139, 0, 0, 1)', label: 'Very High' },
+                                { color: 'rgba(255, 0, 0, 0.95)', label: 'High' },
+                                { color: 'rgba(255, 165, 0, 0.85)', label: 'Medium' },
+                                { color: 'rgba(255, 255, 0, 0.8)', label: 'Low-Med' },
+                                { color: 'rgba(0, 255, 0, 0.5)', label: 'Low' },
+                              ].map((item) => (
+                                <View key={item.label} className="flex-row items-center">
                                   <View
-                                    className="mr-2 h-4 w-4 rounded-full"
-                                    style={{ backgroundColor: 'rgba(139, 0, 0, 1)' }}
+                                    style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: item.color, marginRight: 6 }}
                                   />
-                                  <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                                    Very High Density
+                                  <Text className="text-xs" style={{ color: colors.text }}>
+                                    {item.label}
                                   </Text>
                                 </View>
-                                <View className="flex-row items-center">
-                                  <View
-                                    className="mr-2 h-4 w-4 rounded-full"
-                                    style={{ backgroundColor: 'rgba(255, 0, 0, 0.95)' }}
-                                  />
-                                  <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                                    High Density
-                                  </Text>
-                                </View>
-                                <View className="flex-row items-center">
-                                  <View
-                                    className="mr-2 h-4 w-4 rounded-full"
-                                    style={{ backgroundColor: 'rgba(255, 165, 0, 0.85)' }}
-                                  />
-                                  <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                                    Medium-High
-                                  </Text>
-                                </View>
-                                <View className="flex-row items-center">
-                                  <View
-                                    className="mr-2 h-4 w-4 rounded-full"
-                                    style={{ backgroundColor: 'rgba(255, 255, 0, 0.8)' }}
-                                  />
-                                  <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                                    Medium
-                                  </Text>
-                                </View>
-                                <View className="flex-row items-center">
-                                  <View
-                                    className="mr-2 h-4 w-4 rounded-full"
-                                    style={{ backgroundColor: 'rgba(124, 252, 0, 0.7)' }}
-                                  />
-                                  <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                                    Low-Medium
-                                  </Text>
-                                </View>
-                                <View className="flex-row items-center">
-                                  <View
-                                    className="mr-2 h-4 w-4 rounded-full"
-                                    style={{ backgroundColor: 'rgba(0, 255, 0, 0.5)' }}
-                                  />
-                                  <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                                    Low Density
-                                  </Text>
-                                </View>
-                              </View>
-                            </>
+                              ))}
+                            </View>
                           )}
 
                           {heatmapType === 'choropleth' && (
-                            <>
-                              <Text
-                                className="mb-2 text-xs"
-                                style={{ color: colors.textSecondary }}>
-                                Circle size and color show area crime rates. Based on barangay
-                                aggregation.
-                              </Text>
-                              <View className="space-y-1.5">
-                                <View className="flex-row items-center">
+                            <View style={{ gap: 3 }}>
+                              {[
+                                { color: 'rgba(220, 38, 38, 0.6)', label: 'High', size: 14 },
+                                { color: 'rgba(251, 191, 36, 0.6)', label: 'Medium', size: 12 },
+                                { color: 'rgba(59, 130, 246, 0.6)', label: 'Low', size: 10 },
+                              ].map((item) => (
+                                <View key={item.label} className="flex-row items-center">
                                   <View
-                                    className="mr-2 h-5 w-5 rounded-full"
-                                    style={{ backgroundColor: 'rgba(220, 38, 38, 0.6)' }}
+                                    style={{ width: item.size, height: item.size, borderRadius: item.size / 2, backgroundColor: item.color, marginRight: 6 }}
                                   />
-                                  <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                                    High Rate
+                                  <Text className="text-xs" style={{ color: colors.text }}>
+                                    {item.label}
                                   </Text>
                                 </View>
-                                <View className="flex-row items-center">
-                                  <View
-                                    className="mr-2 h-4 w-4 rounded-full"
-                                    style={{ backgroundColor: 'rgba(251, 191, 36, 0.6)' }}
-                                  />
-                                  <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                                    Medium Rate
-                                  </Text>
-                                </View>
-                                <View className="flex-row items-center">
-                                  <View
-                                    className="mr-2 h-3 w-3 rounded-full"
-                                    style={{ backgroundColor: 'rgba(59, 130, 246, 0.6)' }}
-                                  />
-                                  <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                                    Low Rate
-                                  </Text>
-                                </View>
-                              </View>
-                              <Text
-                                className="mt-2 text-xs"
-                                style={{ color: colors.textSecondary }}>
-                                Color based on crime concentration{'\n'}Radius: 400-1000m based on
-                                count
-                              </Text>
-                            </>
+                              ))}
+                            </View>
                           )}
 
                           {heatmapType === 'graduated' && (
-                            <>
-                              <Text
-                                className="mb-2 text-xs"
-                                style={{ color: colors.textSecondary }}>
-                                Circle size represents crime density. Larger = more incidents.
-                              </Text>
-                              <View className="space-y-1.5">
-                                <View className="flex-row items-center">
+                            <View style={{ gap: 3 }}>
+                              {[
+                                { label: 'Most', size: 16 },
+                                { label: 'Medium', size: 12 },
+                                { label: 'Fewest', size: 8 },
+                              ].map((item) => (
+                                <View key={item.label} className="flex-row items-center">
                                   <View
-                                    className="mr-2 h-6 w-6 rounded-full"
                                     style={{
+                                      width: item.size, height: item.size, borderRadius: item.size / 2,
                                       backgroundColor: 'rgba(220, 38, 38, 0.5)',
-                                      borderWidth: 2,
-                                      borderColor: 'rgba(220, 38, 38, 0.9)',
+                                      borderWidth: 1.5, borderColor: 'rgba(220, 38, 38, 0.9)',
+                                      marginRight: 6,
                                     }}
                                   />
-                                  <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                                    Large (Most incidents)
+                                  <Text className="text-xs" style={{ color: colors.text }}>
+                                    {item.label}
                                   </Text>
                                 </View>
-                                <View className="flex-row items-center">
-                                  <View
-                                    className="mr-2 h-5 w-5 rounded-full"
-                                    style={{
-                                      backgroundColor: 'rgba(220, 38, 38, 0.5)',
-                                      borderWidth: 2,
-                                      borderColor: 'rgba(220, 38, 38, 0.9)',
-                                    }}
-                                  />
-                                  <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                                    Medium
-                                  </Text>
-                                </View>
-                                <View className="flex-row items-center">
-                                  <View
-                                    className="mr-2 h-3 w-3 rounded-full"
-                                    style={{
-                                      backgroundColor: 'rgba(220, 38, 38, 0.5)',
-                                      borderWidth: 2,
-                                      borderColor: 'rgba(220, 38, 38, 0.9)',
-                                    }}
-                                  />
-                                  <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                                    Small (Fewest incidents)
-                                  </Text>
-                                </View>
-                              </View>
-                              <Text
-                                className="mt-2 text-xs"
-                                style={{ color: colors.textSecondary }}>
-                                Size proportional to crime count{'\n'}Radius: 200-1200m
-                              </Text>
-                            </>
+                              ))}
+                            </View>
                           )}
 
                           {heatmapType === 'grid' && (
-                            <>
-                              <Text
-                                className="mb-2 text-xs"
-                                style={{ color: colors.textSecondary }}>
-                                Geographic grid cells (~600-800m). Color intensity shows crime
-                                concentration.
-                              </Text>
-                              <View className="space-y-1.5">
-                                <View className="flex-row items-center">
+                            <View style={{ gap: 3 }}>
+                              {[
+                                { color: 'rgba(255, 69, 0, 0.8)', label: 'Very High' },
+                                { color: 'rgba(255, 215, 0, 0.7)', label: 'High' },
+                                { color: 'rgba(154, 205, 50, 0.6)', label: 'Medium' },
+                                { color: 'rgba(144, 238, 144, 0.4)', label: 'Low' },
+                              ].map((item) => (
+                                <View key={item.label} className="flex-row items-center">
                                   <View
-                                    className="mr-2 h-4 w-6 rounded"
-                                    style={{ backgroundColor: 'rgba(255, 69, 0, 0.8)' }}
+                                    style={{ width: 14, height: 10, borderRadius: 2, backgroundColor: item.color, marginRight: 6 }}
                                   />
-                                  <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                                    Very High Density
+                                  <Text className="text-xs" style={{ color: colors.text }}>
+                                    {item.label}
                                   </Text>
                                 </View>
-                                <View className="flex-row items-center">
-                                  <View
-                                    className="mr-2 h-4 w-6 rounded"
-                                    style={{ backgroundColor: 'rgba(255, 215, 0, 0.7)' }}
-                                  />
-                                  <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                                    High Density
-                                  </Text>
-                                </View>
-                                <View className="flex-row items-center">
-                                  <View
-                                    className="mr-2 h-4 w-6 rounded"
-                                    style={{ backgroundColor: 'rgba(154, 205, 50, 0.6)' }}
-                                  />
-                                  <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                                    Medium Density
-                                  </Text>
-                                </View>
-                                <View className="flex-row items-center">
-                                  <View
-                                    className="mr-2 h-4 w-6 rounded"
-                                    style={{ backgroundColor: 'rgba(0, 255, 0, 0.5)' }}
-                                  />
-                                  <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                                    Low Density
-                                  </Text>
-                                </View>
-                                <View className="flex-row items-center">
-                                  <View
-                                    className="mr-2 h-4 w-6 rounded"
-                                    style={{ backgroundColor: 'rgba(144, 238, 144, 0.4)' }}
-                                  />
-                                  <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                                    Very Low Density
-                                  </Text>
-                                </View>
-                              </View>
-                              <Text
-                                className="mt-2 text-xs"
-                                style={{ color: colors.textSecondary }}>
-                                Color based on relative crime density
-                              </Text>
-                            </>
+                              ))}
+                            </View>
                           )}
 
                           {heatmapType === 'bubble' && (
-                            <>
-                              <Text
-                                className="mb-2 text-xs"
-                                style={{ color: colors.textSecondary }}>
-                                Circles grouped by crime category. Size = incident count.
-                              </Text>
-                              <View className="space-y-1.5">
-                                <View className="flex-row items-center">
+                            <View style={{ gap: 3 }}>
+                              {[
+                                { color: '#DC2626', label: 'Violent' },
+                                { color: '#F59E0B', label: 'Property' },
+                                { color: '#7C3AED', label: 'Drug' },
+                                { color: '#3B82F6', label: 'Traffic' },
+                                { color: '#10B981', label: 'Operations' },
+                                { color: '#6B7280', label: 'Other' },
+                              ].map((item) => (
+                                <View key={item.label} className="flex-row items-center">
                                   <View
-                                    className="mr-2 h-4 w-4 rounded-full"
-                                    style={{ backgroundColor: '#DC2626' }}
+                                    style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: item.color, marginRight: 6 }}
                                   />
-                                  <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                                    Violent Crimes
+                                  <Text className="text-xs" style={{ color: colors.text }}>
+                                    {item.label}
                                   </Text>
                                 </View>
-                                <View className="flex-row items-center">
-                                  <View
-                                    className="mr-2 h-4 w-4 rounded-full"
-                                    style={{ backgroundColor: '#F59E0B' }}
-                                  />
-                                  <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                                    Property Crimes
-                                  </Text>
-                                </View>
-                                <View className="flex-row items-center">
-                                  <View
-                                    className="mr-2 h-4 w-4 rounded-full"
-                                    style={{ backgroundColor: '#7C3AED' }}
-                                  />
-                                  <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                                    Drug-Related
-                                  </Text>
-                                </View>
-                                <View className="flex-row items-center">
-                                  <View
-                                    className="mr-2 h-4 w-4 rounded-full"
-                                    style={{ backgroundColor: '#3B82F6' }}
-                                  />
-                                  <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                                    Traffic Incidents
-                                  </Text>
-                                </View>
-                                <View className="flex-row items-center">
-                                  <View
-                                    className="mr-2 h-4 w-4 rounded-full"
-                                    style={{ backgroundColor: '#10B981' }}
-                                  />
-                                  <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                                    Police Operations
-                                  </Text>
-                                </View>
-                                <View className="flex-row items-center">
-                                  <View
-                                    className="mr-2 h-4 w-4 rounded-full"
-                                    style={{ backgroundColor: '#6B7280' }}
-                                  />
-                                  <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                                    Other
-                                  </Text>
-                                </View>
-                              </View>
-                              <Text
-                                className="mt-2 text-xs"
-                                style={{ color: colors.textSecondary }}>
-                                Radius: 200-800m based on incident count
-                              </Text>
-                            </>
+                              ))}
+                            </View>
                           )}
                         </View>
                       </>
@@ -3187,90 +3038,31 @@ export default function MapPage() {
 
                     {/* Markers Legend */}
                     {showMarkers && (
-                      <View className="mb-3 border-b pb-3" style={{ borderColor: colors.border }}>
+                      <View className="mb-2 border-b pb-2" style={{ borderColor: colors.border }}>
                         <Text
                           className="mb-1 text-xs font-semibold"
                           style={{ color: colors.textSecondary }}>
-                          CRIME MARKERS
+                          MARKERS
                         </Text>
-                        <View className="space-y-1.5">
-                          <View className="flex-row items-center">
-                            <View
-                              className="mr-2 h-5 w-5 rounded-full"
-                              style={{ backgroundColor: '#DC2626' }}
-                            />
-                            <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                              Violent Crimes
-                            </Text>
-                          </View>
-                          <View className="flex-row items-center">
-                            <View
-                              className="mr-2 h-5 w-5 rounded-full"
-                              style={{ backgroundColor: '#F59E0B' }}
-                            />
-                            <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                              Property Crimes
-                            </Text>
-                          </View>
-                          <View className="flex-row items-center">
-                            <View
-                              className="mr-2 h-5 w-5 rounded-full"
-                              style={{ backgroundColor: '#7C3AED' }}
-                            />
-                            <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                              Drug-Related
-                            </Text>
-                          </View>
-                          <View className="flex-row items-center">
-                            <View
-                              className="mr-2 h-5 w-5 rounded-full"
-                              style={{ backgroundColor: '#3B82F6' }}
-                            />
-                            <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                              Traffic Incidents
-                            </Text>
-                          </View>
-                          <View className="flex-row items-center">
-                            <View
-                              className="mr-2 h-5 w-5 rounded-full"
-                              style={{ backgroundColor: '#10B981' }}
-                            />
-                            <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                              Police Operations
-                            </Text>
-                          </View>
-                          <View className="flex-row items-center">
-                            <View
-                              className="mr-2 h-5 w-5 rounded-full"
-                              style={{ backgroundColor: '#6B7280' }}
-                            />
-                            <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                              Other
-                            </Text>
-                          </View>
-                          <View className="mt-2 flex-row items-center">
-                            <View
-                              className="mr-2 h-5 w-5 rounded-full"
-                              style={{ backgroundColor: '#9333ea' }}
-                            />
-                            <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                              Mixed Reports (Multiple Categories)
-                            </Text>
-                          </View>
-                          <View className="mt-2 flex-row items-center">
-                            <View
-                              className="mr-2 h-6 w-6 items-center justify-center rounded-full"
-                              style={{ backgroundColor: '#DC2626' }}>
-                              <Text className="text-xs font-bold text-white">5</Text>
+                        <View style={{ gap: 3 }}>
+                          {[
+                            { color: '#DC2626', label: 'Violent' },
+                            { color: '#F59E0B', label: 'Property' },
+                            { color: '#7C3AED', label: 'Drug' },
+                            { color: '#3B82F6', label: 'Traffic' },
+                            { color: '#10B981', label: 'Operations' },
+                            { color: '#6B7280', label: 'Other' },
+                            { color: '#9333ea', label: 'Mixed' },
+                          ].map((item) => (
+                            <View key={item.label} className="flex-row items-center">
+                              <View
+                                style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: item.color, marginRight: 6 }}
+                              />
+                              <Text className="text-xs" style={{ color: colors.text }}>
+                                {item.label}
+                              </Text>
                             </View>
-                            <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                              Cluster (multiple incidents)
-                            </Text>
-                          </View>
-                          <Text className="mt-2 text-xs" style={{ color: colors.textSecondary }}>
-                            Note: Click on a cluster to see all incidents at that location grouped
-                            by category and type
-                          </Text>
+                          ))}
                         </View>
                       </View>
                     )}
@@ -3278,43 +3070,16 @@ export default function MapPage() {
                     {/* Reports Legend */}
                     {showReports && (
                       <View className="mb-2">
-                        <Text
-                          className="mb-1 text-xs font-semibold"
-                          style={{ color: colors.textSecondary }}>
-                          USER REPORTS
-                        </Text>
                         <View className="flex-row items-center">
                           <View
-                            className="mr-2 h-5 w-5 rounded-full"
-                            style={{ backgroundColor: '#FF6B35' }}
+                            style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#FF6B35', marginRight: 6 }}
                           />
-                          <Text className="flex-1 text-xs" style={{ color: colors.text }}>
-                            Citizen Reports (Real-time)
+                          <Text className="text-xs" style={{ color: colors.text }}>
+                            User Reports
                           </Text>
                         </View>
                       </View>
                     )}
-
-                    {/* How to Read Section */}
-                    <View className="mt-3 border-t pt-3" style={{ borderColor: colors.border }}>
-                      <Text
-                        className="mb-1 text-xs font-semibold"
-                        style={{ color: colors.primary }}>
-                        💡 HOW TO READ THIS MAP
-                      </Text>
-                      <Text className="text-xs leading-4" style={{ color: colors.textSecondary }}>
-                        {heatmapType === 'density' &&
-                          '• Darker red areas = higher crime concentration\n• Smooth gradients show hotspot patterns\n• Best for identifying danger zones'}
-                        {heatmapType === 'choropleth' &&
-                          '• Circle color = crime rate in that area\n• Circle size = total incident count\n• Compare different neighborhoods'}
-                        {heatmapType === 'graduated' &&
-                          '• Larger circles = more incidents\n• All circles same color (red)\n• Clear visual hierarchy of hotspots'}
-                        {heatmapType === 'grid' &&
-                          '• Each square = geographic grid cell\n• Color intensity = crime density\n• Systematic spatial coverage'}
-                        {heatmapType === 'bubble' &&
-                          '• Each bubble = crime category cluster\n• Size = number of incidents\n• Color = crime type'}
-                      </Text>
-                    </View>
                   </View>
                 </ScrollView>
               )}
@@ -3326,11 +3091,11 @@ export default function MapPage() {
         {!selectedCrime && !showFilters && !selectedCluster && !selectedReport && (
           <View className="absolute bottom-4 left-0 right-0 flex-row justify-center">
             <TouchableOpacity
-              className="flex-row items-center rounded-full px-6 py-4 shadow-2xl"
-              style={{ backgroundColor: colors.primary }}
+              className="flex-row items-center rounded-full px-5 py-3"
+              style={{ backgroundColor: colors.primary, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 5 }}
               onPress={() => router.push('/(protected)/report-incident')}>
-              <AlertTriangle size={20} color="#FFF" />
-              <Text className="ml-2 text-base font-bold text-white">Report Incident</Text>
+              <AlertTriangle size={18} color="#FFF" />
+              <Text className="ml-2 text-sm font-bold text-white">Report Incident</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -3339,12 +3104,12 @@ export default function MapPage() {
         {isTransitioning && (
           <View
             className="absolute inset-0 items-center justify-center"
-            style={{ backgroundColor: 'rgba(0,0,0,0.1)' }}
+            style={{ backgroundColor: 'rgba(0,0,0,0.05)' }}
             pointerEvents="none">
             <View
-              className="rounded-lg px-4 py-2"
-              style={{ backgroundColor: colors.card }}>
-              <Text style={{ color: colors.text }}>Loading...</Text>
+              className="rounded-full px-4 py-2"
+              style={{ backgroundColor: colors.card, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 }}>
+              <Text className="text-xs" style={{ color: colors.textSecondary }}>Updating...</Text>
             </View>
           </View>
         )}
