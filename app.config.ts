@@ -43,7 +43,7 @@ export default () => ({
 			},
 			package: 'com.kiyoko.dispatch',
 			permissions: ['android.permission.READ_PHONE_STATE', 'android.permission.CALL_PHONE'],
-			googleServicesFile: process.env.GOOGLE_SERVICES_JSON || './android/app/google-services.json',
+			googleServicesFile: './google-services.json',
 			config: {
 				googleMaps: {
 					apiKey: process.env.GOOGLE_MAPS_API_KEY,
