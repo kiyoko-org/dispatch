@@ -118,18 +118,18 @@ const backgroundThemes: Record<Exclude<BackgroundTheme, 'custom'>, { light: BgCo
   },
   purple: {
     light: {
-      background: '#FAFAFE', surface: '#FFFFFF', surfaceVariant: '#F3F1F9',
-      text: '#1E1B4B', textSecondary: '#6B7280',
-      border: '#E5E1F0', divider: '#F3F1F9',
+      background: '#F3EEFF', surface: '#FAF7FF', surfaceVariant: '#EBE4F9',
+      text: '#1E1B4B', textSecondary: '#6B5B95',
+      border: '#D4C6F0', divider: '#EBE4F9',
       success: '#10B981', warning: '#F59E0B', error: '#EF4444', info: '#3B82F6',
-      card: '#FFFFFF', overlay: 'rgba(0, 0, 0, 0.5)',
+      card: '#FAF7FF', overlay: 'rgba(0, 0, 0, 0.5)',
     },
     dark: {
-      background: '#110E1F', surface: '#1C1832', surfaceVariant: '#2A2446',
-      text: '#EDE9FE', textSecondary: '#9B8EC4',
-      border: '#2A2446', divider: '#2A2446',
+      background: '#1A1232', surface: '#241C42', surfaceVariant: '#2F2554',
+      text: '#EDE9FE', textSecondary: '#A99BD4',
+      border: '#2F2554', divider: '#2F2554',
       success: '#34D399', warning: '#FBBF24', error: '#F87171', info: '#60A5FA',
-      card: '#1C1832', overlay: 'rgba(0, 0, 0, 0.7)',
+      card: '#241C42', overlay: 'rgba(0, 0, 0, 0.7)',
     },
   },
   orange: {
