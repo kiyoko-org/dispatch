@@ -1,5 +1,5 @@
 import { View, Text, ScrollView, TouchableOpacity, StatusBar, TextInput, Modal } from 'react-native';
-import { FileText, Clock, Bell, AlertCircle, AlertTriangle, Search, ChevronDown, X, Filter, Archive } from 'lucide-react-native';
+import { FileText, Clock, AlertTriangle, Search, ChevronDown, X, Filter, Archive, Check } from 'lucide-react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState, useMemo } from 'react';
 import HeaderWithSidebar from '../../../components/HeaderWithSidebar';
@@ -20,6 +20,7 @@ export default function MyReports() {
   // Filter and sort state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedSubCategory, setSelectedSubCategory] = useState<number | null>(null);
   const [sortBy, setSortBy] = useState<'date' | 'title'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -132,7 +133,11 @@ export default function MyReports() {
       const matchesCategory = selectedCategory === 'all' ||
         report.category_id?.toString() === selectedCategory;
 
-      return matchesUser && matchesArchiveStatus && matchesSearch && matchesCategory;
+      // Sub-category filter
+      const matchesSubCategory = selectedSubCategory === null ||
+        report.sub_category === selectedSubCategory;
+
+      return matchesUser && matchesArchiveStatus && matchesSearch && matchesCategory && matchesSubCategory;
     });
 
     // Sort reports
@@ -154,25 +159,9 @@ export default function MyReports() {
     });
 
     return filtered;
-  }, [reports, searchQuery, selectedCategory, sortBy, sortOrder, showArchived, categories, session?.user?.id]);
+  }, [reports, searchQuery, selectedCategory, selectedSubCategory, sortBy, sortOrder, showArchived, categories, session?.user?.id]);
 
-  // Utility function to get appropriate icon based on incident category
-  const getActivityIcon = (categoryId: number | null) => {
-    const category = categories.find(cat => cat.id === categoryId);
-    const categoryName = category?.name || 'Unknown Category';
 
-    const categoryIcons: Record<string, any> = {
-      'Emergency Situation': { icon: AlertTriangle, color: '#DC2626' }, // Red for critical
-      'Crime in Progress': { icon: AlertCircle, color: '#EA580C' }, // Orange for high
-      'Traffic Accident': { icon: AlertCircle, color: '#EA580C' }, // Orange for high
-      'Suspicious Activity': { icon: AlertCircle, color: '#3B82F6' }, // Blue for medium
-      'Public Disturbance': { icon: AlertCircle, color: '#3B82F6' }, // Blue for medium
-      'Property Damage': { icon: AlertCircle, color: '#6B7280' }, // Gray for low
-      'Other Incident': { icon: AlertCircle, color: '#6B7280' }, // Gray for low
-    };
-
-    return categoryIcons[categoryName] || { icon: Bell, color: '#475569' };
-  };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -423,7 +412,7 @@ export default function MyReports() {
                     borderRadius: 24,
                     backgroundColor: colors.error + '15',
                   }}>
-                  <AlertCircle size={24} color={colors.error} />
+                  <AlertTriangle size={24} color={colors.error} />
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text, marginBottom: 8 }}>
@@ -446,8 +435,6 @@ export default function MyReports() {
           ) : filteredAndSortedReports.length > 0 ? (
             <View style={{ gap: 14 }}>
               {filteredAndSortedReports.map((report) => {
-                const activityIcon = getActivityIcon(report.category_id);
-                const IconComponent = activityIcon.icon;
                 const categoryName = categories.find(cat => cat.id === report.category_id)?.name || 'Unknown Category';
                 const statusColor = getStatusColor(report.status || 'pending');
                 const isArchived = report.status === 'resolved' || report.status === 'cancelled';
@@ -469,83 +456,69 @@ export default function MyReports() {
                       elevation: 3,
                       opacity: isArchived ? 0.7 : 1,
                     }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                      <View
-                        style={{
-                          marginRight: 14,
-                          height: 44,
-                          width: 44,
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          borderRadius: 12,
-                          backgroundColor: `${activityIcon.color}15`,
-                        }}>
-                        <IconComponent size={22} color={activityIcon.color} />
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <Text
+                          style={{
+                            fontSize: 16,
+                            fontWeight: '600',
+                            color: colors.text,
+                            flex: 1,
+                          }}
+                          numberOfLines={1}>
+                          {report.incident_title || 'Incident Report'}
+                        </Text>
                       </View>
-                      <View style={{ flex: 1 }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-                          <Text
-                            style={{
-                              fontSize: 16,
-                              fontWeight: '600',
-                              color: colors.text,
-                              flex: 1,
-                            }}
-                            numberOfLines={1}>
-                            {report.incident_title || 'Incident Report'}
+
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
+                        <View style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          backgroundColor: colors.surfaceVariant,
+                          paddingHorizontal: 8,
+                          paddingVertical: 4,
+                          borderRadius: 8,
+                        }}>
+                          <AlertTriangle size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
+                          <Text style={{ fontSize: 12, fontWeight: '500', color: colors.text }}>
+                            {categoryName}
                           </Text>
                         </View>
 
-                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 8 }}>
+                        {report.id && (
                           <View style={{
-                            flexDirection: 'row',
-                            alignItems: 'center',
                             backgroundColor: colors.surfaceVariant,
                             paddingHorizontal: 8,
                             paddingVertical: 4,
                             borderRadius: 8,
                           }}>
-                            <AlertTriangle size={12} color={activityIcon.color} style={{ marginRight: 4 }} />
-                            <Text style={{ fontSize: 12, fontWeight: '500', color: colors.text }}>
-                              {categoryName}
+                            <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textSecondary }}>
+                              #{report.id}
                             </Text>
                           </View>
+                        )}
+                      </View>
 
-                          {report.id && (
-                            <View style={{
-                              backgroundColor: colors.surfaceVariant,
-                              paddingHorizontal: 8,
-                              paddingVertical: 4,
-                              borderRadius: 8,
-                            }}>
-                              <Text style={{ fontSize: 11, fontWeight: '600', color: colors.textSecondary }}>
-                                #{report.id}
-                              </Text>
-                            </View>
-                          )}
-                        </View>
-
-                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                          <View style={{
-                            paddingHorizontal: 10,
-                            paddingVertical: 4,
-                            borderRadius: 8,
-                            backgroundColor: `${statusColor}15`,
+                      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <View style={{
+                          paddingHorizontal: 10,
+                          paddingVertical: 4,
+                          borderRadius: 8,
+                          backgroundColor: `${statusColor}15`,
+                        }}>
+                          <Text style={{
+                            fontSize: 11,
+                            fontWeight: '600',
+                            color: statusColor,
+                            textTransform: 'capitalize',
                           }}>
-                            <Text style={{
-                              fontSize: 11,
-                              fontWeight: '600',
-                              color: statusColor,
-                              textTransform: 'capitalize',
-                            }}>
-                              {report.status?.replace('_', ' ') || 'Pending'}
-                            </Text>
-                          </View>
-
-                          <Text style={{ fontSize: 12, fontWeight: '500', color: colors.textSecondary }}>
-                            {report.created_at ? formatTimeAgo(report.created_at) : 'Recently'}
+                            {report.status?.replace('_', ' ') || 'Pending'}
                           </Text>
                         </View>
+
+                        <Text style={{ fontSize: 12, fontWeight: '500', color: colors.textSecondary }}>
+                          {report.created_at ? formatTimeAgo(report.created_at) : 'Recently'}
+                        </Text>
                       </View>
                     </View>
                   </TouchableOpacity>
@@ -668,13 +641,152 @@ export default function MyReports() {
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              {/* Empty - No category items */}
-              <View style={{ paddingVertical: 32, alignItems: 'center' }}>
-                <Filter size={48} color={colors.textSecondary} style={{ opacity: 0.5, marginBottom: 16 }} />
-                <Text style={{ fontSize: 16, color: colors.textSecondary, textAlign: 'center' }}>
-                  Category filters will appear here
+              {/* All Categories option */}
+              <TouchableOpacity
+                onPress={() => {
+                  setSelectedCategory('all');
+                  setSelectedSubCategory(null);
+                  setShowCategoryModal(false);
+                }}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  paddingVertical: 14,
+                  paddingHorizontal: 16,
+                  borderRadius: 12,
+                  backgroundColor: selectedCategory === 'all' ? colors.primary : 'transparent',
+                  marginBottom: 8,
+                }}>
+                <View
+                  style={{
+                    width: 24,
+                    height: 24,
+                    borderRadius: 12,
+                    borderWidth: 2,
+                    borderColor: selectedCategory === 'all' ? colors.surface : colors.border,
+                    backgroundColor: selectedCategory === 'all' ? colors.surface : 'transparent',
+                    marginRight: 12,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}>
+                  {selectedCategory === 'all' && (
+                    <View
+                      style={{
+                        width: 10,
+                        height: 10,
+                        borderRadius: 5,
+                        backgroundColor: colors.primary,
+                      }}
+                    />
+                  )}
+                </View>
+                <Text
+                  style={{
+                    fontSize: 16,
+                    fontWeight: selectedCategory === 'all' ? '600' : '400',
+                    color: selectedCategory === 'all' ? colors.surface : colors.text,
+                  }}>
+                  All Categories
                 </Text>
-              </View>
+              </TouchableOpacity>
+
+              {/* Category items with sub-categories */}
+              {categories.map((category) => {
+                const isSelected = selectedCategory === category.id.toString();
+                return (
+                  <View key={category.id} style={{ marginBottom: 4 }}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSelectedCategory(category.id.toString());
+                        setSelectedSubCategory(null);
+                        setShowCategoryModal(false);
+                      }}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingVertical: 14,
+                        paddingHorizontal: 16,
+                        borderRadius: 12,
+                        backgroundColor: isSelected ? colors.primary : 'transparent',
+                      }}>
+                      <View
+                        style={{
+                          width: 24,
+                          height: 24,
+                          borderRadius: 12,
+                          borderWidth: 2,
+                          borderColor: isSelected ? colors.surface : colors.border,
+                          backgroundColor: isSelected ? colors.surface : 'transparent',
+                          marginRight: 12,
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                        }}>
+                        {isSelected && (
+                          <View
+                            style={{
+                              width: 10,
+                              height: 10,
+                              borderRadius: 5,
+                              backgroundColor: colors.primary,
+                            }}
+                          />
+                        )}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={{
+                            fontSize: 16,
+                            fontWeight: isSelected ? '600' : '400',
+                            color: isSelected ? colors.surface : colors.text,
+                          }}>
+                          {category.name}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+
+                    {/* Sub-categories shown as tappable chips */}
+                    {category.sub_categories && category.sub_categories.length > 0 && (
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          flexWrap: 'wrap',
+                          gap: 6,
+                          paddingLeft: 52,
+                          paddingBottom: 10,
+                          paddingTop: 4,
+                        }}>
+                        {category.sub_categories.map((sub: string, idx: number) => {
+                          const isSubSelected = selectedCategory === category.id.toString() && selectedSubCategory === idx;
+                          return (
+                            <TouchableOpacity
+                              key={idx}
+                              onPress={() => {
+                                setSelectedCategory(category.id.toString());
+                                setSelectedSubCategory(isSubSelected ? null : idx);
+                                setShowCategoryModal(false);
+                              }}
+                              style={{
+                                backgroundColor: isSubSelected ? colors.primary : colors.surfaceVariant,
+                                paddingHorizontal: 10,
+                                paddingVertical: 5,
+                                borderRadius: 8,
+                              }}>
+                              <Text
+                                style={{
+                                  fontSize: 12,
+                                  fontWeight: isSubSelected ? '600' : '500',
+                                  color: isSubSelected ? colors.surface : colors.textSecondary,
+                                }}>
+                                {sub}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
             </ScrollView>
           </View>
         </View>

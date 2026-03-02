@@ -6,7 +6,6 @@ import { Text, View, ScrollView, StatusBar, Platform, KeyboardAvoidingView } fro
 import { useTheme } from 'components/ThemeContext';
 import { useDispatchClient } from 'components/DispatchProvider';
 import HeaderWithSidebar from 'components/HeaderWithSidebar';
-import { Card } from 'components/ui/Card';
 import { ShimmerCard } from 'components/ui/Shimmer';
 import {
   MapPin,
@@ -15,6 +14,9 @@ import {
   AlertTriangle,
   Shield,
   Badge,
+  FileText,
+  User,
+  Info,
 } from 'lucide-react-native';
 
 export default function ReportDetails() {
@@ -81,19 +83,15 @@ export default function ReportDetails() {
     if (!dateString) return 'Not specified';
 
     try {
-      // Handle different date formats
       let date: Date;
 
-      // Check if it's already in MM/DD/YYYY format
       if (typeof dateString === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
         const [month, day, year] = dateString.split('/');
         date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
       } else {
-        // Try parsing as ISO string or other formats
         date = new Date(dateString);
       }
 
-      // Check if date is valid
       if (isNaN(date.getTime())) {
         return 'Invalid date';
       }
@@ -167,6 +165,124 @@ export default function ReportDetails() {
     }
   };
 
+  // Get status label
+  const getStatusLabel = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'pending':
+        return 'Pending Review';
+      case 'in_progress':
+        return 'In Progress';
+      case 'resolved':
+        return 'Resolved';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return status?.replace('_', ' ') || 'Unknown';
+    }
+  };
+
+  const statusColor = getStatusColor(reportInfo.status || 'pending');
+  const assignedOfficers = getAssignedOfficers();
+
+  // Shared card style
+  const cardStyle = {
+    backgroundColor: colors.card,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: isDark ? 0.3 : 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  };
+
+  // Section header component style
+  const SectionHeader = ({
+    icon: Icon,
+    title,
+    iconColor,
+  }: {
+    icon: any;
+    title: string;
+    iconColor?: string;
+  }) => (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 16,
+        paddingBottom: 14,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+      }}>
+      <View
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: 12,
+          backgroundColor: (iconColor || colors.primary) + '18',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginRight: 12,
+        }}>
+        <Icon size={20} color={iconColor || colors.primary} />
+      </View>
+      <Text
+        style={{
+          fontSize: 18,
+          fontWeight: '700',
+          color: colors.text,
+          letterSpacing: -0.3,
+        }}>
+        {title}
+      </Text>
+    </View>
+  );
+
+  // Info row component
+  const InfoRow = ({
+    label,
+    value,
+    mono,
+  }: {
+    label: string;
+    value: string;
+    mono?: boolean;
+  }) => (
+    <View
+      style={{
+        backgroundColor: colors.surfaceVariant,
+        borderRadius: 14,
+        padding: 14,
+        marginBottom: 10,
+      }}>
+      <Text
+        style={{
+          fontSize: 11,
+          fontWeight: '700',
+          color: colors.textSecondary,
+          textTransform: 'uppercase',
+          letterSpacing: 1,
+          marginBottom: 6,
+        }}>
+        {label}
+      </Text>
+      <Text
+        style={{
+          fontSize: 15,
+          fontWeight: '500',
+          color: colors.text,
+          lineHeight: 22,
+          ...(mono ? { fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' } : {}),
+        }}>
+        {value}
+      </Text>
+    </View>
+  );
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -180,304 +296,501 @@ export default function ReportDetails() {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 32 }}
+        contentContainerStyle={{ paddingBottom: 40 }}
         className="flex-1">
-        <View className="px-4 pt-4">
-          {/* Basic Information Card */}
-          <Card
-            className="mb-5"
+        <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
+
+          {/* ═══════════════════════════════════════════════ */}
+          {/* HERO CARD — Title, Status, Report ID           */}
+          {/* ═══════════════════════════════════════════════ */}
+          <View
             style={{
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 8,
-              elevation: 3,
+              ...cardStyle,
+              overflow: 'hidden',
+              padding: 0,
             }}>
-            <View className="mb-5">
-              <View className="mb-3 flex-row items-start justify-between">
-                <View className="mr-3 flex-1">
-                  <Text className="mb-2 text-2xl font-bold" style={{ color: colors.text }}>
-                    {reportInfo.incident_title || 'Untitled Report'}
-                  </Text>
+            {/* Accent top bar */}
+            <View
+              style={{
+                height: 4,
+                backgroundColor: statusColor,
+              }}
+            />
+            <View style={{ padding: 20 }}>
+              {/* Status badge */}
+              <View
+                style={{
+                  alignSelf: 'flex-start',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: statusColor + '18',
+                  borderRadius: 20,
+                  paddingHorizontal: 14,
+                  paddingVertical: 6,
+                  marginBottom: 14,
+                }}>
+                <View
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: 4,
+                    backgroundColor: statusColor,
+                    marginRight: 8,
+                  }}
+                />
+                <Text
+                  style={{
+                    fontSize: 13,
+                    fontWeight: '700',
+                    color: statusColor,
+                    textTransform: 'capitalize',
+                  }}>
+                  {getStatusLabel(reportInfo.status || 'pending')}
+                </Text>
+              </View>
+
+              {/* Title */}
+              <Text
+                style={{
+                  fontSize: 24,
+                  fontWeight: '800',
+                  color: colors.text,
+                  lineHeight: 32,
+                  letterSpacing: -0.5,
+                  marginBottom: 10,
+                }}>
+                {reportInfo.incident_title || 'Untitled Report'}
+              </Text>
+
+              {/* Report ID chip */}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8,
+                }}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: colors.surfaceVariant,
+                    paddingHorizontal: 10,
+                    paddingVertical: 5,
+                    borderRadius: 8,
+                  }}>
+                  <FileText size={13} color={colors.textSecondary} style={{ marginRight: 5 }} />
                   <Text
-                    className="mb-1 text-sm font-medium"
-                    style={{ color: colors.textSecondary }}>
+                    style={{
+                      fontSize: 13,
+                      fontWeight: '600',
+                      color: colors.textSecondary,
+                    }}>
                     Report #{reportInfo.id}
                   </Text>
                 </View>
-                <View
-                  className="rounded-full px-4 py-2"
-                  style={{
-                    backgroundColor: `${getStatusColor(reportInfo.status || 'pending')}15`,
-                  }}>
-                  <Text
-                    className="text-xs font-bold capitalize"
-                    style={{ color: getStatusColor(reportInfo.status || 'pending') }}>
-                    {reportInfo.status?.replace('_', ' ') || 'Pending'}
-                  </Text>
-                </View>
-              </View>
-              <View className="mb-4 h-px" style={{ backgroundColor: colors.border }} />
-            </View>
 
-            <View className="space-y-4">
-              {/* Category Information */}
-              {reportInfo.category_id && (
-                <View className="mb-4">
-                  <Text
-                    className="mb-2 text-xs font-semibold uppercase tracking-wider"
-                    style={{ color: colors.textSecondary }}>
-                    Category
-                  </Text>
+                {reportInfo.created_at && (
                   <View
-                    className="flex-row items-center rounded-lg p-3"
-                    style={{ backgroundColor: colors.surfaceVariant }}>
-                    <View
-                      className="mr-3 h-10 w-10 items-center justify-center rounded-full"
-                      style={{ backgroundColor: colors.primary + '20' }}>
-                      <AlertTriangle size={20} color={colors.primary} />
-                    </View>
-                    <View className="flex-1">
-                      <Text
-                        className="mb-0.5 text-base font-semibold"
-                        style={{ color: colors.text }}>
-                        {getCategoryInfo(reportInfo.category_id).name}
-                      </Text>
-                      {reportInfo.sub_category !== null &&
-                        reportInfo.sub_category !== undefined && (
-                          <Text className="text-sm" style={{ color: colors.textSecondary }}>
-                            {getSubcategoryInfo(reportInfo.category_id, reportInfo.sub_category) ||
-                              'Unknown Subcategory'}
-                          </Text>
-                        )}
-                    </View>
-                  </View>
-                </View>
-              )}
-
-              <View className="flex-row space-x-3">
-                <View
-                  className="flex-1 rounded-lg p-3"
-                  style={{ backgroundColor: colors.surfaceVariant }}>
-                  <Text
-                    className="mb-1.5 text-xs font-semibold uppercase tracking-wider"
-                    style={{ color: colors.textSecondary }}>
-                    Date
-                  </Text>
-                  <View className="flex-row items-center">
-                    <Calendar size={16} color={colors.primary} style={{ marginRight: 6 }} />
-                    <Text className="text-sm font-medium" style={{ color: colors.text }}>
-                      {formatDate(reportInfo.incident_date)}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      backgroundColor: colors.surfaceVariant,
+                      paddingHorizontal: 10,
+                      paddingVertical: 5,
+                      borderRadius: 8,
+                    }}>
+                    <Clock size={13} color={colors.textSecondary} style={{ marginRight: 5 }} />
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: '600',
+                        color: colors.textSecondary,
+                      }}>
+                      {formatDate(reportInfo.created_at)}
                     </Text>
                   </View>
-                </View>
+                )}
+              </View>
+            </View>
+          </View>
+
+          {/* ═══════════════════════════════════════════════ */}
+          {/* CATEGORY & DATE/TIME CARD                      */}
+          {/* ═══════════════════════════════════════════════ */}
+          <View style={cardStyle}>
+            {/* Category */}
+            {reportInfo.category_id && (
+              <View style={{ marginBottom: 16 }}>
+                <Text
+                  style={{
+                    fontSize: 11,
+                    fontWeight: '700',
+                    color: colors.textSecondary,
+                    textTransform: 'uppercase',
+                    letterSpacing: 1,
+                    marginBottom: 10,
+                  }}>
+                  Category
+                </Text>
                 <View
-                  className="flex-1 rounded-lg p-3"
-                  style={{ backgroundColor: colors.surfaceVariant }}>
-                  <Text
-                    className="mb-1.5 text-xs font-semibold uppercase tracking-wider"
-                    style={{ color: colors.textSecondary }}>
-                    Time
-                  </Text>
-                  <View className="flex-row items-center">
-                    <Clock size={16} color={colors.primary} style={{ marginRight: 6 }} />
-                    <Text className="text-sm font-medium" style={{ color: colors.text }}>
-                      {formatTime(reportInfo.incident_time ?? '')}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: colors.surfaceVariant,
+                    borderRadius: 14,
+                    padding: 14,
+                  }}>
+                  <View
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 14,
+                      backgroundColor: colors.primary + '18',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: 14,
+                    }}>
+                    <AlertTriangle size={22} color={colors.primary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={{
+                        fontSize: 16,
+                        fontWeight: '700',
+                        color: colors.text,
+                        marginBottom: 2,
+                      }}>
+                      {getCategoryInfo(reportInfo.category_id).name}
                     </Text>
+                    {reportInfo.sub_category !== null &&
+                      reportInfo.sub_category !== undefined && (
+                        <Text
+                          style={{
+                            fontSize: 14,
+                            color: colors.textSecondary,
+                            fontWeight: '500',
+                          }}>
+                          {getSubcategoryInfo(reportInfo.category_id, reportInfo.sub_category) ||
+                            'Unknown Subcategory'}
+                        </Text>
+                      )}
                   </View>
                 </View>
               </View>
-            </View>
-          </Card>
+            )}
 
-          {/* Location Information Card */}
-          <Card
-            className="mb-5"
-            style={{
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 8,
-              elevation: 3,
-            }}>
-            <View className="mb-4 flex-row items-center">
+            {/* Date and Time */}
+            <View
+              style={{
+                flexDirection: 'row',
+                gap: 10,
+              }}>
               <View
-                className="mr-3 h-10 w-10 items-center justify-center rounded-full"
-                style={{ backgroundColor: colors.primary + '20' }}>
-                <MapPin size={20} color={colors.primary} />
-              </View>
-              <Text className="text-lg font-bold" style={{ color: colors.text }}>
-                Location Information
-              </Text>
-            </View>
-
-            <View className="space-y-3">
-              <View className="rounded-lg p-3" style={{ backgroundColor: colors.surfaceVariant }}>
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.surfaceVariant,
+                  borderRadius: 14,
+                  padding: 14,
+                }}>
                 <Text
-                  className="mb-1.5 text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: colors.textSecondary }}>
-                  Street Address
+                  style={{
+                    fontSize: 11,
+                    fontWeight: '700',
+                    color: colors.textSecondary,
+                    textTransform: 'uppercase',
+                    letterSpacing: 1,
+                    marginBottom: 8,
+                  }}>
+                  Date
                 </Text>
-                <Text className="text-sm leading-5" style={{ color: colors.text }}>
-                  {reportInfo.street_address || 'No address provided'}
-                </Text>
-              </View>
-
-              {reportInfo.nearby_landmark && (
-                <View className="rounded-lg p-3" style={{ backgroundColor: colors.surfaceVariant }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 10,
+                      backgroundColor: colors.primary + '18',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: 10,
+                    }}>
+                    <Calendar size={16} color={colors.primary} />
+                  </View>
                   <Text
-                    className="mb-1.5 text-xs font-semibold uppercase tracking-wider"
-                    style={{ color: colors.textSecondary }}>
-                    Nearby Landmark
-                  </Text>
-                  <Text className="text-sm" style={{ color: colors.text }}>
-                    {reportInfo.nearby_landmark}
+                    style={{
+                      fontSize: 14,
+                      fontWeight: '600',
+                      color: colors.text,
+                      flex: 1,
+                    }}>
+                    {formatDate(reportInfo.incident_date)}
                   </Text>
                 </View>
-              )}
+              </View>
 
-              <View className="rounded-lg p-3" style={{ backgroundColor: colors.surfaceVariant }}>
+              <View
+                style={{
+                  flex: 1,
+                  backgroundColor: colors.surfaceVariant,
+                  borderRadius: 14,
+                  padding: 14,
+                }}>
                 <Text
-                  className="mb-1.5 text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: colors.textSecondary }}>
-                  Coordinates
+                  style={{
+                    fontSize: 11,
+                    fontWeight: '700',
+                    color: colors.textSecondary,
+                    textTransform: 'uppercase',
+                    letterSpacing: 1,
+                    marginBottom: 8,
+                  }}>
+                  Time
                 </Text>
-                <Text className="font-mono text-sm" style={{ color: colors.text }}>
-                  {reportInfo.latitude && reportInfo.longitude
-                    ? `${reportInfo.latitude.toFixed(6)}, ${reportInfo.longitude.toFixed(6)}`
-                    : 'Coordinates not available'}
-                </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View
+                    style={{
+                      width: 32,
+                      height: 32,
+                      borderRadius: 10,
+                      backgroundColor: colors.primary + '18',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: 10,
+                    }}>
+                    <Clock size={16} color={colors.primary} />
+                  </View>
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      fontWeight: '600',
+                      color: colors.text,
+                      flex: 1,
+                    }}>
+                    {formatTime(reportInfo.incident_time ?? '')}
+                  </Text>
+                </View>
               </View>
             </View>
-          </Card>
+          </View>
 
-          {/* Incident Details Card */}
-          <Card
-            className="mb-5"
-            style={{
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 8,
-              elevation: 3,
-            }}>
-            <View className="mb-4 flex-row items-center">
-              <View
-                className="mr-3 h-10 w-10 items-center justify-center rounded-full"
-                style={{ backgroundColor: colors.primary + '20' }}>
-                <AlertTriangle size={20} color={colors.primary} />
-              </View>
-              <Text className="text-lg font-bold" style={{ color: colors.text }}>
-                Incident Details
+          {/* ═══════════════════════════════════════════════ */}
+          {/* LOCATION INFORMATION CARD                      */}
+          {/* ═══════════════════════════════════════════════ */}
+          <View style={cardStyle}>
+            <SectionHeader icon={MapPin} title="Location" iconColor="#6366F1" />
+
+            <InfoRow
+              label="Street Address"
+              value={reportInfo.street_address || 'No address provided'}
+            />
+
+            {reportInfo.nearby_landmark && (
+              <InfoRow label="Nearby Landmark" value={reportInfo.nearby_landmark} />
+            )}
+
+            <InfoRow
+              label="Coordinates"
+              value={
+                reportInfo.latitude && reportInfo.longitude
+                  ? `${reportInfo.latitude.toFixed(6)}, ${reportInfo.longitude.toFixed(6)}`
+                  : 'Coordinates not available'
+              }
+              mono
+            />
+          </View>
+
+          {/* ═══════════════════════════════════════════════ */}
+          {/* INCIDENT DETAILS CARD                          */}
+          {/* ═══════════════════════════════════════════════ */}
+          <View style={cardStyle}>
+            <SectionHeader icon={AlertTriangle} title="Incident Details" iconColor="#F59E0B" />
+
+            <View
+              style={{
+                backgroundColor: colors.surfaceVariant,
+                borderRadius: 14,
+                padding: 16,
+                borderLeftWidth: 3,
+                borderLeftColor: colors.primary + '60',
+              }}>
+              <Text
+                style={{
+                  fontSize: 11,
+                  fontWeight: '700',
+                  color: colors.textSecondary,
+                  textTransform: 'uppercase',
+                  letterSpacing: 1,
+                  marginBottom: 8,
+                }}>
+                What Happened
+              </Text>
+              <Text
+                style={{
+                  fontSize: 15,
+                  color: colors.text,
+                  lineHeight: 24,
+                  fontWeight: '400',
+                }}>
+                {reportInfo.what_happened || 'No description provided'}
               </Text>
             </View>
+          </View>
 
-            <View className="space-y-3">
-              <View className="rounded-lg p-4" style={{ backgroundColor: colors.surfaceVariant }}>
-                <Text
-                  className="mb-2 text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: colors.textSecondary }}>
-                  What Happened
-                </Text>
-                <Text className="text-sm leading-6" style={{ color: colors.text }}>
-                  {reportInfo.what_happened || 'No description provided'}
-                </Text>
-              </View>
+          {/* ═══════════════════════════════════════════════ */}
+          {/* ADDITIONAL INFORMATION CARD                    */}
+          {/* ═══════════════════════════════════════════════ */}
+          <View style={cardStyle}>
+            <SectionHeader icon={Info} title="Additional Info" iconColor="#8B5CF6" />
 
-              
-            </View>
-          </Card>
-
-
-
-          {/* Additional Information Card */}
-          <Card
-            className="mb-5"
-            style={{
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: 2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 8,
-              elevation: 3,
-            }}>
-            <View className="mb-4 flex-row items-center">
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                backgroundColor: colors.surfaceVariant,
+                borderRadius: 14,
+                padding: 14,
+              }}>
               <View
-                className="mr-3 h-10 w-10 items-center justify-center rounded-full"
-                style={{ backgroundColor: colors.primary + '20' }}>
-                <Shield size={20} color={colors.primary} />
-              </View>
-              <Text className="text-lg font-bold" style={{ color: colors.text }}>
-                Additional Information
-              </Text>
-            </View>
-
-            <View className="space-y-3">
-
-              <View className="rounded-lg p-3" style={{ backgroundColor: colors.surfaceVariant }}>
+                style={{
+                  width: 10,
+                  height: 10,
+                  borderRadius: 5,
+                  backgroundColor: colors.primary,
+                  marginRight: 12,
+                }}
+              />
+              <View style={{ flex: 1 }}>
                 <Text
-                  className="mb-1.5 text-xs font-semibold uppercase tracking-wider"
-                  style={{ color: colors.textSecondary }}>
+                  style={{
+                    fontSize: 11,
+                    fontWeight: '700',
+                    color: colors.textSecondary,
+                    textTransform: 'uppercase',
+                    letterSpacing: 1,
+                    marginBottom: 4,
+                  }}>
                   Reported On
                 </Text>
-                <Text className="text-sm font-medium" style={{ color: colors.text }}>
+                <Text
+                  style={{
+                    fontSize: 15,
+                    fontWeight: '600',
+                    color: colors.text,
+                  }}>
                   {reportInfo.created_at ? formatDate(reportInfo.created_at) : 'Date not available'}
                 </Text>
               </View>
-
-              {/* last updated hidden: not present on row type */}
             </View>
-          </Card>
+          </View>
 
-          {/* Assigned Officers Card */}
-          {getAssignedOfficers().length > 0 && (
-            <Card
-              className="mb-5"
-              style={{
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.1,
-                shadowRadius: 8,
-                elevation: 3,
-              }}>
-              <View className="mb-4 flex-row items-center">
-                <View
-                  className="mr-3 h-10 w-10 items-center justify-center rounded-full"
-                  style={{ backgroundColor: colors.primary + '20' }}>
-                  <Badge size={20} color={colors.primary} />
-                </View>
-                <Text className="text-lg font-bold" style={{ color: colors.text }}>
-                  Assigned Officers
-                </Text>
-              </View>
+          {/* ═══════════════════════════════════════════════ */}
+          {/* ASSIGNED OFFICERS CARD                         */}
+          {/* ═══════════════════════════════════════════════ */}
+          {assignedOfficers.length > 0 && (
+            <View style={cardStyle}>
+              <SectionHeader icon={Shield} title="Assigned Officers" iconColor="#10B981" />
 
-              <View className="space-y-3">
-                {getAssignedOfficers().map((officer) => (
-                  <View
-                    key={officer.id}
-                    className="rounded-lg p-3"
-                    style={{ backgroundColor: colors.surfaceVariant }}>
-                    <View className="flex-row items-center justify-between">
-                      <View className="flex-1">
-                        <Text className="text-base font-semibold" style={{ color: colors.text }}>
-                          {officer.first_name} {officer.middle_name && officer.middle_name + ' '}
+              <View style={{ gap: 10 }}>
+                {assignedOfficers.map((officer) => {
+                  const initials =
+                    (officer.first_name?.[0] || '') + (officer.last_name?.[0] || '');
+                  return (
+                    <View
+                      key={officer.id}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        backgroundColor: colors.surfaceVariant,
+                        borderRadius: 14,
+                        padding: 14,
+                      }}>
+                      {/* Avatar circle with initials */}
+                      <View
+                        style={{
+                          width: 46,
+                          height: 46,
+                          borderRadius: 23,
+                          backgroundColor: colors.primary + '20',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          marginRight: 14,
+                        }}>
+                        <Text
+                          style={{
+                            fontSize: 16,
+                            fontWeight: '800',
+                            color: colors.primary,
+                          }}>
+                          {initials.toUpperCase()}
+                        </Text>
+                      </View>
+
+                      <View style={{ flex: 1 }}>
+                        <Text
+                          style={{
+                            fontSize: 16,
+                            fontWeight: '700',
+                            color: colors.text,
+                            marginBottom: 2,
+                          }}>
+                          {officer.first_name}{' '}
+                          {officer.middle_name && officer.middle_name + ' '}
                           {officer.last_name}
                         </Text>
-                        {officer.rank && (
-                          <Text className="text-sm" style={{ color: colors.textSecondary }}>
-                            {officer.rank}
-                          </Text>
-                        )}
-                        {officer.badge_number && (
-                          <Text className="mt-1 text-xs" style={{ color: colors.textSecondary }}>
-                            Badge: {officer.badge_number}
-                          </Text>
-                        )}
+
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 8,
+                            marginTop: 4,
+                          }}>
+                          {officer.rank && (
+                            <View
+                              style={{
+                                backgroundColor: colors.primary + '18',
+                                paddingHorizontal: 8,
+                                paddingVertical: 3,
+                                borderRadius: 6,
+                              }}>
+                              <Text
+                                style={{
+                                  fontSize: 12,
+                                  fontWeight: '600',
+                                  color: colors.primary,
+                                }}>
+                                {officer.rank}
+                              </Text>
+                            </View>
+                          )}
+                          {officer.badge_number && (
+                            <View
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                              }}>
+                              <Badge
+                                size={12}
+                                color={colors.textSecondary}
+                                style={{ marginRight: 4 }}
+                              />
+                              <Text
+                                style={{
+                                  fontSize: 12,
+                                  fontWeight: '500',
+                                  color: colors.textSecondary,
+                                }}>
+                                {officer.badge_number}
+                              </Text>
+                            </View>
+                          )}
+                        </View>
                       </View>
                     </View>
-                  </View>
-                ))}
+                  );
+                })}
               </View>
-            </Card>
+            </View>
           )}
         </View>
       </ScrollView>
