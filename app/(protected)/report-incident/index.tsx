@@ -1243,14 +1243,21 @@ export default function ReportIncidentIndex() {
           <View style={{ marginBottom: 24 }}>
             <Text
               style={{
-                fontSize: 13,
-                fontWeight: '600',
-                color: colors.textSecondary,
-                letterSpacing: 0.5,
-                textTransform: 'uppercase',
-                marginBottom: 12,
+                fontSize: 20,
+                fontWeight: '800',
+                color: colors.text,
+                letterSpacing: -0.3,
+                marginBottom: 4,
               }}>
               What happened?
+            </Text>
+            <Text
+              style={{
+                fontSize: 13,
+                color: colors.textSecondary,
+                marginBottom: 14,
+              }}>
+              Quick select or fill out the form below
             </Text>
             {quickLinksScrollable ? (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
@@ -1259,19 +1266,24 @@ export default function ReportIncidentIndex() {
                     key={index}
                     onPress={link.onPress}
                     style={{
-                      backgroundColor: link.color + '08',
-                      borderColor: link.color + '20',
+                      backgroundColor: colors.card,
+                      borderColor: colors.border,
                       borderWidth: 1,
-                      borderRadius: 16,
-                      paddingVertical: 14,
-                      paddingHorizontal: 12,
+                      borderRadius: 18,
+                      paddingVertical: 16,
+                      paddingHorizontal: 14,
                       alignItems: 'center',
                       justifyContent: 'center',
-                      minWidth: 95,
-                      minHeight: 90,
+                      minWidth: 100,
+                      minHeight: 95,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.05,
+                      shadowRadius: 6,
+                      elevation: 2,
                     }}
                     activeOpacity={0.7}>
-                    <Text style={{ fontSize: 26, marginBottom: 6 }}>{link.icon}</Text>
+                    <Text style={{ fontSize: 30, marginBottom: 8 }}>{link.icon}</Text>
                     <Text
                       style={{
                         fontSize: 11,
@@ -1292,20 +1304,25 @@ export default function ReportIncidentIndex() {
                     key={index}
                     onPress={link.onPress}
                     style={{
-                      backgroundColor: link.color + '08',
-                      borderColor: link.color + '20',
+                      backgroundColor: colors.card,
+                      borderColor: colors.border,
                       borderWidth: 1,
-                      borderRadius: 16,
-                      paddingVertical: 12,
+                      borderRadius: 18,
+                      paddingVertical: 14,
                       paddingHorizontal: 8,
                       alignItems: 'center',
                       justifyContent: 'center',
                       flexGrow: 1,
                       flexBasis: '21%',
-                      minHeight: 82,
+                      minHeight: 88,
+                      shadowColor: '#000',
+                      shadowOffset: { width: 0, height: 2 },
+                      shadowOpacity: 0.05,
+                      shadowRadius: 6,
+                      elevation: 2,
                     }}
                     activeOpacity={0.7}>
-                    <Text style={{ fontSize: 22, marginBottom: 4 }}>{link.icon}</Text>
+                    <Text style={{ fontSize: 26, marginBottom: 6 }}>{link.icon}</Text>
                     <Text
                       style={{
                         fontSize: 10,
@@ -1354,7 +1371,7 @@ export default function ReportIncidentIndex() {
           </View>
 
           {/* Date/Time and Location */}
-          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
+          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 22 }}>
             {/* Date/Time Card */}
             <TouchableOpacity
               onPress={() => updateUIState({ showDateTimeDialog: true })}
@@ -1362,30 +1379,30 @@ export default function ReportIncidentIndex() {
                 flex: 1,
                 flexDirection: 'row',
                 alignItems: 'center',
-                backgroundColor: colors.surface,
+                backgroundColor: colors.card,
                 borderWidth: 1,
                 borderColor: colors.border,
-                borderRadius: 14,
+                borderRadius: 16,
                 paddingHorizontal: 14,
-                paddingVertical: 12,
+                paddingVertical: 14,
                 shadowColor: '#000',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.04,
-                shadowRadius: 3,
-                elevation: 1,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.06,
+                shadowRadius: 6,
+                elevation: 2,
               }}
               activeOpacity={0.7}>
               <View
                 style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 18,
-                  backgroundColor: colors.primary + '12',
+                  width: 40,
+                  height: 40,
+                  borderRadius: 12,
+                  backgroundColor: colors.primary + '15',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  marginRight: 10,
+                  marginRight: 12,
                 }}>
-                <Calendar size={16} color={colors.primary} />
+                <Calendar size={18} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 10, fontWeight: '600', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 }}>
@@ -1421,32 +1438,32 @@ export default function ReportIncidentIndex() {
                 flex: 1,
                 flexDirection: 'row',
                 alignItems: 'center',
-                backgroundColor: colors.surface,
+                backgroundColor: colors.card,
                 borderWidth: 1,
                 borderColor: uiState.locationFetchFailed ? colors.error + '60' : colors.border,
-                borderRadius: 14,
+                borderRadius: 16,
                 paddingHorizontal: 14,
-                paddingVertical: 12,
+                paddingVertical: 14,
                 shadowColor: '#000',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.04,
-                shadowRadius: 3,
-                elevation: 1,
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.06,
+                shadowRadius: 6,
+                elevation: 2,
               }}
               activeOpacity={0.7}>
               <View
                 style={{
-                  width: 36,
-                  height: 36,
-                  borderRadius: 18,
+                  width: 40,
+                  height: 40,
+                  borderRadius: 12,
                   backgroundColor: uiState.locationFetchFailed
-                    ? colors.error + '12'
+                    ? colors.error + '15'
                     : formData.street_address
-                      ? (colors.success || '#10B981') + '12'
-                      : colors.primary + '12',
+                      ? (colors.success || '#10B981') + '15'
+                      : colors.primary + '15',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  marginRight: 10,
+                  marginRight: 12,
                 }}>
                 {uiState.isGettingLocation ? (
                   <ActivityIndicator size="small" color={colors.primary} />
@@ -1486,14 +1503,12 @@ export default function ReportIncidentIndex() {
           </View>
 
           {/* Incident Title */}
-          <View style={{ marginBottom: 16 }}>
+          <View style={{ marginBottom: 18 }}>
             <Text
               style={{
-                fontSize: 13,
-                fontWeight: '600',
-                color: colors.textSecondary,
-                letterSpacing: 0.5,
-                textTransform: 'uppercase',
+                fontSize: 14,
+                fontWeight: '700',
+                color: colors.text,
                 marginBottom: 8,
               }}>
               Incident Title <Text style={{ color: colors.error }}>*</Text>
@@ -1503,7 +1518,7 @@ export default function ReportIncidentIndex() {
               value={formData.incident_title}
               onChangeText={(value) => updateFormData({ incident_title: value })}
               style={{
-                backgroundColor: colors.surface,
+                backgroundColor: colors.card,
                 borderColor: uiState.validationErrors.incident_title ? colors.error : colors.border,
                 borderWidth: 1,
                 borderRadius: 14,
@@ -1511,6 +1526,11 @@ export default function ReportIncidentIndex() {
                 paddingVertical: 14,
                 fontSize: 15,
                 color: colors.text,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.04,
+                shadowRadius: 3,
+                elevation: 1,
               }}
               placeholderTextColor={colors.textSecondary}
             />
@@ -1522,14 +1542,12 @@ export default function ReportIncidentIndex() {
           </View>
 
           {/* Category */}
-          <View style={{ marginBottom: 16 }}>
+          <View style={{ marginBottom: 18 }}>
             <Text
               style={{
-                fontSize: 13,
-                fontWeight: '600',
-                color: colors.textSecondary,
-                letterSpacing: 0.5,
-                textTransform: 'uppercase',
+                fontSize: 14,
+                fontWeight: '700',
+                color: colors.text,
                 marginBottom: 8,
               }}>
               Category <Text style={{ color: colors.error }}>*</Text>
@@ -1542,13 +1560,18 @@ export default function ReportIncidentIndex() {
                 flexDirection: 'row',
                 alignItems: 'center',
                 justifyContent: 'space-between',
-                backgroundColor: colors.surface,
+                backgroundColor: colors.card,
                 borderColor: uiState.validationErrors.incident_category ? colors.error : colors.border,
                 borderWidth: 1,
                 borderRadius: 14,
                 paddingHorizontal: 16,
                 paddingVertical: 14,
                 opacity: categoriesLoading ? 0.6 : 1,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.04,
+                shadowRadius: 3,
+                elevation: 1,
               }}>
               <Text
                 style={{
@@ -1576,14 +1599,12 @@ export default function ReportIncidentIndex() {
 
           {/* Subcategory - shown after category selection */}
           {formData.incident_category && (
-            <View style={{ marginBottom: 16 }}>
+            <View style={{ marginBottom: 18 }}>
               <Text
                 style={{
-                  fontSize: 13,
-                  fontWeight: '600',
-                  color: colors.textSecondary,
-                  letterSpacing: 0.5,
-                  textTransform: 'uppercase',
+                  fontSize: 14,
+                  fontWeight: '700',
+                  color: colors.text,
                   marginBottom: 8,
                 }}>
                 Subcategory
@@ -1595,12 +1616,17 @@ export default function ReportIncidentIndex() {
                   flexDirection: 'row',
                   alignItems: 'center',
                   justifyContent: 'space-between',
-                  backgroundColor: colors.surface,
+                  backgroundColor: colors.card,
                   borderColor: colors.border,
                   borderWidth: 1,
                   borderRadius: 14,
                   paddingHorizontal: 16,
                   paddingVertical: 14,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 1 },
+                  shadowOpacity: 0.04,
+                  shadowRadius: 3,
+                  elevation: 1,
                 }}>
                 <Text
                   style={{
@@ -1615,14 +1641,12 @@ export default function ReportIncidentIndex() {
           )}
 
           {/* What Happened */}
-          <View style={{ marginBottom: 16 }}>
+          <View style={{ marginBottom: 18 }}>
             <Text
               style={{
-                fontSize: 13,
-                fontWeight: '600',
-                color: colors.textSecondary,
-                letterSpacing: 0.5,
-                textTransform: 'uppercase',
+                fontSize: 14,
+                fontWeight: '700',
+                color: colors.text,
                 marginBottom: 8,
               }}>
               What Happened? <Text style={{ color: colors.error }}>*</Text>
@@ -1634,7 +1658,7 @@ export default function ReportIncidentIndex() {
               multiline
               numberOfLines={6}
               style={{
-                backgroundColor: colors.surface,
+                backgroundColor: colors.card,
                 borderColor: uiState.validationErrors.what_happened ? colors.error : colors.border,
                 borderWidth: 1,
                 borderRadius: 14,
@@ -1644,6 +1668,11 @@ export default function ReportIncidentIndex() {
                 color: colors.text,
                 minHeight: 140,
                 textAlignVertical: 'top',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.04,
+                shadowRadius: 3,
+                elevation: 1,
               }}
               placeholderTextColor={colors.textSecondary}
             />
@@ -1655,35 +1684,16 @@ export default function ReportIncidentIndex() {
           </View>
 
           {/* Evidence Section */}
-          <View style={{ marginBottom: 16 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-              <Text
-                style={{
-                  fontSize: 13,
-                  fontWeight: '600',
-                  color: colors.textSecondary,
-                  letterSpacing: 0.5,
-                  textTransform: 'uppercase',
-                }}>
-                Evidence
-              </Text>
-              <TouchableOpacity
-                onPress={() => updateUIState({ showEvidenceModal: true })}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  backgroundColor: colors.primary + '12',
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
-                  borderRadius: 20,
-                }}
-                activeOpacity={0.7}>
-                <Plus size={14} color={colors.primary} />
-                <Text style={{ marginLeft: 4, fontSize: 13, fontWeight: '600', color: colors.primary }}>
-                  Add
-                </Text>
-              </TouchableOpacity>
-            </View>
+          <View style={{ marginBottom: 18 }}>
+            <Text
+              style={{
+                fontSize: 14,
+                fontWeight: '700',
+                color: colors.text,
+                marginBottom: 8,
+              }}>
+              Evidence
+            </Text>
 
             {/* Upload Progress */}
             {isUploading && uploadProgress && (
@@ -1832,32 +1842,36 @@ export default function ReportIncidentIndex() {
         animationType="slide"
         onRequestClose={() => updateUIState({ showDateTimeDialog: false })}>
         <View className="flex-1 justify-end" style={{ backgroundColor: colors.overlay }}>
-          <View className="rounded-t-3xl p-6" style={{ backgroundColor: colors.surface }}>
-            <View className="mb-6 flex-row items-center justify-between">
-              <Text className="text-lg font-bold" style={{ color: colors.text }}>
+          <View style={{ backgroundColor: colors.background, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingBottom: 32 }}>
+            <View style={{ alignItems: 'center', paddingVertical: 12 }}>
+              <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
+            </View>
+
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <Text style={{ fontSize: 22, fontWeight: 'bold', color: colors.text, letterSpacing: -0.3 }}>
                 Select Date & Time
               </Text>
               <TouchableOpacity
                 onPress={() => updateUIState({ showDateTimeDialog: false })}
+                style={{ padding: 8, borderRadius: 10, backgroundColor: colors.surfaceVariant }}
                 activeOpacity={0.7}>
-                <X size={24} color={colors.textSecondary} />
+                <X size={20} color={colors.text} />
               </TouchableOpacity>
             </View>
 
-            <View className="space-y-3">
+            <View style={{ gap: 10 }}>
               <TouchableOpacity
                 onPress={handleUseCurrentDateTime}
-                className="flex-row items-center rounded-xl p-4"
                 activeOpacity={0.7}
-                style={{ backgroundColor: colors.surfaceVariant }}>
+                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceVariant, borderRadius: 16, padding: 16 }}>
                 <View
-                  className="mr-4 h-12 w-12 items-center justify-center rounded-full"
-                  style={{ backgroundColor: colors.primary + '20' }}>
-                  <Clock size={24} color={colors.primary} />
+                  style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: colors.primary + '18', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                  <Clock size={22} color={colors.primary} />
                 </View>
-                <Text className="text-base font-medium" style={{ color: colors.text }}>
-                  Use Current Date & Time
-                </Text>
+                <View>
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>Use Current Date & Time</Text>
+                  <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>Auto-fill with right now</Text>
+                </View>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -1865,17 +1879,16 @@ export default function ReportIncidentIndex() {
                   updateUIState({ showDateTimeDialog: false });
                   setShowDatePicker(true);
                 }}
-                className="flex-row items-center rounded-xl p-4"
                 activeOpacity={0.7}
-                style={{ backgroundColor: colors.surfaceVariant }}>
+                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceVariant, borderRadius: 16, padding: 16 }}>
                 <View
-                  className="mr-4 h-12 w-12 items-center justify-center rounded-full"
-                  style={{ backgroundColor: colors.primary + '20' }}>
-                  <Calendar size={24} color={colors.primary} />
+                  style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: colors.primary + '18', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                  <Calendar size={22} color={colors.primary} />
                 </View>
-                <Text className="text-base font-medium" style={{ color: colors.text }}>
-                  Select Date
-                </Text>
+                <View>
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>Select Date</Text>
+                  <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>Choose a specific date</Text>
+                </View>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -1883,17 +1896,16 @@ export default function ReportIncidentIndex() {
                   updateUIState({ showDateTimeDialog: false });
                   setShowTimePicker(true);
                 }}
-                className="flex-row items-center rounded-xl p-4"
                 activeOpacity={0.7}
-                style={{ backgroundColor: colors.surfaceVariant }}>
+                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceVariant, borderRadius: 16, padding: 16 }}>
                 <View
-                  className="mr-4 h-12 w-12 items-center justify-center rounded-full"
-                  style={{ backgroundColor: colors.primary + '20' }}>
-                  <Clock size={24} color={colors.primary} />
+                  style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: colors.primary + '18', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                  <Clock size={22} color={colors.primary} />
                 </View>
-                <Text className="text-base font-medium" style={{ color: colors.text }}>
-                  Select Time
-                </Text>
+                <View>
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>Select Time</Text>
+                  <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>Choose a specific time</Text>
+                </View>
               </TouchableOpacity>
             </View>
           </View>
@@ -1907,34 +1919,37 @@ export default function ReportIncidentIndex() {
         animationType="slide"
         onRequestClose={() => updateUIState({ showLocationDialog: false })}>
         <View className="flex-1 justify-end" style={{ backgroundColor: colors.overlay }}>
-          <View className="rounded-t-3xl p-6" style={{ backgroundColor: colors.surface }}>
-            <View className="mb-6 flex-row items-center justify-between">
-              <Text className="text-lg font-bold" style={{ color: colors.text }}>
+          <View style={{ backgroundColor: colors.background, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingBottom: 32 }}>
+            <View style={{ alignItems: 'center', paddingVertical: 12 }}>
+              <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
+            </View>
+
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <Text style={{ fontSize: 22, fontWeight: 'bold', color: colors.text, letterSpacing: -0.3 }}>
                 Set Location
               </Text>
               <TouchableOpacity
                 onPress={() => updateUIState({ showLocationDialog: false })}
+                style={{ padding: 8, borderRadius: 10, backgroundColor: colors.surfaceVariant }}
                 activeOpacity={0.7}>
-                <X size={24} color={colors.textSecondary} />
+                <X size={20} color={colors.text} />
               </TouchableOpacity>
             </View>
 
             <View>
-              <View className="flex-row space-x-3">
+              <View style={{ flexDirection: 'row', gap: 10 }}>
                 <TouchableOpacity
                   onPress={() => {
                     updateUIState({ showLocationDialog: false });
                     setShowAddressSearch(true);
                   }}
-                  className="flex-1 items-center rounded-xl p-4"
                   activeOpacity={0.7}
-                  style={{ backgroundColor: colors.surfaceVariant }}>
+                  style={{ flex: 1, alignItems: 'center', backgroundColor: colors.surfaceVariant, borderRadius: 16, paddingVertical: 20, paddingHorizontal: 10 }}>
                   <View
-                    className="mb-3 h-12 w-12 items-center justify-center rounded-full"
-                    style={{ backgroundColor: colors.primary + '20' }}>
+                    style={{ width: 50, height: 50, borderRadius: 16, backgroundColor: colors.primary + '18', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
                     <MapPin size={24} color={colors.primary} />
                   </View>
-                  <Text className="text-center text-sm font-medium" style={{ color: colors.text }}>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text, textAlign: 'center' }}>
                     Search Location
                   </Text>
                 </TouchableOpacity>
@@ -1944,50 +1959,48 @@ export default function ReportIncidentIndex() {
                     updateUIState({ showLocationDialog: false });
                     openMapView();
                   }}
-                  className="flex-1 items-center rounded-xl p-4"
                   activeOpacity={0.7}
-                  style={{ backgroundColor: colors.surfaceVariant }}>
+                  style={{ flex: 1, alignItems: 'center', backgroundColor: colors.surfaceVariant, borderRadius: 16, paddingVertical: 20, paddingHorizontal: 10 }}>
                   <View
-                    className="mb-3 h-12 w-12 items-center justify-center rounded-full"
-                    style={{ backgroundColor: colors.primary + '20' }}>
-                    <MapPin size={24} color={colors.primary} />
+                    style={{ width: 50, height: 50, borderRadius: 16, backgroundColor: colors.primary + '18', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+                    <Navigation size={24} color={colors.primary} />
                   </View>
-                  <Text className="text-center text-sm font-medium" style={{ color: colors.text }}>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text, textAlign: 'center' }}>
                     Select on Map
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   onPress={() => handleUseCurrentLocation()}
-                  className="flex-1 items-center rounded-xl p-4"
                   activeOpacity={0.7}
-                  style={{ backgroundColor: colors.surfaceVariant }}>
+                  style={{ flex: 1, alignItems: 'center', backgroundColor: colors.surfaceVariant, borderRadius: 16, paddingVertical: 20, paddingHorizontal: 10 }}>
                   <View
-                    className="mb-3 h-12 w-12 items-center justify-center rounded-full"
-                    style={{ backgroundColor: colors.primary + '20' }}>
+                    style={{ width: 50, height: 50, borderRadius: 16, backgroundColor: colors.primary + '18', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
                     <MapPin size={24} color={colors.primary} />
                   </View>
-                  <Text className="text-center text-sm font-medium" style={{ color: colors.text }}>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text, textAlign: 'center' }}>
                     Use Current Location
                   </Text>
                 </TouchableOpacity>
               </View>
 
-              <View className="mt-4">
+              <View style={{ marginTop: 20 }}>
                 <Text
-                  className="mb-2 text-xs font-semibold uppercase"
-                  style={{ color: colors.textSecondary }}>
+                  style={{ fontSize: 14, fontWeight: '700', color: colors.text, marginBottom: 8 }}>
                   Nearby Landmark
                 </Text>
                 <TextInput
                   placeholder="Nearby landmark (optional)"
                   value={formData.nearby_landmark}
                   onChangeText={(value) => updateFormData({ nearby_landmark: value })}
-                  className="rounded-xl px-4 py-4 text-base"
                   style={{
-                    backgroundColor: colors.surface,
+                    backgroundColor: colors.card,
                     borderColor: colors.border,
                     borderWidth: 1,
+                    borderRadius: 14,
+                    paddingHorizontal: 16,
+                    paddingVertical: 14,
+                    fontSize: 15,
                     color: colors.text,
                   }}
                   placeholderTextColor={colors.textSecondary}
@@ -2009,113 +2022,113 @@ export default function ReportIncidentIndex() {
           }
         }}>
         <View className="flex-1 justify-end" style={{ backgroundColor: colors.overlay }}>
-          <View className="rounded-t-3xl p-6" style={{ backgroundColor: colors.surface }}>
-            <View className="mb-6 flex-row items-center justify-between">
-              <Text className="text-lg font-bold" style={{ color: colors.text }}>
+          <View style={{ backgroundColor: colors.background, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingBottom: 32 }}>
+            <View style={{ alignItems: 'center', paddingVertical: 12 }}>
+              <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
+            </View>
+
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <Text style={{ fontSize: 22, fontWeight: 'bold', color: colors.text, letterSpacing: -0.3 }}>
                 {uiState.isRecording ? 'Recording Audio' : 'Add Evidence'}
               </Text>
               {!uiState.isRecording && (
                 <TouchableOpacity
                   onPress={() => updateUIState({ showEvidenceModal: false })}
+                  style={{ padding: 8, borderRadius: 10, backgroundColor: colors.surfaceVariant }}
                   activeOpacity={0.7}>
-                  <X size={24} color={colors.textSecondary} />
+                  <X size={20} color={colors.text} />
                 </TouchableOpacity>
               )}
             </View>
 
             {uiState.isRecording ? (
-              <View className="items-center py-8">
-                <View className="mb-4 h-24 w-24 items-center justify-center rounded-full bg-red-600">
+              <View style={{ alignItems: 'center', paddingVertical: 32 }}>
+                <View style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: colors.error, alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
                   <Mic size={40} color="white" />
                 </View>
-                <Text className="mb-2 text-2xl font-bold text-red-600">
+                <Text style={{ fontSize: 28, fontWeight: 'bold', color: colors.error, marginBottom: 8 }}>
                   <Text>{Math.floor(recordingDuration / 60)}</Text>
                   <Text>:</Text>
                   <Text>{(recordingDuration % 60).toString().padStart(2, '0')}</Text>
                 </Text>
-                <Text className="mb-6 text-sm" style={{ color: colors.textSecondary }}>
+                <Text style={{ fontSize: 14, color: colors.textSecondary, marginBottom: 24 }}>
                   Recording in progress...
                 </Text>
                 <TouchableOpacity
                   onPress={handleVoiceRecording}
-                  className="w-full items-center rounded-xl py-4"
                   activeOpacity={0.8}
-                  style={{ backgroundColor: colors.error }}>
-                  <Text className="text-base font-semibold text-white">Stop Recording</Text>
+                  style={{ width: '100%', alignItems: 'center', borderRadius: 14, paddingVertical: 16, backgroundColor: colors.error }}>
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: '#FFFFFF' }}>Stop Recording</Text>
                 </TouchableOpacity>
               </View>
             ) : (
-              <View className="space-y-3">
+              <View style={{ gap: 10 }}>
                 <TouchableOpacity
                   onPress={handleVoiceRecording}
-                  className="flex-row items-center rounded-xl p-4"
                   activeOpacity={0.7}
-                  style={{ backgroundColor: colors.surfaceVariant }}>
+                  style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceVariant, borderRadius: 16, padding: 16 }}>
                   <View
-                    className="mr-4 h-12 w-12 items-center justify-center rounded-full"
-                    style={{ backgroundColor: colors.primary + '20' }}>
-                    <Mic size={24} color={colors.primary} />
+                    style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: colors.error + '18', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                    <Mic size={22} color={colors.error} />
                   </View>
-                  <Text className="text-base font-medium" style={{ color: colors.text }}>
-                    Record Audio
-                  </Text>
+                  <View>
+                    <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>Record Audio</Text>
+                    <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>Voice note or narration</Text>
+                  </View>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   onPress={() => handleFileUpload('photo')}
-                  className="flex-row items-center rounded-xl p-4"
                   activeOpacity={0.7}
                   disabled={isUploading}
                   style={{
-                    backgroundColor: colors.surfaceVariant,
+                    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceVariant, borderRadius: 16, padding: 16,
                     opacity: isUploading ? 0.6 : 1,
                   }}>
                   <View
-                    className="mr-4 h-12 w-12 items-center justify-center rounded-full"
-                    style={{ backgroundColor: colors.primary + '20' }}>
-                    <Camera size={24} color={colors.primary} />
+                    style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: colors.primary + '18', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                    <Camera size={22} color={colors.primary} />
                   </View>
-                  <Text className="text-base font-medium" style={{ color: colors.text }}>
-                    Take a Picture
-                  </Text>
+                  <View>
+                    <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>Take a Picture</Text>
+                    <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>Use your camera</Text>
+                  </View>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   onPress={() => handleFileUpload('image')}
-                  className="flex-row items-center rounded-xl p-4"
                   activeOpacity={0.7}
                   disabled={isUploading}
                   style={{
-                    backgroundColor: colors.surfaceVariant,
+                    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceVariant, borderRadius: 16, padding: 16,
                     opacity: isUploading ? 0.6 : 1,
                   }}>
                   <View
-                    className="mr-4 h-12 w-12 items-center justify-center rounded-full"
-                    style={{ backgroundColor: colors.primary + '20' }}>
-                    <Upload size={24} color={colors.primary} />
+                    style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: colors.primary + '18', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                    <Upload size={22} color={colors.primary} />
                   </View>
-                  <Text className="text-base font-medium" style={{ color: colors.text }}>
-                    Upload a Picture
-                  </Text>
+                  <View>
+                    <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>Upload a Picture</Text>
+                    <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>From your gallery</Text>
+                  </View>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   onPress={() => handleFileUpload('document')}
-                  className="flex-row items-center rounded-xl p-4"
                   activeOpacity={0.7}
                   disabled={isUploading}
                   style={{
-                    backgroundColor: colors.surfaceVariant,
+                    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceVariant, borderRadius: 16, padding: 16,
                     opacity: isUploading ? 0.6 : 1,
                   }}>
                   <View
-                    className="mr-4 h-12 w-12 items-center justify-center rounded-full"
-                    style={{ backgroundColor: colors.primary + '20' }}>
-                    <FileText size={24} color={colors.primary} />
+                    style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: (colors.success || '#10B981') + '18', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                    <FileText size={22} color={colors.success || '#10B981'} />
                   </View>
-                  <Text className="text-base font-medium" style={{ color: colors.text }}>
-                    Upload a Document
-                  </Text>
+                  <View>
+                    <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>Upload a Document</Text>
+                    <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>PDF, Word, or text files</Text>
+                  </View>
                 </TouchableOpacity>
               </View>
             )}
