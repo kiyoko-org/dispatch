@@ -93,6 +93,7 @@ export default function MapPage() {
   const [showReports, setShowReports] = useState(true);
   const [showBoundary, setShowBoundary] = useState(false);
   const [filterCategory, setFilterCategory] = useState<CrimeCategory | 'all'>('all');
+  const [filterIntensity, setFilterIntensity] = useState<string | null>(null);
   const [filterSubcategory, setFilterSubcategory] = useState<string | null>(null);
   const [filterStartDate, setFilterStartDate] = useState<Date | null>(null);
   const [filterEndDate, setFilterEndDate] = useState<Date | null>(null);
@@ -805,6 +806,11 @@ export default function MapPage() {
     setSelectedCluster(null);
     setSelectedReportId(null);
     setSelectedReportCluster(null);
+    setFilterCategory('all');
+    setFilterIntensity(null);
+    setShowHeatmap(true);
+    setShowMarkers(true);
+    setShowReports(true);
   };
 
   // Safe state reset function with debouncing
@@ -1104,27 +1110,75 @@ export default function MapPage() {
             {/* Kernel Density Estimation (KDE) with cluster-based positioning
 						    Algorithm: Grid-based clustering + weighted KDE rendering
 						    Use Case: Hotspot detection, intensity visualization aligned with markers */}
-            {showHeatmap && heatmapType === 'density' && heatmapPoints.length > 0 && (
-              <Heatmap
-                points={heatmapPoints}
-                opacity={0.7}
-                radius={50}
-                gradient={{
-                  colors: [
-                    'rgba(0, 255, 0, 0)', // Transparent green
-                    'rgba(0, 255, 0, 0.5)', // Light green
-                    'rgba(124, 252, 0, 0.7)', // Lawn green
-                    'rgba(255, 255, 0, 0.8)', // Yellow
-                    'rgba(255, 165, 0, 0.85)', // Orange
-                    'rgba(255, 69, 0, 0.9)', // Red-orange
-                    'rgba(255, 0, 0, 0.95)', // Red
-                    'rgba(139, 0, 0, 1)', // Dark red
-                  ],
-                  startPoints: [0, 0.15, 0.3, 0.5, 0.65, 0.8, 0.9, 1.0],
-                  colorMapSize: 512,
-                }}
-              />
-            )}
+            {showHeatmap && heatmapType === 'density' && heatmapPoints.length > 0 && (() => {
+              const maxWeight = Math.max(...heatmapPoints.map(p => p.weight), 1);
+
+              // When intensity filter is active, render circles with that specific color only
+              if (filterIntensity) {
+                const intensityColorMap: Record<string, string> = {
+                  'Very High': 'rgba(139, 0, 0, 0.7)',
+                  'High': 'rgba(255, 0, 0, 0.6)',
+                  'Medium': 'rgba(255, 165, 0, 0.55)',
+                  'Low-Med': 'rgba(255, 255, 0, 0.5)',
+                  'Low': 'rgba(0, 255, 0, 0.4)',
+                };
+                const intensityStrokeMap: Record<string, string> = {
+                  'Very High': 'rgba(139, 0, 0, 0.9)',
+                  'High': 'rgba(255, 0, 0, 0.8)',
+                  'Medium': 'rgba(255, 165, 0, 0.75)',
+                  'Low-Med': 'rgba(255, 255, 0, 0.7)',
+                  'Low': 'rgba(0, 255, 0, 0.6)',
+                };
+                const fillColor = intensityColorMap[filterIntensity] || 'rgba(255,0,0,0.5)';
+                const strokeColor = intensityStrokeMap[filterIntensity] || 'rgba(255,0,0,0.8)';
+
+                const filteredPoints = heatmapPoints.filter(p => {
+                  const ratio = p.weight / maxWeight;
+                  switch (filterIntensity) {
+                    case 'Very High': return ratio >= 0.9;
+                    case 'High': return ratio >= 0.65 && ratio < 0.9;
+                    case 'Medium': return ratio >= 0.4 && ratio < 0.65;
+                    case 'Low-Med': return ratio >= 0.2 && ratio < 0.4;
+                    case 'Low': return ratio < 0.2;
+                    default: return true;
+                  }
+                });
+
+                return filteredPoints.map((point, idx) => (
+                  <Circle
+                    key={`density-filtered-${idx}`}
+                    center={{ latitude: point.latitude, longitude: point.longitude }}
+                    radius={300 + (point.weight / maxWeight) * 400}
+                    fillColor={fillColor}
+                    strokeColor={strokeColor}
+                    strokeWidth={1}
+                  />
+                ));
+              }
+
+              // No filter: render the full gradient heatmap
+              return (
+                <Heatmap
+                  points={heatmapPoints}
+                  opacity={0.7}
+                  radius={50}
+                  gradient={{
+                    colors: [
+                      'rgba(0, 255, 0, 0)', // Transparent green
+                      'rgba(0, 255, 0, 0.5)', // Light green
+                      'rgba(124, 252, 0, 0.7)', // Lawn green
+                      'rgba(255, 255, 0, 0.8)', // Yellow
+                      'rgba(255, 165, 0, 0.85)', // Orange
+                      'rgba(255, 69, 0, 0.9)', // Red-orange
+                      'rgba(255, 0, 0, 0.95)', // Red
+                      'rgba(139, 0, 0, 1)', // Dark red
+                    ],
+                    startPoints: [0, 0.15, 0.3, 0.5, 0.65, 0.8, 0.9, 1.0],
+                    colorMapSize: 512,
+                  }}
+                />
+              );
+            })()}
 
             {/* Choropleth Map - Region-based Aggregation
 						    Algorithm: Region Aggregation by barangay/administrative boundaries
@@ -1133,11 +1187,18 @@ export default function MapPage() {
               heatmapType === 'choropleth' &&
               Object.entries(barangayCrimeData).map(([key, data]) => {
                 if (!data.center) return null;
-                // Dynamic radius based on crime count (larger clusters = larger circles)
-                const baseRadius = 400; // Start with 400m
+                const baseRadius = 400;
                 const maxCount = Math.max(...Object.values(barangayCrimeData).map((d) => d.count));
                 const ratio = data.count / maxCount;
-                const radius = baseRadius + ratio * 600; // 400m to 1000m
+                // Filter by intensity
+                if (filterIntensity) {
+                  const matchesIntensity =
+                    (filterIntensity === 'High' && ratio >= 0.6) ||
+                    (filterIntensity === 'Medium' && ratio >= 0.3 && ratio < 0.6) ||
+                    (filterIntensity === 'Low' && ratio < 0.3);
+                  if (!matchesIntensity) return null;
+                }
+                const radius = baseRadius + ratio * 600;
 
                 return (
                   <Circle
@@ -1158,10 +1219,17 @@ export default function MapPage() {
               heatmapType === 'graduated' &&
               Object.entries(barangayCrimeData).map(([key, data]) => {
                 if (!data.center) return null;
-                // Larger graduated sizes for better visibility (200m to 1200m)
                 const maxCount = Math.max(...Object.values(barangayCrimeData).map((d) => d.count));
                 const ratio = data.count / maxCount;
-                const size = 200 + ratio * 1000; // Much larger range
+                // Filter by intensity
+                if (filterIntensity) {
+                  const matchesIntensity =
+                    (filterIntensity === 'Most' && ratio >= 0.6) ||
+                    (filterIntensity === 'Medium' && ratio >= 0.3 && ratio < 0.6) ||
+                    (filterIntensity === 'Fewest' && ratio < 0.3);
+                  if (!matchesIntensity) return null;
+                }
+                const size = 200 + ratio * 1000;
 
                 return (
                   <Circle
@@ -1184,35 +1252,38 @@ export default function MapPage() {
                 const maxCount = Math.max(...gridHeatmapData.map((c) => c.count), 1);
                 const ratio = cell.count / maxCount;
 
-                // Color gradient based on intensity (low to high)
+                // Determine intensity label for this cell
+                let intensityLabel: string;
                 let fillColor: string;
                 let strokeColor: string;
 
                 if (ratio < 0.2) {
-                  // Very Low - Light green
-                  fillColor = `rgba(144, 238, 144, 0.4)`; // Light green
+                  intensityLabel = 'Low';
+                  fillColor = `rgba(144, 238, 144, 0.4)`;
                   strokeColor = 'rgba(144, 238, 144, 0.6)';
                 } else if (ratio < 0.4) {
-                  // Low - Green
+                  intensityLabel = 'Low';
                   fillColor = `rgba(0, 255, 0, 0.5)`;
                   strokeColor = 'rgba(0, 255, 0, 0.7)';
                 } else if (ratio < 0.6) {
-                  // Medium - Yellow-green
+                  intensityLabel = 'Medium';
                   fillColor = `rgba(154, 205, 50, 0.6)`;
                   strokeColor = 'rgba(154, 205, 50, 0.8)';
                 } else if (ratio < 0.8) {
-                  // High - Yellow-orange
+                  intensityLabel = 'High';
                   fillColor = `rgba(255, 215, 0, 0.7)`;
                   strokeColor = 'rgba(255, 215, 0, 0.9)';
                 } else {
-                  // Very High - Orange-red
+                  intensityLabel = 'Very High';
                   fillColor = `rgba(255, 69, 0, 0.8)`;
                   strokeColor = 'rgba(255, 69, 0, 1)';
                 }
 
-                // Radius also varies with intensity for better visibility
+                // Filter by intensity
+                if (filterIntensity && intensityLabel !== filterIntensity) return null;
+
                 const baseRadius = 600;
-                const radius = baseRadius + ratio * 200; // 600-800m
+                const radius = baseRadius + ratio * 200;
 
                 return (
                   <Circle
@@ -2918,123 +2989,184 @@ export default function MapPage() {
                 <ScrollView style={{ maxHeight: 350 }} showsVerticalScrollIndicator={false}>
                   <View className="px-3 pb-2">
                     {/* Heatmap Visualization Legend */}
-                    {showHeatmap && (
-                      <>
-                        <View className="mb-2 border-b pb-2" style={{ borderColor: colors.border }}>
-                          <Text
-                            className="mb-1 text-xs font-semibold"
-                            style={{ color: colors.textSecondary }}>
-                            INTENSITY
-                          </Text>
+                    <View className="mb-2 border-b pb-2" style={{ borderColor: colors.border }}>
+                      <Text
+                        className="mb-1 text-xs font-semibold"
+                        style={{ color: colors.textSecondary }}>
+                        INTENSITY
+                      </Text>
 
-                          {heatmapType === 'density' && (
-                            <View style={{ gap: 3 }}>
-                              {[
-                                { color: 'rgba(139, 0, 0, 1)', label: 'Very High' },
-                                { color: 'rgba(255, 0, 0, 0.95)', label: 'High' },
-                                { color: 'rgba(255, 165, 0, 0.85)', label: 'Medium' },
-                                { color: 'rgba(255, 255, 0, 0.8)', label: 'Low-Med' },
-                                { color: 'rgba(0, 255, 0, 0.5)', label: 'Low' },
-                              ].map((item) => (
-                                <View key={item.label} className="flex-row items-center">
-                                  <View
-                                    style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: item.color, marginRight: 6 }}
-                                  />
-                                  <Text className="text-xs" style={{ color: colors.text }}>
-                                    {item.label}
-                                  </Text>
-                                </View>
-                              ))}
-                            </View>
-                          )}
-
-                          {heatmapType === 'choropleth' && (
-                            <View style={{ gap: 3 }}>
-                              {[
-                                { color: 'rgba(220, 38, 38, 0.6)', label: 'High', size: 14 },
-                                { color: 'rgba(251, 191, 36, 0.6)', label: 'Medium', size: 12 },
-                                { color: 'rgba(59, 130, 246, 0.6)', label: 'Low', size: 10 },
-                              ].map((item) => (
-                                <View key={item.label} className="flex-row items-center">
-                                  <View
-                                    style={{ width: item.size, height: item.size, borderRadius: item.size / 2, backgroundColor: item.color, marginRight: 6 }}
-                                  />
-                                  <Text className="text-xs" style={{ color: colors.text }}>
-                                    {item.label}
-                                  </Text>
-                                </View>
-                              ))}
-                            </View>
-                          )}
-
-                          {heatmapType === 'graduated' && (
-                            <View style={{ gap: 3 }}>
-                              {[
-                                { label: 'Most', size: 16 },
-                                { label: 'Medium', size: 12 },
-                                { label: 'Fewest', size: 8 },
-                              ].map((item) => (
-                                <View key={item.label} className="flex-row items-center">
-                                  <View
-                                    style={{
-                                      width: item.size, height: item.size, borderRadius: item.size / 2,
-                                      backgroundColor: 'rgba(220, 38, 38, 0.5)',
-                                      borderWidth: 1.5, borderColor: 'rgba(220, 38, 38, 0.9)',
-                                      marginRight: 6,
-                                    }}
-                                  />
-                                  <Text className="text-xs" style={{ color: colors.text }}>
-                                    {item.label}
-                                  </Text>
-                                </View>
-                              ))}
-                            </View>
-                          )}
-
-                          {heatmapType === 'grid' && (
-                            <View style={{ gap: 3 }}>
-                              {[
-                                { color: 'rgba(255, 69, 0, 0.8)', label: 'Very High' },
-                                { color: 'rgba(255, 215, 0, 0.7)', label: 'High' },
-                                { color: 'rgba(154, 205, 50, 0.6)', label: 'Medium' },
-                                { color: 'rgba(144, 238, 144, 0.4)', label: 'Low' },
-                              ].map((item) => (
-                                <View key={item.label} className="flex-row items-center">
-                                  <View
-                                    style={{ width: 14, height: 10, borderRadius: 2, backgroundColor: item.color, marginRight: 6 }}
-                                  />
-                                  <Text className="text-xs" style={{ color: colors.text }}>
-                                    {item.label}
-                                  </Text>
-                                </View>
-                              ))}
-                            </View>
-                          )}
-
-                          {heatmapType === 'bubble' && (
-                            <View style={{ gap: 3 }}>
-                              {[
-                                { color: '#DC2626', label: 'Violent' },
-                                { color: '#F59E0B', label: 'Property' },
-                                { color: '#7C3AED', label: 'Drug' },
-                                { color: '#3B82F6', label: 'Traffic' },
-                                { color: '#10B981', label: 'Operations' },
-                                { color: '#6B7280', label: 'Other' },
-                              ].map((item) => (
-                                <View key={item.label} className="flex-row items-center">
-                                  <View
-                                    style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: item.color, marginRight: 6 }}
-                                  />
-                                  <Text className="text-xs" style={{ color: colors.text }}>
-                                    {item.label}
-                                  </Text>
-                                </View>
-                              ))}
-                            </View>
-                          )}
+                      {heatmapType === 'density' && (
+                        <View style={{ gap: 2 }}>
+                          {[
+                            { color: 'rgba(139, 0, 0, 1)', label: 'Very High' },
+                            { color: 'rgba(255, 0, 0, 0.95)', label: 'High' },
+                            { color: 'rgba(255, 165, 0, 0.85)', label: 'Medium' },
+                            { color: 'rgba(255, 255, 0, 0.8)', label: 'Low-Med' },
+                            { color: 'rgba(0, 255, 0, 0.5)', label: 'Low' },
+                          ].map((item) => {
+                            const isActive = filterIntensity === item.label;
+                            return (
+                              <TouchableOpacity
+                                key={item.label}
+                                className="flex-row items-center"
+                                style={{
+                                  paddingVertical: 3,
+                                  paddingHorizontal: 6,
+                                  borderRadius: 6,
+                                  backgroundColor: isActive ? item.color.replace(/[\d.]+\)$/, '0.2)') : 'transparent',
+                                }}
+                                activeOpacity={0.6}
+                                onPress={() => setFilterIntensity(isActive ? null : item.label)}>
+                                <View
+                                  style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: item.color, marginRight: 6 }}
+                                />
+                                <Text className="text-xs" style={{ color: colors.text, fontWeight: isActive ? '700' : '400' }}>
+                                  {item.label}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
                         </View>
-                      </>
-                    )}
+                      )}
+
+                      {heatmapType === 'choropleth' && (
+                        <View style={{ gap: 2 }}>
+                          {[
+                            { color: 'rgba(220, 38, 38, 0.6)', label: 'High', size: 14 },
+                            { color: 'rgba(251, 191, 36, 0.6)', label: 'Medium', size: 12 },
+                            { color: 'rgba(59, 130, 246, 0.6)', label: 'Low', size: 10 },
+                          ].map((item) => {
+                            const isActive = filterIntensity === item.label;
+                            return (
+                              <TouchableOpacity
+                                key={item.label}
+                                className="flex-row items-center"
+                                style={{
+                                  paddingVertical: 3,
+                                  paddingHorizontal: 6,
+                                  borderRadius: 6,
+                                  backgroundColor: isActive ? item.color.replace(/[\d.]+\)$/, '0.2)') : 'transparent',
+                                }}
+                                activeOpacity={0.6}
+                                onPress={() => setFilterIntensity(isActive ? null : item.label)}>
+                                <View
+                                  style={{ width: item.size, height: item.size, borderRadius: item.size / 2, backgroundColor: item.color, marginRight: 6 }}
+                                />
+                                <Text className="text-xs" style={{ color: colors.text, fontWeight: isActive ? '700' : '400' }}>
+                                  {item.label}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      )}
+
+                      {heatmapType === 'graduated' && (
+                        <View style={{ gap: 2 }}>
+                          {[
+                            { label: 'Most', size: 16 },
+                            { label: 'Medium', size: 12 },
+                            { label: 'Fewest', size: 8 },
+                          ].map((item) => {
+                            const isActive = filterIntensity === item.label;
+                            return (
+                              <TouchableOpacity
+                                key={item.label}
+                                className="flex-row items-center"
+                                style={{
+                                  paddingVertical: 3,
+                                  paddingHorizontal: 6,
+                                  borderRadius: 6,
+                                  backgroundColor: isActive ? 'rgba(220, 38, 38, 0.15)' : 'transparent',
+                                }}
+                                activeOpacity={0.6}
+                                onPress={() => setFilterIntensity(isActive ? null : item.label)}>
+                                <View
+                                  style={{
+                                    width: item.size, height: item.size, borderRadius: item.size / 2,
+                                    backgroundColor: 'rgba(220, 38, 38, 0.5)',
+                                    borderWidth: 1.5, borderColor: 'rgba(220, 38, 38, 0.9)',
+                                    marginRight: 6,
+                                  }}
+                                />
+                                <Text className="text-xs" style={{ color: colors.text, fontWeight: isActive ? '700' : '400' }}>
+                                  {item.label}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      )}
+
+                      {heatmapType === 'grid' && (
+                        <View style={{ gap: 2 }}>
+                          {[
+                            { color: 'rgba(255, 69, 0, 0.8)', label: 'Very High' },
+                            { color: 'rgba(255, 215, 0, 0.7)', label: 'High' },
+                            { color: 'rgba(154, 205, 50, 0.6)', label: 'Medium' },
+                            { color: 'rgba(144, 238, 144, 0.4)', label: 'Low' },
+                          ].map((item) => {
+                            const isActive = filterIntensity === item.label;
+                            return (
+                              <TouchableOpacity
+                                key={item.label}
+                                className="flex-row items-center"
+                                style={{
+                                  paddingVertical: 3,
+                                  paddingHorizontal: 6,
+                                  borderRadius: 6,
+                                  backgroundColor: isActive ? item.color.replace(/[\d.]+\)$/, '0.2)') : 'transparent',
+                                }}
+                                activeOpacity={0.6}
+                                onPress={() => setFilterIntensity(isActive ? null : item.label)}>
+                                <View
+                                  style={{ width: 14, height: 10, borderRadius: 2, backgroundColor: item.color, marginRight: 6 }}
+                                />
+                                <Text className="text-xs" style={{ color: colors.text, fontWeight: isActive ? '700' : '400' }}>
+                                  {item.label}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      )}
+
+                      {heatmapType === 'bubble' && (
+                        <View style={{ gap: 2 }}>
+                          {[
+                            { color: '#DC2626', label: 'Violent' },
+                            { color: '#F59E0B', label: 'Property' },
+                            { color: '#7C3AED', label: 'Drug' },
+                            { color: '#3B82F6', label: 'Traffic' },
+                            { color: '#10B981', label: 'Operations' },
+                            { color: '#6B7280', label: 'Other' },
+                          ].map((item) => {
+                            const isActive = filterIntensity === item.label;
+                            return (
+                              <TouchableOpacity
+                                key={item.label}
+                                className="flex-row items-center"
+                                style={{
+                                  paddingVertical: 3,
+                                  paddingHorizontal: 6,
+                                  borderRadius: 6,
+                                  backgroundColor: isActive ? item.color + '20' : 'transparent',
+                                }}
+                                activeOpacity={0.6}
+                                onPress={() => setFilterIntensity(isActive ? null : item.label)}>
+                                <View
+                                  style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: item.color, marginRight: 6 }}
+                                />
+                                <Text className="text-xs" style={{ color: colors.text, fontWeight: isActive ? '700' : '400' }}>
+                                  {item.label}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      )}
+                    </View>
 
                     {/* Markers Legend */}
                     {showMarkers && (
@@ -3044,42 +3176,65 @@ export default function MapPage() {
                           style={{ color: colors.textSecondary }}>
                           MARKERS
                         </Text>
-                        <View style={{ gap: 3 }}>
+                        <View style={{ gap: 2 }}>
                           {[
-                            { color: '#DC2626', label: 'Violent' },
-                            { color: '#F59E0B', label: 'Property' },
-                            { color: '#7C3AED', label: 'Drug' },
-                            { color: '#3B82F6', label: 'Traffic' },
-                            { color: '#10B981', label: 'Operations' },
-                            { color: '#6B7280', label: 'Other' },
-                            { color: '#9333ea', label: 'Mixed' },
-                          ].map((item) => (
-                            <View key={item.label} className="flex-row items-center">
-                              <View
-                                style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: item.color, marginRight: 6 }}
-                              />
-                              <Text className="text-xs" style={{ color: colors.text }}>
-                                {item.label}
-                              </Text>
-                            </View>
-                          ))}
+                            { color: '#DC2626', label: 'Violent', category: 'violent' as CrimeCategory },
+                            { color: '#F59E0B', label: 'Property', category: 'property' as CrimeCategory },
+                            { color: '#7C3AED', label: 'Drug', category: 'drug' as CrimeCategory },
+                            { color: '#3B82F6', label: 'Traffic', category: 'traffic' as CrimeCategory },
+                            { color: '#10B981', label: 'Operations', category: 'operation' as CrimeCategory },
+                            { color: '#6B7280', label: 'Other', category: 'other' as CrimeCategory },
+                            { color: '#9333ea', label: 'Mixed', category: null },
+                          ].map((item) => {
+                            const isActive = item.category && filterCategory === item.category;
+                            return (
+                              <TouchableOpacity
+                                key={item.label}
+                                className="flex-row items-center"
+                                style={{
+                                  paddingVertical: 3,
+                                  paddingHorizontal: 6,
+                                  borderRadius: 6,
+                                  backgroundColor: isActive ? item.color + '20' : 'transparent',
+                                }}
+                                activeOpacity={0.6}
+                                onPress={() => {
+                                  if (!item.category) return;
+                                  setFilterCategory(isActive ? 'all' : item.category);
+                                }}>
+                                <View
+                                  style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: item.color, marginRight: 6 }}
+                                />
+                                <Text className="text-xs" style={{ color: isActive ? item.color : colors.text, fontWeight: isActive ? '700' : '400' }}>
+                                  {item.label}
+                                </Text>
+                              </TouchableOpacity>
+                            );
+                          })}
                         </View>
                       </View>
                     )}
 
                     {/* Reports Legend */}
-                    {showReports && (
-                      <View className="mb-2">
-                        <View className="flex-row items-center">
-                          <View
-                            style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#FF6B35', marginRight: 6 }}
-                          />
-                          <Text className="text-xs" style={{ color: colors.text }}>
-                            User Reports
-                          </Text>
-                        </View>
-                      </View>
-                    )}
+                    <TouchableOpacity
+                      className="mb-2"
+                      onPress={() => setShowReports(!showReports)}
+                      activeOpacity={0.6}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        paddingVertical: 3,
+                        paddingHorizontal: 6,
+                        borderRadius: 6,
+                        backgroundColor: showReports ? '#FF6B35' + '20' : 'transparent',
+                      }}>
+                      <View
+                        style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#FF6B35', marginRight: 6, opacity: showReports ? 1 : 0.4 }}
+                      />
+                      <Text className="text-xs" style={{ color: showReports ? '#FF6B35' : colors.textSecondary, fontWeight: showReports ? '700' : '400' }}>
+                        User Reports
+                      </Text>
+                    </TouchableOpacity>
                   </View>
                 </ScrollView>
               )}
@@ -3128,7 +3283,7 @@ export default function MapPage() {
         initialDate={formatDateForPicker(filterEndDate)}
         onSelectDate={handleSelectEndDate}
       />
-    </View>
+    </View >
   );
 }
 

@@ -76,25 +76,23 @@ export default function Dropdown<T = any>({
 
     return (
       <View
-        className="px-4 py-3"
-        style={{ borderBottomWidth: 1, borderBottomColor: colors.border }}>
+        style={{ paddingHorizontal: 12, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: colors.border }}>
         <View
-          className="flex-row items-center rounded-lg px-3 py-2"
-          style={{ backgroundColor: colors.surfaceVariant }}>
-          <Search size={16} color={colors.textSecondary} />
+          className="flex-row items-center"
+          style={{ backgroundColor: colors.surfaceVariant, borderRadius: 10, paddingHorizontal: 10, paddingVertical: 6 }}>
+          <Search size={14} color={colors.textSecondary} />
           <TextInput
             placeholder={searchPlaceholder}
             value={searchQuery}
             onChangeText={setSearchQuery}
-            className="ml-2 flex-1"
-            style={{ color: colors.text }}
+            style={{ color: colors.text, flex: 1, marginLeft: 8, fontSize: 14, paddingVertical: 0 }}
             placeholderTextColor={colors.textSecondary}
             autoCapitalize="none"
             autoCorrect={false}
           />
           {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')} className="ml-2">
-              <X size={16} color={colors.textSecondary} />
+            <TouchableOpacity onPress={() => setSearchQuery('')} style={{ marginLeft: 8 }}>
+              <X size={14} color={colors.textSecondary} />
             </TouchableOpacity>
           )}
         </View>
@@ -111,11 +109,17 @@ export default function Dropdown<T = any>({
         <TouchableOpacity className="flex-1 bg-black/50" activeOpacity={1} onPress={onClose} />
 
         {/* Centered Container */}
-        <View className="absolute inset-0 flex items-center justify-center px-4">
+        <View className="absolute inset-0 flex items-center justify-center px-6">
           {/* Dropdown Content */}
           <View
-            className="w-full max-w-md rounded-lg shadow-lg"
-            style={{ backgroundColor: colors.surface }}>
+            className="w-full max-w-md shadow-lg"
+            style={{
+              backgroundColor: colors.surface,
+              borderRadius: 18,
+              overflow: 'hidden',
+              borderWidth: 1,
+              borderColor: colors.border,
+            }}>
             {/* Header */}
             <View
               className="flex-row items-center justify-between px-4 py-3"
