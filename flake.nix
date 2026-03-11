@@ -26,9 +26,10 @@
         androidSdk = android-nixpkgs.sdk.${system} (sdkPkgs: with sdkPkgs; [
           cmdline-tools-latest
           platform-tools
-          build-tools-36-0-0
           build-tools-35-0-0
-          platforms-android-36
+          platforms-android-35
+          ndk-27-1-12297006
+          cmake-3-22-1
         ]);
       });
     in
