@@ -1,10 +1,4 @@
-import {
-  View,
-  Text,
-  ScrollView,
-  StatusBar,
-  Animated,
-} from 'react-native';
+import { View, Text, ScrollView, StatusBar, Animated } from 'react-native';
 import {
   Shield,
   AlertTriangle,
@@ -21,8 +15,9 @@ import {
 } from 'lucide-react-native';
 import HeaderWithSidebar from 'components/HeaderWithSidebar';
 import { useTheme } from 'components/ThemeContext';
-import { useState, useEffect, useRef } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useEffect, useRef } from 'react';
+import { useProfile } from '@kiyoko-org/dispatch-lib';
+import { useAuthContext } from 'components/AuthProvider';
 
 const TRUST_LEVELS = [
   {
@@ -67,16 +62,19 @@ const TRUST_LEVELS = [
   },
 ];
 
-const STORAGE_KEY = '@dispatch_trust_level';
+function getTrustLevel(score: number | null | undefined) {
+  if (score === null || score === undefined) return 0;
+  if (score <= 0) return 0;
+  if (score >= 3) return 3;
+  return Math.trunc(score);
+}
 
 export default function TrustScorePage() {
   const { colors, isDark } = useTheme();
-  const [currentLevel, setCurrentLevel] = useState(3);
+  const { session } = useAuthContext();
+  const { profile, loading: profileLoading, error: profileError } = useProfile(session?.user?.id);
   const pulseAnim = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    loadTrustLevel();
-  }, []);
+  const currentLevel = getTrustLevel(profile?.trust_score);
 
   useEffect(() => {
     // Pulse animation for the icon circle
@@ -100,26 +98,7 @@ export default function TrustScorePage() {
     return () => {
       pulse.stop();
     };
-  }, []);
-
-  const loadTrustLevel = async () => {
-    try {
-      const saved = await AsyncStorage.getItem(STORAGE_KEY);
-      if (saved !== null) {
-        setCurrentLevel(parseInt(saved, 10));
-      }
-    } catch (e) {
-      // ignore
-    }
-  };
-
-  const saveTrustLevel = async (level: number) => {
-    try {
-      await AsyncStorage.setItem(STORAGE_KEY, level.toString());
-    } catch (e) {
-      // ignore
-    }
-  };
+  }, [pulseAnim]);
 
   const trustInfo = TRUST_LEVELS[currentLevel];
   const TrustIcon = trustInfo.icon;
@@ -167,6 +146,16 @@ export default function TrustScorePage() {
           <Text className="text-sm text-center mt-3 px-8" style={{ color: colors.textSecondary }}>
             {trustInfo.description}
           </Text>
+          {profileLoading ? (
+            <Text className="text-xs text-center mt-3 px-8" style={{ color: colors.textSecondary }}>
+              Loading your current trust level...
+            </Text>
+          ) : null}
+          {profileError ? (
+            <Text className="text-xs text-center mt-3 px-8" style={{ color: colors.error }}>
+              Failed to load latest trust score.
+            </Text>
+          ) : null}
         </View>
 
         {/* Honor System Explanation */}

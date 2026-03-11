@@ -1,25 +1,14 @@
-import { View, Text, ScrollView, TouchableOpacity, StatusBar, Alert } from 'react-native';
-import {
-  Shield,
-  FileText,
-  CheckCircle,
-  Zap,
-  AlertTriangle,
-  MapPin,
-  Phone,
-  Bell,
-} from 'lucide-react-native';
-import { useRouter, useFocusEffect } from 'expo-router';
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, StatusBar } from 'react-native';
+import { Shield, FileText, Zap, AlertTriangle, MapPin, Phone, Bell } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { useEffect, useMemo } from 'react';
 import HeaderWithSidebar from '../../components/HeaderWithSidebar';
 import { useAuthContext } from 'components/AuthProvider';
 import { useTheme } from 'components/ThemeContext';
-import { supabase } from 'lib/supabase';
-import { useReports } from '@kiyoko-org/dispatch-lib';
+import { useProfile, useReports } from '@kiyoko-org/dispatch-lib';
 import { useRealtimeReports } from 'hooks/useRealtimeReports';
 import Splash from 'components/ui/Splash';
 import { LogoutOverlay } from 'components/LogoutOverlay';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const TRUST_LEVEL_COLORS = [
   { color: '#EF4444', label: 'Untrusted' },
@@ -28,37 +17,22 @@ const TRUST_LEVEL_COLORS = [
   { color: '#22C55E', label: 'Highly Trusted' },
 ];
 
-type Profile = {
-  first_name: string;
-};
+function getTrustLevel(score: number | null | undefined) {
+  if (score === null || score === undefined) return 0;
+  if (score <= 0) return 0;
+  if (score >= 3) return 3;
+  return Math.trunc(score);
+}
 
 export default function Home() {
   const router = useRouter();
   const { session, signOut, isLoggingOut } = useAuthContext();
-  const { colors, selectedColorTheme, setSelectedColorTheme, isDark } = useTheme();
+  const { colors, isDark } = useTheme();
   const { reports: allReports, fetchReports } = useReports();
-  const { reports: userReports, loading: realtimeLoading } = useRealtimeReports();
-  const [loading, setLoading] = useState(false);
-  const [profile, setProfile] = useState<Profile>();
-  const [trustLevel, setTrustLevel] = useState(3);
+  const { reports: userReports } = useRealtimeReports();
+  const { profile, loading: profileLoading } = useProfile(session?.user?.id);
 
-  const loadTrustLevel = useCallback(async () => {
-    try {
-      const saved = await AsyncStorage.getItem('@dispatch_trust_level');
-      if (saved !== null) {
-        setTrustLevel(parseInt(saved, 10));
-      }
-    } catch (e) {
-      // ignore
-    }
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadTrustLevel();
-    }, [loadTrustLevel])
-  );
-
+  const trustLevel = getTrustLevel(profile?.trust_score);
   const trustInfo = TRUST_LEVEL_COLORS[trustLevel];
 
   const recentReports = allReports.slice(0, 5);
@@ -143,39 +117,12 @@ export default function Home() {
   };
 
   useEffect(() => {
-    if (session?.user?.id) {
-      getProfile();
-      fetchReports?.();
-    }
+    if (!session?.user?.id) return;
+    fetchReports?.();
   }, [session?.user?.id, fetchReports]);
 
-  if (loading) {
+  if (profileLoading && !profile) {
     return <Splash />;
-  }
-
-  async function getProfile() {
-    try {
-      setLoading(true);
-      if (!session?.user) throw new Error('No user on the session!');
-      const { data, error, status } = await supabase
-        .from('profiles')
-        .select(`first_name`)
-        .eq('id', session?.user.id)
-        .single();
-      if (error && status !== 406) {
-        throw error;
-      }
-      if (data) {
-        setProfile(data);
-      }
-    } catch (error) {
-      if (error instanceof Error) {
-        Alert.alert(error.message);
-        console.error(error.message);
-      }
-    } finally {
-      setLoading(false);
-    }
   }
 
   const handleReportIncident = () => {
@@ -223,7 +170,7 @@ export default function Home() {
                 fontWeight: 'bold',
                 color: currentColors.headerText,
               }}>
-              Welcome back, {profile?.first_name}
+              Welcome back, {profile?.first_name ?? 'there'}
             </Text>
             <Text style={{ fontSize: 16, color: currentColors.headerSubtext }}>
               Your community safety dashboard
