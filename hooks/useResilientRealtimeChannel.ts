@@ -10,6 +10,7 @@ type ResilientChannelOptions = {
   channelName: string;
   enabled: boolean;
   createChannel: () => RealtimeChannel;
+  beforeSubscribe?: () => Promise<void> | void;
   onSubscribed?: () => Promise<void> | void;
   onDisconnected?: (status: string) => void;
   onReconnect?: () => Promise<void> | void;
@@ -25,6 +26,7 @@ export function useResilientRealtimeChannel({
   channelName,
   enabled,
   createChannel,
+  beforeSubscribe,
   onSubscribed,
   onDisconnected,
   onReconnect,
@@ -69,11 +71,13 @@ export function useResilientRealtimeChannel({
     const retryDelay = RETRY_DELAYS_MS[Math.min(retryIndexRef.current, RETRY_DELAYS_MS.length - 1)];
     retryIndexRef.current = Math.min(retryIndexRef.current + 1, RETRY_DELAYS_MS.length - 1);
 
+    console.log(`[${channelName}] Realtime reconnect scheduled in ${retryDelay}ms`);
+
     reconnectTimerRef.current = setTimeout(() => {
       reconnectTimerRef.current = null;
       void reconnectRef.current();
     }, retryDelay);
-  }, []);
+  }, [channelName]);
 
   const createAndSubscribe = useCallback(async () => {
     if (!enabledRef.current) return;
@@ -81,11 +85,15 @@ export function useResilientRealtimeChannel({
     await destroyChannel();
 
     try {
+      await beforeSubscribe?.();
+
       const nextChannel = createChannel();
       channelRef.current = nextChannel;
 
       nextChannel.subscribe((nextStatus) => {
         if (channelRef.current !== nextChannel) return;
+
+        console.log(`[${channelName}] Realtime subscription status: ${nextStatus}`);
 
         currentStatusRef.current = nextStatus;
         setStatus(nextStatus);
@@ -112,6 +120,7 @@ export function useResilientRealtimeChannel({
 
         if (!RECOVERABLE_STATUSES.has(nextStatus)) return;
 
+        console.warn(`[${channelName}] Realtime disconnected: ${nextStatus}`);
         void onDisconnected?.(nextStatus);
         scheduleReconnect();
       });
@@ -120,6 +129,7 @@ export function useResilientRealtimeChannel({
       scheduleReconnect();
     }
   }, [
+    beforeSubscribe,
     channelName,
     clearReconnectTimer,
     createChannel,
@@ -132,9 +142,10 @@ export function useResilientRealtimeChannel({
 
   const reconnect = useCallback(async () => {
     if (!enabledRef.current) return;
+    console.log(`[${channelName}] Reconnecting realtime channel`);
     clearReconnectTimer();
     await createAndSubscribe();
-  }, [clearReconnectTimer, createAndSubscribe]);
+  }, [channelName, clearReconnectTimer, createAndSubscribe]);
 
   reconnectRef.current = reconnect;
 

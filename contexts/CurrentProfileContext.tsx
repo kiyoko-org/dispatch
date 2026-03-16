@@ -96,6 +96,10 @@ export function CurrentProfileProvider({ children }: { children: React.ReactNode
         filter: `id=eq.${userId}`,
       },
       (payload: RealtimePostgresChangesPayload<ProfileRow>) => {
+        console.log('[current-profile] Realtime profile update received', {
+          userId,
+          trustScore: payload.new.trust_score,
+        });
         applyProfile(payload.new as ProfileRow);
         setError(null);
       }
@@ -105,6 +109,9 @@ export function CurrentProfileProvider({ children }: { children: React.ReactNode
   const { isConnected: isRealtimeConnected } = useResilientRealtimeChannel({
     channelName: 'current-profile',
     enabled: Boolean(userId),
+    beforeSubscribe: useCallback(async () => {
+      await supabase.realtime.setAuth();
+    }, []),
     createChannel,
     onReconnect: useCallback(async () => {
       await refreshProfile({ silent: true });

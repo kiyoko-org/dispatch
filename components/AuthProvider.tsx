@@ -61,6 +61,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    const syncRealtimeAuth = async () => {
+      try {
+        await supabase.realtime.setAuth(authState.session?.access_token ?? null);
+      } catch (error) {
+        console.error('[Auth] Failed to sync realtime auth token', error);
+      }
+    };
+
+    void syncRealtimeAuth();
+  }, [authState.session?.access_token]);
+
+  useEffect(() => {
     let isComponentMounted = true;
 
     const initializeAuth = async () => {
