@@ -13,6 +13,8 @@ import {
 import { SearchResponse, SearchResult } from '../lib/types/search';
 import { isWithinTuguegarao } from '../lib/locations/tuguegarao-boundary';
 
+import { searchAddress } from '../lib/services/geocoding';
+
 interface AddressSearchProps {
   visible: boolean;
   onClose: () => void;
@@ -21,9 +23,21 @@ interface AddressSearchProps {
 
 export default function AddressSearch({ visible, onClose, onSelect }: AddressSearchProps) {
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [suggestions, setSuggestions] = useState<SearchResponse>([]);
   const abortControllerRef = useRef<AbortController | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // Debounce query changes
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 500);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [query]);
 
   useEffect(() => {
     // Abort previous request
@@ -36,17 +50,8 @@ export default function AddressSearch({ visible, onClose, onSelect }: AddressSea
       // Create new controller
       abortControllerRef.current = new AbortController();
       try {
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}`,
-          {
-            headers: { 'User-Agent': 'maptest/1.0' },
-            signal: abortControllerRef.current.signal,
-          }
-        );
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data: SearchResponse = await response.json();
+        const data = await searchAddress(debouncedQuery, abortControllerRef.current.signal);
+        
         // Filter suggestions to only include locations within the Tuguegarao polygon
         const filtered = data.filter((item) => {
           const lat = Number(item.lat);
@@ -66,12 +71,12 @@ export default function AddressSearch({ visible, onClose, onSelect }: AddressSea
       }
     }
 
-    if (query.length > 2) {
+    if (debouncedQuery.length > 2) {
       fetchSuggestions();
     } else {
       setSuggestions([]);
     }
-  }, [query]);
+  }, [debouncedQuery]);
 
   const [selectionError, setSelectionError] = useState<string | null>(null);
 
