@@ -1,12 +1,13 @@
-import { useReports, useOfficers } from '@kiyoko-org/dispatch-lib';
-import { Database } from '@kiyoko-org/dispatch-lib/database.types';
+import { useOfficers } from '@kiyoko-org/dispatch-lib';
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Text, View, ScrollView, StatusBar, Platform, KeyboardAvoidingView } from 'react-native';
 import { useTheme } from 'components/ThemeContext';
 import { useDispatchClient } from 'components/DispatchProvider';
 import HeaderWithSidebar from 'components/HeaderWithSidebar';
+import { useReportsStore } from 'contexts/ReportsContext';
 import { ShimmerCard } from 'components/ui/Shimmer';
+import type { ReportRow } from 'lib/types/db';
 import {
   MapPin,
   Calendar,
@@ -15,44 +16,183 @@ import {
   Shield,
   Badge,
   FileText,
-  User,
   Info,
+  type LucideIcon,
 } from 'lucide-react-native';
+
+type ThemeColors = ReturnType<typeof useTheme>['colors'];
 
 export default function ReportDetails() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { getReportInfo } = useReports();
+  const { reports, fetchReportById, loading: reportsLoading } = useReportsStore();
   const { officers } = useOfficers();
   const { colors, isDark } = useTheme();
   const { categories } = useDispatchClient();
-  const [reportInfo, setReportInfo] = useState<
-    Database['public']['Tables']['reports']['Row'] | null
-  >(null);
+  const [reportInfo, setReportInfo] = useState<ReportRow | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const reportId = Number(id);
+  const cachedReport = Number.isFinite(reportId)
+    ? (reports.find((report) => report.id === reportId) ?? null)
+    : null;
+
   useEffect(() => {
-    const fetchReport = async () => {
-      if (id) {
-        setLoading(true);
-        const report = await getReportInfo(Number(id));
+    if (!Number.isFinite(reportId)) {
+      setReportInfo(null);
+      setLoading(false);
+      return;
+    }
 
-        if (report.error) {
-          console.error('Error fetching report:', report.error);
-          return;
-        }
+    if (cachedReport) {
+      setReportInfo(cachedReport);
+      setLoading(false);
+      return;
+    }
 
-        console.log('Fetched report:', report.data);
+    if (reportsLoading) {
+      setLoading(true);
+      return;
+    }
 
-        setReportInfo(report.data);
+    let isMounted = true;
+
+    const loadReport = async () => {
+      setLoading(true);
+      const fetchedReport = await fetchReportById(reportId);
+
+      if (!isMounted) {
+        return;
       }
+
+      setReportInfo(fetchedReport);
       setLoading(false);
     };
 
-    fetchReport();
-  }, [id]);
+    void loadReport();
 
-  // Loading state with shimmer
-  if (loading || !reportInfo) {
+    return () => {
+      isMounted = false;
+    };
+  }, [cachedReport, fetchReportById, reportId, reportsLoading]);
+
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return 'Not specified';
+
+    try {
+      let date: Date;
+
+      if (typeof dateString === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
+        const [month, day, year] = dateString.split('/');
+        date = new Date(Number(year), Number(month) - 1, Number(day));
+      } else {
+        date = new Date(dateString);
+      }
+
+      if (Number.isNaN(date.getTime())) {
+        return 'Invalid date';
+      }
+
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Invalid date';
+    }
+  };
+
+  const formatTime = (timeString: string | null | undefined) => {
+    return timeString || 'Not specified';
+  };
+
+  const getCategoryInfo = (categoryId: number | null) => {
+    if (!categoryId) {
+      return { name: 'Unknown Category', severity: 'Unknown' };
+    }
+
+    return (
+      categories.find((category) => category.id === categoryId) ?? {
+        name: 'Unknown Category',
+        severity: 'Unknown',
+      }
+    );
+  };
+
+  const getSubcategoryInfo = (categoryId: number | null, subCategoryIndex: number | null) => {
+    if (!categoryId || subCategoryIndex === null) return null;
+
+    const category = categories.find((item) => item.id === categoryId);
+    if (!category?.sub_categories || subCategoryIndex >= category.sub_categories.length) {
+      return null;
+    }
+
+    return category.sub_categories[subCategoryIndex];
+  };
+
+  const assignedOfficers = useMemo(() => {
+    if (!reportInfo) return [];
+
+    if (reportInfo.status === 'resolved' && reportInfo.who_was_involved) {
+      const officerIds = reportInfo.who_was_involved
+        .split(',')
+        .map((officerId) => officerId.trim());
+      return officers.filter((officer) => officerIds.includes(officer.id));
+    }
+
+    if (reportInfo.status !== 'resolved') {
+      return officers.filter((officer) => officer.assigned_report_id === reportInfo.id);
+    }
+
+    return [];
+  }, [officers, reportInfo]);
+
+  const getStatusColor = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return colors.warning || '#F59E0B';
+      case 'in_progress':
+        return colors.primary;
+      case 'resolved':
+        return colors.success || '#10B981';
+      case 'cancelled':
+        return colors.error;
+      default:
+        return colors.textSecondary;
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return 'Pending Review';
+      case 'in_progress':
+        return 'In Progress';
+      case 'resolved':
+        return 'Resolved';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return status.replace('_', ' ');
+    }
+  };
+
+  const cardStyle = {
+    backgroundColor: colors.card,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.border,
+    padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: isDark ? 0.3 : 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  };
+
+  if (loading) {
     return (
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -62,7 +202,7 @@ export default function ReportDetails() {
           barStyle={isDark ? 'light-content' : 'dark-content'}
           backgroundColor={colors.background}
         />
-        <HeaderWithSidebar title="Report Details" showBackButton={true} />
+        <HeaderWithSidebar title="Report Details" showBackButton />
 
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -78,210 +218,31 @@ export default function ReportDetails() {
     );
   }
 
-  // Format date and time
-  const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return 'Not specified';
+  if (!reportInfo) {
+    return (
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        className="flex-1"
+        style={{ backgroundColor: colors.background }}>
+        <StatusBar
+          barStyle={isDark ? 'light-content' : 'dark-content'}
+          backgroundColor={colors.background}
+        />
+        <HeaderWithSidebar title="Report Details" showBackButton />
 
-    try {
-      let date: Date;
-
-      if (typeof dateString === 'string' && /^\d{2}\/\d{2}\/\d{4}$/.test(dateString)) {
-        const [month, day, year] = dateString.split('/');
-        date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-      } else {
-        date = new Date(dateString);
-      }
-
-      if (isNaN(date.getTime())) {
-        return 'Invalid date';
-      }
-
-      return date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-      });
-    } catch (error) {
-      console.error('Error formatting date:', error);
-      return 'Invalid date';
-    }
-  };
-
-  const formatTime = (timeString: string) => {
-    return timeString || 'Not specified';
-  };
-
-  // Get category information from context
-  const getCategoryInfo = (categoryId: number | null) => {
-    if (!categoryId) return { name: 'Unknown Category', severity: 'Unknown' };
-    const category = categories.find((cat) => cat.id === categoryId);
-    return category || { name: 'Unknown Category', severity: 'Unknown' };
-  };
-
-  // Get subcategory information from context
-  const getSubcategoryInfo = (categoryId: number | null, subCategoryIndex: number | null) => {
-    if (!categoryId || subCategoryIndex === null) return null;
-    const category = categories.find((cat) => cat.id === categoryId);
-    if (
-      !category ||
-      !category.sub_categories ||
-      subCategoryIndex >= category.sub_categories.length
-    ) {
-      return null;
-    }
-    return category.sub_categories[subCategoryIndex];
-  };
-
-  // Get assigned officers based on report status
-  const getAssignedOfficers = () => {
-    if (!reportInfo) return [];
-
-    if (reportInfo.status === 'resolved' && reportInfo.who_was_involved) {
-      try {
-        const officerIds = reportInfo.who_was_involved.split(',').map((id) => id.trim());
-        return officers.filter((officer) => officerIds.includes(officer.id));
-      } catch {
-        return [];
-      }
-    } else if (reportInfo.status !== 'resolved') {
-      return officers.filter((officer) => officer.assigned_report_id === reportInfo.id);
-    }
-    return [];
-  };
-
-  // Get status color
-  const getStatusColor = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case 'pending':
-        return colors.warning || '#F59E0B';
-      case 'in_progress':
-        return colors.primary;
-      case 'resolved':
-        return colors.success || '#10B981';
-      case 'cancelled':
-        return colors.error;
-      default:
-        return colors.textSecondary;
-    }
-  };
-
-  // Get status label
-  const getStatusLabel = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case 'pending':
-        return 'Pending Review';
-      case 'in_progress':
-        return 'In Progress';
-      case 'resolved':
-        return 'Resolved';
-      case 'cancelled':
-        return 'Cancelled';
-      default:
-        return status?.replace('_', ' ') || 'Unknown';
-    }
-  };
+        <View className="flex-1 items-center justify-center px-6">
+          <Text className="text-lg font-semibold" style={{ color: colors.text }}>
+            Report not found
+          </Text>
+          <Text className="mt-2 text-center text-sm" style={{ color: colors.textSecondary }}>
+            This report is unavailable or you no longer have access to it.
+          </Text>
+        </View>
+      </KeyboardAvoidingView>
+    );
+  }
 
   const statusColor = getStatusColor(reportInfo.status || 'pending');
-  const assignedOfficers = getAssignedOfficers();
-
-  // Shared card style
-  const cardStyle = {
-    backgroundColor: colors.card,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: isDark ? 0.3 : 0.08,
-    shadowRadius: 12,
-    elevation: 4,
-  };
-
-  // Section header component style
-  const SectionHeader = ({
-    icon: Icon,
-    title,
-    iconColor,
-  }: {
-    icon: any;
-    title: string;
-    iconColor?: string;
-  }) => (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginBottom: 16,
-        paddingBottom: 14,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-      }}>
-      <View
-        style={{
-          width: 40,
-          height: 40,
-          borderRadius: 12,
-          backgroundColor: (iconColor || colors.primary) + '18',
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginRight: 12,
-        }}>
-        <Icon size={20} color={iconColor || colors.primary} />
-      </View>
-      <Text
-        style={{
-          fontSize: 18,
-          fontWeight: '700',
-          color: colors.text,
-          letterSpacing: -0.3,
-        }}>
-        {title}
-      </Text>
-    </View>
-  );
-
-  // Info row component
-  const InfoRow = ({
-    label,
-    value,
-    mono,
-  }: {
-    label: string;
-    value: string;
-    mono?: boolean;
-  }) => (
-    <View
-      style={{
-        backgroundColor: colors.surfaceVariant,
-        borderRadius: 14,
-        padding: 14,
-        marginBottom: 10,
-      }}>
-      <Text
-        style={{
-          fontSize: 11,
-          fontWeight: '700',
-          color: colors.textSecondary,
-          textTransform: 'uppercase',
-          letterSpacing: 1,
-          marginBottom: 6,
-        }}>
-        {label}
-      </Text>
-      <Text
-        style={{
-          fontSize: 15,
-          fontWeight: '500',
-          color: colors.text,
-          lineHeight: 22,
-          ...(mono ? { fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' } : {}),
-        }}>
-        {value}
-      </Text>
-    </View>
-  );
 
   return (
     <KeyboardAvoidingView
@@ -292,24 +253,19 @@ export default function ReportDetails() {
         barStyle={isDark ? 'light-content' : 'dark-content'}
         backgroundColor={colors.background}
       />
-      <HeaderWithSidebar title="Report Details" showBackButton={true} />
+      <HeaderWithSidebar title="Report Details" showBackButton />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 40 }}
         className="flex-1">
         <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
-
-          {/* ═══════════════════════════════════════════════ */}
-          {/* HERO CARD — Title, Status, Report ID           */}
-          {/* ═══════════════════════════════════════════════ */}
           <View
             style={{
               ...cardStyle,
               overflow: 'hidden',
               padding: 0,
             }}>
-            {/* Accent top bar */}
             <View
               style={{
                 height: 4,
@@ -317,7 +273,6 @@ export default function ReportDetails() {
               }}
             />
             <View style={{ padding: 20 }}>
-              {/* Status badge */}
               <View
                 style={{
                   alignSelf: 'flex-start',
@@ -349,7 +304,6 @@ export default function ReportDetails() {
                 </Text>
               </View>
 
-              {/* Title */}
               <Text
                 style={{
                   fontSize: 24,
@@ -362,7 +316,6 @@ export default function ReportDetails() {
                 {reportInfo.incident_title || 'Untitled Report'}
               </Text>
 
-              {/* Report ID chip */}
               <View
                 style={{
                   flexDirection: 'row',
@@ -389,7 +342,7 @@ export default function ReportDetails() {
                   </Text>
                 </View>
 
-                {reportInfo.created_at && (
+                {reportInfo.created_at ? (
                   <View
                     style={{
                       flexDirection: 'row',
@@ -409,17 +362,13 @@ export default function ReportDetails() {
                       {formatDate(reportInfo.created_at)}
                     </Text>
                   </View>
-                )}
+                ) : null}
               </View>
             </View>
           </View>
 
-          {/* ═══════════════════════════════════════════════ */}
-          {/* CATEGORY & DATE/TIME CARD                      */}
-          {/* ═══════════════════════════════════════════════ */}
           <View style={cardStyle}>
-            {/* Category */}
-            {reportInfo.category_id && (
+            {reportInfo.category_id ? (
               <View style={{ marginBottom: 16 }}>
                 <Text
                   style={{
@@ -462,24 +411,22 @@ export default function ReportDetails() {
                       }}>
                       {getCategoryInfo(reportInfo.category_id).name}
                     </Text>
-                    {reportInfo.sub_category !== null &&
-                      reportInfo.sub_category !== undefined && (
-                        <Text
-                          style={{
-                            fontSize: 14,
-                            color: colors.textSecondary,
-                            fontWeight: '500',
-                          }}>
-                          {getSubcategoryInfo(reportInfo.category_id, reportInfo.sub_category) ||
-                            'Unknown Subcategory'}
-                        </Text>
-                      )}
+                    {reportInfo.sub_category !== null && reportInfo.sub_category !== undefined ? (
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          color: colors.textSecondary,
+                          fontWeight: '500',
+                        }}>
+                        {getSubcategoryInfo(reportInfo.category_id, reportInfo.sub_category) ||
+                          'Unknown Subcategory'}
+                      </Text>
+                    ) : null}
                   </View>
                 </View>
               </View>
-            )}
+            ) : null}
 
-            {/* Date and Time */}
             <View
               style={{
                 flexDirection: 'row',
@@ -566,44 +513,41 @@ export default function ReportDetails() {
                       color: colors.text,
                       flex: 1,
                     }}>
-                    {formatTime(reportInfo.incident_time ?? '')}
+                    {formatTime(reportInfo.incident_time)}
                   </Text>
                 </View>
               </View>
             </View>
           </View>
 
-          {/* ═══════════════════════════════════════════════ */}
-          {/* LOCATION INFORMATION CARD                      */}
-          {/* ═══════════════════════════════════════════════ */}
           <View style={cardStyle}>
-            <SectionHeader icon={MapPin} title="Location" iconColor="#6366F1" />
+            <SectionHeader icon={MapPin} title="Location" colors={colors} iconColor="#6366F1" />
 
             <InfoRow
               label="Street Address"
               value={reportInfo.street_address || 'No address provided'}
+              colors={colors}
             />
 
-            {reportInfo.nearby_landmark && (
-              <InfoRow label="Nearby Landmark" value={reportInfo.nearby_landmark} />
-            )}
+            {reportInfo.nearby_landmark ? (
+              <InfoRow label="Nearby Landmark" value={reportInfo.nearby_landmark} colors={colors} />
+            ) : null}
 
             <InfoRow
               label="Coordinates"
-              value={
-                reportInfo.latitude && reportInfo.longitude
-                  ? `${reportInfo.latitude.toFixed(6)}, ${reportInfo.longitude.toFixed(6)}`
-                  : 'Coordinates not available'
-              }
+              value={`${reportInfo.latitude.toFixed(6)}, ${reportInfo.longitude.toFixed(6)}`}
               mono
+              colors={colors}
             />
           </View>
 
-          {/* ═══════════════════════════════════════════════ */}
-          {/* INCIDENT DETAILS CARD                          */}
-          {/* ═══════════════════════════════════════════════ */}
           <View style={cardStyle}>
-            <SectionHeader icon={AlertTriangle} title="Incident Details" iconColor="#F59E0B" />
+            <SectionHeader
+              icon={AlertTriangle}
+              title="Incident Details"
+              colors={colors}
+              iconColor="#F59E0B"
+            />
 
             <View
               style={{
@@ -636,11 +580,13 @@ export default function ReportDetails() {
             </View>
           </View>
 
-          {/* ═══════════════════════════════════════════════ */}
-          {/* ADDITIONAL INFORMATION CARD                    */}
-          {/* ═══════════════════════════════════════════════ */}
           <View style={cardStyle}>
-            <SectionHeader icon={Info} title="Additional Info" iconColor="#8B5CF6" />
+            <SectionHeader
+              icon={Info}
+              title="Additional Info"
+              colors={colors}
+              iconColor="#8B5CF6"
+            />
 
             <View
               style={{
@@ -683,17 +629,19 @@ export default function ReportDetails() {
             </View>
           </View>
 
-          {/* ═══════════════════════════════════════════════ */}
-          {/* ASSIGNED OFFICERS CARD                         */}
-          {/* ═══════════════════════════════════════════════ */}
-          {assignedOfficers.length > 0 && (
+          {assignedOfficers.length > 0 ? (
             <View style={cardStyle}>
-              <SectionHeader icon={Shield} title="Assigned Officers" iconColor="#10B981" />
+              <SectionHeader
+                icon={Shield}
+                title="Assigned Officers"
+                colors={colors}
+                iconColor="#10B981"
+              />
 
               <View style={{ gap: 10 }}>
                 {assignedOfficers.map((officer) => {
-                  const initials =
-                    (officer.first_name?.[0] || '') + (officer.last_name?.[0] || '');
+                  const initials = `${officer.first_name?.[0] || ''}${officer.last_name?.[0] || ''}`;
+
                   return (
                     <View
                       key={officer.id}
@@ -704,7 +652,6 @@ export default function ReportDetails() {
                         borderRadius: 14,
                         padding: 14,
                       }}>
-                      {/* Avatar circle with initials */}
                       <View
                         style={{
                           width: 46,
@@ -734,7 +681,7 @@ export default function ReportDetails() {
                             marginBottom: 2,
                           }}>
                           {officer.first_name}{' '}
-                          {officer.middle_name && officer.middle_name + ' '}
+                          {officer.middle_name ? `${officer.middle_name} ` : ''}
                           {officer.last_name}
                         </Text>
 
@@ -745,7 +692,7 @@ export default function ReportDetails() {
                             gap: 8,
                             marginTop: 4,
                           }}>
-                          {officer.rank && (
+                          {officer.rank ? (
                             <View
                               style={{
                                 backgroundColor: colors.primary + '18',
@@ -762,8 +709,8 @@ export default function ReportDetails() {
                                 {officer.rank}
                               </Text>
                             </View>
-                          )}
-                          {officer.badge_number && (
+                          ) : null}
+                          {officer.badge_number ? (
                             <View
                               style={{
                                 flexDirection: 'row',
@@ -783,7 +730,7 @@ export default function ReportDetails() {
                                 {officer.badge_number}
                               </Text>
                             </View>
-                          )}
+                          ) : null}
                         </View>
                       </View>
                     </View>
@@ -791,9 +738,99 @@ export default function ReportDetails() {
                 })}
               </View>
             </View>
-          )}
+          ) : null}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
+  );
+}
+
+function SectionHeader({
+  icon: Icon,
+  title,
+  colors,
+  iconColor,
+}: {
+  icon: LucideIcon;
+  title: string;
+  colors: ThemeColors;
+  iconColor?: string;
+}) {
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginBottom: 16,
+        paddingBottom: 14,
+        borderBottomWidth: 1,
+        borderBottomColor: colors.border,
+      }}>
+      <View
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: 12,
+          backgroundColor: (iconColor || colors.primary) + '18',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginRight: 12,
+        }}>
+        <Icon size={20} color={iconColor || colors.primary} />
+      </View>
+      <Text
+        style={{
+          fontSize: 18,
+          fontWeight: '700',
+          color: colors.text,
+          letterSpacing: -0.3,
+        }}>
+        {title}
+      </Text>
+    </View>
+  );
+}
+
+function InfoRow({
+  label,
+  value,
+  colors,
+  mono,
+}: {
+  label: string;
+  value: string;
+  colors: ThemeColors;
+  mono?: boolean;
+}) {
+  return (
+    <View
+      style={{
+        backgroundColor: colors.surfaceVariant,
+        borderRadius: 14,
+        padding: 14,
+        marginBottom: 10,
+      }}>
+      <Text
+        style={{
+          fontSize: 11,
+          fontWeight: '700',
+          color: colors.textSecondary,
+          textTransform: 'uppercase',
+          letterSpacing: 1,
+          marginBottom: 6,
+        }}>
+        {label}
+      </Text>
+      <Text
+        style={{
+          fontSize: 15,
+          fontWeight: '500',
+          color: colors.text,
+          lineHeight: 22,
+          ...(mono ? { fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' } : {}),
+        }}>
+        {value}
+      </Text>
+    </View>
   );
 }

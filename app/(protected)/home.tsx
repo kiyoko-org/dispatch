@@ -1,12 +1,12 @@
 import { View, Text, ScrollView, TouchableOpacity, StatusBar } from 'react-native';
 import { Shield, FileText, Zap, AlertTriangle, MapPin, Phone, Bell } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import HeaderWithSidebar from '../../components/HeaderWithSidebar';
 import { useAuthContext } from 'components/AuthProvider';
 import { useTheme } from 'components/ThemeContext';
-import { useProfile, useReports } from '@kiyoko-org/dispatch-lib';
-import { useRealtimeReports } from 'hooks/useRealtimeReports';
+import { useCurrentProfile } from 'contexts/CurrentProfileContext';
+import { useReportsStore } from 'contexts/ReportsContext';
 import Splash from 'components/ui/Splash';
 import { LogoutOverlay } from 'components/LogoutOverlay';
 
@@ -26,27 +26,25 @@ function getTrustLevel(score: number | null | undefined) {
 
 export default function Home() {
   const router = useRouter();
-  const { session, signOut, isLoggingOut } = useAuthContext();
+  const { signOut, isLoggingOut } = useAuthContext();
   const { colors, isDark } = useTheme();
-  const { reports: allReports, fetchReports } = useReports();
-  const { reports: userReports } = useRealtimeReports();
-  const { profile, loading: profileLoading } = useProfile(session?.user?.id);
+  const { profile, loading: profileLoading } = useCurrentProfile();
+  const { reports: allReports, currentUserReports } = useReportsStore();
 
   const trustLevel = getTrustLevel(profile?.trust_score);
   const trustInfo = TRUST_LEVEL_COLORS[trustLevel];
-
   const recentReports = allReports.slice(0, 5);
-  const reportCount = userReports.length;
+  const reportCount = currentUserReports.length;
+
   const averageResponseTimeMinutes = useMemo(() => {
     const responseTimes = allReports
       .map((report) => {
-        const { arrived_at } = report as { arrived_at?: string | null };
-        if (!arrived_at || !report.created_at) {
+        if (!report.arrived_at || !report.created_at) {
           return null;
         }
 
         const createdAtTime = new Date(report.created_at).getTime();
-        const arrivedAtTime = new Date(arrived_at).getTime();
+        const arrivedAtTime = new Date(report.arrived_at).getTime();
 
         if (Number.isNaN(createdAtTime) || Number.isNaN(arrivedAtTime)) {
           return null;
@@ -70,72 +68,26 @@ export default function Home() {
       ? `${Math.max(Math.round(averageResponseTimeMinutes), 0)}min`
       : '0min';
 
-  // Get current theme colors
-  const getCurrentColors = () => {
-    return {
-      headerBg: colors.primary,
-      headerText: '#FFFFFF',
-      headerSubtext: 'rgba(255, 255, 255, 0.8)',
-      headerCardBg: 'rgba(255, 255, 255, 0.1)',
-      headerCardBorder: 'rgba(255, 255, 255, 0.2)',
-      headerCardIconBg: 'rgba(255, 255, 255, 0.2)',
-      headerCardIcon: '#FFFFFF',
-      headerTagBg: 'rgba(255, 255, 255, 0.2)',
-      headerProgressBg: 'rgba(255, 255, 255, 0.2)',
-      headerProgressFill: '#FFFFFF',
-      sectionHeading: colors.text,
-      cardBg: colors.surface,
-      cardBorder: colors.border,
-      cardIconBg: colors.surfaceVariant,
-      cardIcon: colors.primary,
-      cardText: colors.text,
-      cardSubtext: colors.textSecondary,
-      emergencyRed: colors.error,
-      emergencyRedLight: colors.error,
-      emergencyText: '#FFFFFF',
-      emergencyIconBg: 'rgba(255, 255, 255, 0.2)',
-      reportBg: colors.surface,
-      reportBorder: colors.border,
-      reportText: colors.text,
-      reportIconBg: colors.surfaceVariant,
-      background: colors.background,
-      statusBarStyle: isDark ? ('light-content' as const) : ('dark-content' as const),
-      primary: colors.primary,
-      primaryLight: colors.primaryLight,
-    };
+  const currentColors = {
+    headerBg: colors.primary,
+    headerText: '#FFFFFF',
+    headerSubtext: 'rgba(255, 255, 255, 0.8)',
+    sectionHeading: colors.text,
+    cardBg: colors.surface,
+    cardBorder: colors.border,
+    cardIcon: colors.primary,
+    cardText: colors.text,
+    cardSubtext: colors.textSecondary,
+    reportBg: colors.surface,
+    reportBorder: colors.border,
+    reportText: colors.text,
+    background: colors.background,
+    statusBarStyle: isDark ? ('light-content' as const) : ('dark-content' as const),
   };
-
-  const currentColors = getCurrentColors();
-
-  const handleLogout = () => {
-    // TODO: add a loading indicator when signingout
-    signOut();
-  };
-
-  const handleEmergency = () => {
-    router.push('/emergency');
-  };
-
-  useEffect(() => {
-    if (!session?.user?.id) return;
-    fetchReports?.();
-  }, [session?.user?.id, fetchReports]);
 
   if (profileLoading && !profile) {
     return <Splash />;
   }
-
-  const handleReportIncident = () => {
-    router.push('/report-incident');
-  };
-
-  const handleViewMap = () => {
-    router.push('/map');
-  };
-
-  const handleViewHotlines = () => {
-    router.push('/hotlines');
-  };
 
   return (
     <View style={{ flex: 1, backgroundColor: currentColors.background }}>
@@ -147,14 +99,12 @@ export default function Home() {
       <HeaderWithSidebar
         title="Dispatch Dashboard"
         showBackButton={false}
-        logoutPressed={handleLogout}
+        logoutPressed={signOut}
         recentReports={recentReports}
-        showNotificationBell={true}
+        showNotificationBell
       />
 
-      {/* Main Content */}
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {/* Welcome Banner */}
         <View
           style={{
             paddingHorizontal: 24,
@@ -178,7 +128,6 @@ export default function Home() {
           </View>
         </View>
 
-        {/* Quick Actions */}
         <View style={{ marginBottom: 32, marginTop: 24, paddingHorizontal: 16 }}>
           <View style={{ marginBottom: 16, flexDirection: 'row', alignItems: 'center' }}>
             <AlertTriangle size={24} color={currentColors.cardIcon} />
@@ -208,7 +157,7 @@ export default function Home() {
                 shadowOpacity: 0.1,
                 shadowRadius: 4,
               }}
-              onPress={handleEmergency}>
+              onPress={() => router.push('/emergency')}>
               <View style={{ alignItems: 'center' }}>
                 <View
                   style={{
@@ -250,7 +199,7 @@ export default function Home() {
                 shadowOpacity: 0.1,
                 shadowRadius: 4,
               }}
-              onPress={handleReportIncident}>
+              onPress={() => router.push('/report-incident')}>
               <View style={{ alignItems: 'center' }}>
                 <View
                   style={{
@@ -281,7 +230,6 @@ export default function Home() {
           </View>
         </View>
 
-        {/* Quick Access */}
         <View style={{ marginBottom: 32, paddingHorizontal: 16 }}>
           <Text
             style={{
@@ -303,7 +251,7 @@ export default function Home() {
                 backgroundColor: currentColors.cardBg,
                 padding: 16,
               }}
-              onPress={handleViewMap}>
+              onPress={() => router.push('/map')}>
               <View style={{ alignItems: 'center' }}>
                 <View
                   style={{
@@ -336,7 +284,7 @@ export default function Home() {
                 backgroundColor: currentColors.cardBg,
                 padding: 16,
               }}
-              onPress={handleViewHotlines}>
+              onPress={() => router.push('/hotlines')}>
               <View style={{ alignItems: 'center' }}>
                 <View
                   style={{
@@ -362,7 +310,6 @@ export default function Home() {
           </View>
         </View>
 
-        {/* Key Metrics */}
         <View style={{ marginBottom: 32, paddingHorizontal: 16 }}>
           <Text
             style={{
@@ -409,6 +356,7 @@ export default function Home() {
                 </Text>
               </View>
             </TouchableOpacity>
+
             <TouchableOpacity
               style={{
                 width: '48%',
@@ -444,6 +392,7 @@ export default function Home() {
                 </Text>
               </View>
             </TouchableOpacity>
+
             <View
               style={{
                 width: '48%',
@@ -481,11 +430,9 @@ export default function Home() {
           </View>
         </View>
 
-        {/* Bottom Spacing */}
         <View style={{ height: 32 }} />
       </ScrollView>
 
-      {/* Logout Overlay */}
       <LogoutOverlay visible={isLoggingOut} />
     </View>
   );

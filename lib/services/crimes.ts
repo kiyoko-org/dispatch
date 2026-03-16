@@ -1,6 +1,7 @@
 import Papa from 'papaparse';
 import * as FileSystem from 'expo-file-system';
 import { Asset } from 'expo-asset';
+import crimesCsvAsset from '../../assets/crimes.csv';
 
 // Define the interface for each crime record based on the CSV structure
 export interface CrimeRecord {
@@ -18,9 +19,9 @@ export interface CrimeRecord {
 
 // Function to load and parse the CSV data
 export async function loadCrimesData(): Promise<CrimeRecord[]> {
-  const asset = Asset.fromModule(require('../../assets/crimes.csv'));
+  const asset = Asset.fromModule(crimesCsvAsset);
   await asset.downloadAsync(); // Ensure the asset is available locally
-  const fileContent = await FileSystem.readAsStringAsync(asset.localUri || asset.uri);
+  const fileContent = await FileSystem.readAsStringAsync(asset.localUri ?? asset.uri);
 
   return new Promise((resolve, reject) => {
     Papa.parse(fileContent, {

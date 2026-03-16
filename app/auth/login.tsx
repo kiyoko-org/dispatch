@@ -3,7 +3,6 @@ import {
   View,
   TouchableOpacity,
   TextInput as RNTextInput,
-  AppState,
   Alert,
   StatusBar,
   Modal,
@@ -16,14 +15,6 @@ import { supabase } from 'lib/supabase';
 import { useTheme } from 'components/ThemeContext';
 import { registerForFCMToken } from 'hooks/useFCMToken';
 import ActiveSessionDialog from 'components/ActiveSessionDialog';
-
-AppState.addEventListener('change', (state) => {
-  if (state === 'active') {
-    supabase.auth.startAutoRefresh();
-  } else {
-    supabase.auth.stopAutoRefresh();
-  }
-});
 
 export default function Login() {
   const router = useRouter();

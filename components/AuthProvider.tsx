@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import { AppState } from 'react-native';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from 'lib/supabase';
 import * as Linking from 'expo-linking';
@@ -31,12 +32,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
 
   const router = useRouter();
+  const handleDeepLinkRef = useRef<((url?: string) => Promise<void>) | null>(null);
 
   useEffect(() => {
     if (authState.session) {
       router.replace('/(protected)/home');
     }
-  }, [authState.session]);
+  }, [authState.session, router]);
+
+  useEffect(() => {
+    const handleAppStateChange = (nextState: string) => {
+      if (nextState === 'active') {
+        supabase.auth.startAutoRefresh();
+        return;
+      }
+
+      supabase.auth.stopAutoRefresh();
+    };
+
+    handleAppStateChange(AppState.currentState);
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      subscription.remove();
+      supabase.auth.stopAutoRefresh();
+    };
+  }, []);
 
   useEffect(() => {
     let isComponentMounted = true;
@@ -44,7 +66,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const initializeAuth = async () => {
       try {
         // Handle deep linking first
-        await handleDeepLink();
+        await handleDeepLinkRef.current?.();
 
         // Then get the current session
         const {
@@ -95,7 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Handle deep linking for subsequent app opens
     const handleUrl = ({ url }: { url: string }) => {
       if (url && isComponentMounted) {
-        handleDeepLink(url);
+        void handleDeepLinkRef.current?.(url);
       }
     };
 
@@ -109,80 +131,84 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  const handleDeepLink = async (url?: string) => {
-    try {
-      // Get the URL - either from parameter or current linking URL
-      const linkingUrl = url || (await Linking.getInitialURL());
+  const handleDeepLink = useCallback(
+    async (url?: string) => {
+      try {
+        // Get the URL - either from parameter or current linking URL
+        const linkingUrl = url || (await Linking.getInitialURL());
 
-      if (!linkingUrl) {
-        console.log('No linking URL found');
-        return;
-      }
-
-      console.log('Processing deep link:', linkingUrl);
-
-      // Parse query parameters from the URL
-      const { params, errorCode } = QueryParams.getQueryParams(linkingUrl);
-
-      if (errorCode) {
-        console.error('Failed to get params:', errorCode);
-        return;
-      }
-
-      const { access_token, refresh_token, type } = params;
-
-      // Check if this is a password recovery link - don't set session, navigate to reset screen instead
-      if (type === 'recovery' && access_token && refresh_token) {
-        console.log('Password recovery link detected, navigating to reset screen');
-        router.push({
-          pathname: '/password',
-          params: { access_token, refresh_token },
-        });
-        return;
-      }
-
-      // Only process if we have both tokens (for other auth flows like sign in)
-      if (access_token && refresh_token) {
-        console.log('Setting session from deep link tokens');
-
-        setAuthState((prev) => ({ ...prev, isProcessingDeepLink: true }));
-
-        const { data, error } = await supabase.auth.setSession({
-          access_token,
-          refresh_token,
-        });
-
-        if (error) {
-          console.error('Failed to set session:', error.message);
-          setAuthState((prev) => ({ ...prev, isProcessingDeepLink: false }));
+        if (!linkingUrl) {
+          console.log('No linking URL found');
           return;
         }
 
-        console.log('Successfully set session from deep link');
+        console.log('Processing deep link:', linkingUrl);
 
-        if (data.user) {
-          const fcmToken = await registerForFCMToken();
-          if (fcmToken) {
-            const { error: updateError } = await supabase
-              .from('profiles')
-              .update({ fcm_token: fcmToken })
-              .eq('id', data.user.id);
+        // Parse query parameters from the URL
+        const { params, errorCode } = QueryParams.getQueryParams(linkingUrl);
 
-            if (updateError) {
-              console.error('Error updating FCM token:', updateError);
-            } else {
-              console.log('[DeepLink] FCM token updated successfully');
-            }
-          }
+        if (errorCode) {
+          console.error('Failed to get params:', errorCode);
+          return;
         }
 
+        const { access_token, refresh_token, type } = params;
+
+        // Check if this is a password recovery link - don't set session, navigate to reset screen instead
+        if (type === 'recovery' && access_token && refresh_token) {
+          console.log('Password recovery link detected, navigating to reset screen');
+          router.push({
+            pathname: '/password',
+            params: { access_token, refresh_token },
+          });
+          return;
+        }
+
+        // Only process if we have both tokens (for other auth flows like sign in)
+        if (access_token && refresh_token) {
+          console.log('Setting session from deep link tokens');
+
+          setAuthState((prev) => ({ ...prev, isProcessingDeepLink: true }));
+
+          const { data, error } = await supabase.auth.setSession({
+            access_token,
+            refresh_token,
+          });
+
+          if (error) {
+            console.error('Failed to set session:', error.message);
+            setAuthState((prev) => ({ ...prev, isProcessingDeepLink: false }));
+            return;
+          }
+
+          console.log('Successfully set session from deep link');
+
+          if (data.user) {
+            const fcmToken = await registerForFCMToken();
+            if (fcmToken) {
+              const { error: updateError } = await supabase
+                .from('profiles')
+                .update({ fcm_token: fcmToken })
+                .eq('id', data.user.id);
+
+              if (updateError) {
+                console.error('Error updating FCM token:', updateError);
+              } else {
+                console.log('[DeepLink] FCM token updated successfully');
+              }
+            }
+          }
+
+          setAuthState((prev) => ({ ...prev, isProcessingDeepLink: false }));
+        }
+      } catch (error) {
+        console.error('Error handling deep link:', error);
         setAuthState((prev) => ({ ...prev, isProcessingDeepLink: false }));
       }
-    } catch (error) {
-      console.error('Error handling deep link:', error);
-      setAuthState((prev) => ({ ...prev, isProcessingDeepLink: false }));
-    }
-  };
+    },
+    [router]
+  );
+  handleDeepLinkRef.current = handleDeepLink;
 
   const signOut = async () => {
     try {
@@ -204,9 +230,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setAuthState((prev) => ({ ...prev, isLoggingOut: false }));
     }
   };
-
-  // TODO: put sign in here
-  const singIn = async () => {};
 
   return (
     <AuthContext.Provider

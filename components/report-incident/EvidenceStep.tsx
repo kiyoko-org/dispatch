@@ -70,8 +70,8 @@ export default function EvidenceStep({
         setSignedUrls((prev) => ({ ...prev, ...newSignedUrls }));
       }
     };
-    generateSignedUrls();
-  }, [uploadedFiles]);
+    void generateSignedUrls();
+  }, [uploadedFiles, signedUrls]);
 
   const handleVoiceRecording = async () => {
     if (uiState.isRecording) {

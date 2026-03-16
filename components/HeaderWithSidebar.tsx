@@ -11,11 +11,12 @@ import {
   Phone,
   LogOut,
   Bell,
+  ChevronLeft,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from './ThemeContext';
 import { useAuthContext } from './AuthProvider';
-import { supabase } from 'lib/supabase';
+import { useCurrentProfile } from 'contexts/CurrentProfileContext';
 import { SyncIndicator } from './SyncIndicator';
 import { useNotifications } from '@kiyoko-org/dispatch-lib';
 import NotificationSidebar from './NotificationSidebar';
@@ -46,6 +47,7 @@ interface HeaderWithSidebarProps {
 
 export default function HeaderWithSidebar({
   title,
+  showBackButton = false,
   backRoute,
   showStepProgress = false,
   stepProgressData,
@@ -59,6 +61,7 @@ export default function HeaderWithSidebar({
   const router = useRouter();
   const { colors } = useTheme();
   const { session } = useAuthContext();
+  const { profile } = useCurrentProfile();
   const { notifications, loading: notificationsLoading, deleteNotification } = useNotifications();
 
   const userNotifications = notifications
@@ -71,37 +74,9 @@ export default function HeaderWithSidebar({
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isActivityOpen, setIsActivityOpen] = useState(false);
-  const [userName, setUserName] = useState<string>('');
   const [localNotifCount, setLocalNotifCount] = useState<number>(0);
 
-  // Fetch user profile to get the name
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      if (!session?.user?.id) return;
-
-      try {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('first_name, last_name')
-          .eq('id', session.user.id)
-          .single();
-
-        if (error) {
-          console.error('Error fetching user profile:', error);
-          return;
-        }
-
-        if (data) {
-          const fullName = [data.first_name, data.last_name].filter(Boolean).join(' ') || 'User';
-          setUserName(fullName);
-        }
-      } catch (error) {
-        console.error('Error fetching user profile:', error);
-      }
-    };
-
-    fetchUserProfile();
-  }, [session?.user?.id]);
+  const userName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || 'User';
 
   // Load local notification count
   useEffect(() => {
@@ -129,7 +104,7 @@ export default function HeaderWithSidebar({
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [fadeAnim, slideAnim]);
 
   const handleBackPress = () => {
     if (backRoute) {
@@ -301,14 +276,23 @@ export default function HeaderWithSidebar({
           },
         ]}>
         <View className="w-full flex-row items-center px-6">
-          {/* User Profile / Sidebar Button - Moved to Left */}
-          <TouchableOpacity
-            onPress={toggleSidebar}
-            className="mr-4 h-10 w-10 items-center justify-center rounded-full"
-            style={{ backgroundColor: colors.primary }}
-            activeOpacity={0.7}>
-            <User size={20} color={colors.surface} />
-          </TouchableOpacity>
+          {showBackButton ? (
+            <TouchableOpacity
+              onPress={handleBackPress}
+              className="mr-4 h-10 w-10 items-center justify-center rounded-full"
+              style={{ backgroundColor: colors.surfaceVariant }}
+              activeOpacity={0.7}>
+              <ChevronLeft size={20} color={colors.text} />
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              onPress={toggleSidebar}
+              className="mr-4 h-10 w-10 items-center justify-center rounded-full"
+              style={{ backgroundColor: colors.primary }}
+              activeOpacity={0.7}>
+              <User size={20} color={colors.surface} />
+            </TouchableOpacity>
+          )}
 
           <View className="flex-1 flex-row items-center">
             <Text className="flex-1 text-xl font-bold" style={{ color: colors.text }}>

@@ -1,6 +1,6 @@
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import { AudioModule, requestRecordingPermissionsAsync, AudioRecorder } from 'expo-audio';
+import { requestRecordingPermissionsAsync, AudioRecorder } from 'expo-audio';
 import { Alert } from 'react-native';
 import { IFilePickerService } from '../types';
 
@@ -204,7 +204,7 @@ export class ExpoFilePickerService implements IFilePickerService {
         web: {},
       };
 
-      const recorder = new AudioModule.AudioRecorder(recordingOptions);
+      const recorder = new AudioRecorder(recordingOptions);
 
       // Prepare for recording
       await recorder.prepareToRecordAsync();

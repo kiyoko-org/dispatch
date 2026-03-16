@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, StatusBar, Animated } from 'react-native';
+import { View, Text, ScrollView, StatusBar, Animated, ActivityIndicator } from 'react-native';
 import {
   Shield,
   AlertTriangle,
@@ -12,14 +12,27 @@ import {
   Star,
   ShieldAlert,
   ShieldOff,
+  type LucideIcon,
 } from 'lucide-react-native';
 import HeaderWithSidebar from 'components/HeaderWithSidebar';
 import { useTheme } from 'components/ThemeContext';
+import { useCurrentProfile } from 'contexts/CurrentProfileContext';
 import { useEffect, useRef } from 'react';
-import { useProfile } from '@kiyoko-org/dispatch-lib';
-import { useAuthContext } from 'components/AuthProvider';
 
-const TRUST_LEVELS = [
+type ThemeColors = ReturnType<typeof useTheme>['colors'];
+
+type TrustLevelConfig = {
+  level: number;
+  label: string;
+  color: string;
+  bg: string;
+  border: string;
+  priority: string;
+  description: string;
+  icon: LucideIcon;
+};
+
+const TRUST_LEVELS: TrustLevelConfig[] = [
   {
     level: 0,
     label: 'Untrusted',
@@ -47,7 +60,7 @@ const TRUST_LEVELS = [
     bg: '#F59E0B20',
     border: '#F59E0B40',
     priority: 'Medium',
-    description: 'Your reports are given moderate priority. You\'re a valued community member.',
+    description: "Your reports are given moderate priority. You're a valued community member.",
     icon: Shield,
   },
   {
@@ -71,13 +84,10 @@ function getTrustLevel(score: number | null | undefined) {
 
 export default function TrustScorePage() {
   const { colors, isDark } = useTheme();
-  const { session } = useAuthContext();
-  const { profile, loading: profileLoading, error: profileError } = useProfile(session?.user?.id);
+  const { profile, loading: profileLoading, error: profileError } = useCurrentProfile();
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const currentLevel = getTrustLevel(profile?.trust_score);
 
   useEffect(() => {
-    // Pulse animation for the icon circle
     const pulse = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
@@ -100,6 +110,27 @@ export default function TrustScorePage() {
     };
   }, [pulseAnim]);
 
+  if (profileLoading && !profile) {
+    return (
+      <View className="flex-1" style={{ backgroundColor: colors.background }}>
+        <StatusBar
+          barStyle={isDark ? 'light-content' : 'dark-content'}
+          backgroundColor={colors.background}
+        />
+
+        <HeaderWithSidebar title="Trust Score" showBackButton backRoute="/home" />
+
+        <View className="flex-1 items-center justify-center px-6">
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text className="mt-4 text-center text-sm" style={{ color: colors.textSecondary }}>
+            Loading your current trust score...
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  const currentLevel = getTrustLevel(profile?.trust_score);
   const trustInfo = TRUST_LEVELS[currentLevel];
   const TrustIcon = trustInfo.icon;
 
@@ -110,12 +141,10 @@ export default function TrustScorePage() {
         backgroundColor={colors.background}
       />
 
-      <HeaderWithSidebar title="Trust Score" showBackButton={true} backRoute="/home" />
+      <HeaderWithSidebar title="Trust Score" showBackButton backRoute="/home" />
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {/* Trust Score Display */}
         <View className="items-center py-8">
-          {/* Animated pulsating icon circle */}
           <Animated.View
             style={{
               transform: [{ scale: pulseAnim }],
@@ -128,80 +157,74 @@ export default function TrustScorePage() {
               backgroundColor: trustInfo.bg,
               borderWidth: 3,
               borderColor: trustInfo.color,
-            }}
-          >
+            }}>
             <TrustIcon size={56} color={trustInfo.color} />
           </Animated.View>
-          <Text className="text-2xl font-bold mb-1" style={{ color: colors.text }}>
+          <Text className="mb-1 text-2xl font-bold" style={{ color: colors.text }}>
             {trustInfo.label}
           </Text>
           <View
-            className="px-4 py-2 rounded-full mt-2"
-            style={{ backgroundColor: trustInfo.bg, borderWidth: 1, borderColor: trustInfo.border }}
-          >
+            className="mt-2 rounded-full px-4 py-2"
+            style={{
+              backgroundColor: trustInfo.bg,
+              borderWidth: 1,
+              borderColor: trustInfo.border,
+            }}>
             <Text className="text-sm font-semibold" style={{ color: trustInfo.color }}>
               Level {currentLevel} • Priority: {trustInfo.priority}
             </Text>
           </View>
-          <Text className="text-sm text-center mt-3 px-8" style={{ color: colors.textSecondary }}>
+          <Text className="mt-3 px-8 text-center text-sm" style={{ color: colors.textSecondary }}>
             {trustInfo.description}
           </Text>
-          {profileLoading ? (
-            <Text className="text-xs text-center mt-3 px-8" style={{ color: colors.textSecondary }}>
-              Loading your current trust level...
-            </Text>
-          ) : null}
           {profileError ? (
-            <Text className="text-xs text-center mt-3 px-8" style={{ color: colors.error }}>
+            <Text className="mt-3 px-8 text-center text-xs" style={{ color: colors.error }}>
               Failed to load latest trust score.
             </Text>
           ) : null}
         </View>
 
-        {/* Honor System Explanation */}
         <View className="px-6 py-4">
           <View
-            className="rounded-2xl p-6 mb-6"
+            className="mb-6 rounded-2xl p-6"
             style={{
               backgroundColor: colors.surface,
               borderWidth: 1,
               borderColor: colors.border,
-            }}
-          >
-            <View className="flex-row items-center mb-3">
+            }}>
+            <View className="mb-3 flex-row items-center">
               <View
-                className="w-10 h-10 rounded-full items-center justify-center mr-3"
-                style={{ backgroundColor: colors.primary + '20' }}
-              >
+                className="mr-3 h-10 w-10 items-center justify-center rounded-full"
+                style={{ backgroundColor: colors.primary + '20' }}>
                 <Info size={20} color={colors.primary} />
               </View>
-              <Text className="text-xl font-bold flex-1" style={{ color: colors.text }}>
+              <Text className="flex-1 text-xl font-bold" style={{ color: colors.text }}>
                 How Trust Works
               </Text>
             </View>
             <Text className="text-base leading-6" style={{ color: colors.textSecondary }}>
-              Trust Score is an honor system with 3 levels. Your level determines the priority of your reports and emergency requests. Responsible use increases your level, while misuse decreases it — even down to Level 0 (Untrusted).
+              Trust Score is an honor system with 3 levels. Your level determines the priority of
+              your reports and emergency requests. Responsible use increases your level, while
+              misuse decreases it — even down to Level 0 (Untrusted).
             </Text>
           </View>
 
-          {/* Building Trust Section */}
           <View className="mb-6">
-            <Text className="text-lg font-bold mb-4" style={{ color: colors.text }}>
+            <Text className="mb-4 text-lg font-bold" style={{ color: colors.text }}>
               How to Level Up
             </Text>
 
             <View
-              className="rounded-2xl overflow-hidden"
+              className="overflow-hidden rounded-2xl"
               style={{
                 backgroundColor: colors.surface,
                 borderWidth: 1,
                 borderColor: colors.border,
-              }}
-            >
+              }}>
               <TrustItem
                 icon={FileText}
-                iconBg={'#22C55E20'}
-                iconColor={'#22C55E'}
+                iconBg="#22C55E20"
+                iconColor="#22C55E"
                 title="Submit Verified Reports"
                 description="Accurate incident reports that are confirmed by authorities"
                 colors={colors}
@@ -209,8 +232,8 @@ export default function TrustScorePage() {
               <Divider colors={colors} />
               <TrustItem
                 icon={CheckCircle}
-                iconBg={'#22C55E20'}
-                iconColor={'#22C55E'}
+                iconBg="#22C55E20"
+                iconColor="#22C55E"
                 title="Timely Emergency Responses"
                 description="Quick and appropriate responses to emergency situations"
                 colors={colors}
@@ -218,8 +241,8 @@ export default function TrustScorePage() {
               <Divider colors={colors} />
               <TrustItem
                 icon={MapPin}
-                iconBg={'#22C55E20'}
-                iconColor={'#22C55E'}
+                iconBg="#22C55E20"
+                iconColor="#22C55E"
                 title="Accurate Location Information"
                 description="Providing precise location details for incidents"
                 colors={colors}
@@ -227,8 +250,8 @@ export default function TrustScorePage() {
               <Divider colors={colors} />
               <TrustItem
                 icon={Clock}
-                iconBg={'#22C55E20'}
-                iconColor={'#22C55E'}
+                iconBg="#22C55E20"
+                iconColor="#22C55E"
                 title="Consistent Platform Use"
                 description="Regular, responsible engagement with the community"
                 colors={colors}
@@ -236,24 +259,22 @@ export default function TrustScorePage() {
             </View>
           </View>
 
-          {/* Reasons for Low Trust */}
           <View className="mb-6">
-            <Text className="text-lg font-bold mb-4" style={{ color: colors.text }}>
+            <Text className="mb-4 text-lg font-bold" style={{ color: colors.text }}>
               What Lowers Your Level
             </Text>
 
             <View
-              className="rounded-2xl overflow-hidden"
+              className="overflow-hidden rounded-2xl"
               style={{
                 backgroundColor: colors.surface,
                 borderWidth: 1,
                 borderColor: colors.border,
-              }}
-            >
+              }}>
               <TrustItem
                 icon={Phone}
-                iconBg={'#EF444420'}
-                iconColor={'#EF4444'}
+                iconBg="#EF444420"
+                iconColor="#EF4444"
                 title="Prank Emergency Calls"
                 description="Making false emergency calls wastes critical resources and endangers lives"
                 colors={colors}
@@ -262,8 +283,8 @@ export default function TrustScorePage() {
               <Divider colors={colors} />
               <TrustItem
                 icon={AlertTriangle}
-                iconBg={'#EF444420'}
-                iconColor={'#EF4444'}
+                iconBg="#EF444420"
+                iconColor="#EF4444"
                 title="False Report Submissions"
                 description="Submitting fabricated or misleading incident reports"
                 colors={colors}
@@ -272,8 +293,8 @@ export default function TrustScorePage() {
               <Divider colors={colors} />
               <TrustItem
                 icon={TrendingDown}
-                iconBg={'#EF444420'}
-                iconColor={'#EF4444'}
+                iconBg="#EF444420"
+                iconColor="#EF4444"
                 title="Spam or Abuse"
                 description="Excessive irrelevant reports or platform misuse"
                 colors={colors}
@@ -282,8 +303,8 @@ export default function TrustScorePage() {
               <Divider colors={colors} />
               <TrustItem
                 icon={MapPin}
-                iconBg={'#EF444420'}
-                iconColor={'#EF4444'}
+                iconBg="#EF444420"
+                iconColor="#EF4444"
                 title="Inaccurate Location Data"
                 description="Repeatedly providing wrong locations for incidents"
                 colors={colors}
@@ -292,8 +313,8 @@ export default function TrustScorePage() {
               <Divider colors={colors} />
               <TrustItem
                 icon={FileText}
-                iconBg={'#EF444420'}
-                iconColor={'#EF4444'}
+                iconBg="#EF444420"
+                iconColor="#EF4444"
                 title="Unverified Information"
                 description="Sharing unconfirmed or sensationalized information"
                 colors={colors}
@@ -302,8 +323,8 @@ export default function TrustScorePage() {
               <Divider colors={colors} />
               <TrustItem
                 icon={AlertTriangle}
-                iconBg={'#EF444420'}
-                iconColor={'#EF4444'}
+                iconBg="#EF444420"
+                iconColor="#EF4444"
                 title="Community Guidelines Violations"
                 description="Behavior that disrupts community safety or violates terms"
                 colors={colors}
@@ -312,39 +333,37 @@ export default function TrustScorePage() {
             </View>
           </View>
 
-          {/* Why Trust Matters */}
           <View
-            className="rounded-2xl p-6 mb-6"
+            className="mb-6 rounded-2xl p-6"
             style={{
               backgroundColor: colors.primary + '10',
               borderWidth: 1,
               borderColor: colors.primary + '30',
-            }}
-          >
-            <View className="flex-row items-center mb-3">
+            }}>
+            <View className="mb-3 flex-row items-center">
               <Shield size={24} color={colors.primary} />
-              <Text className="text-lg font-bold ml-3" style={{ color: colors.text }}>
+              <Text className="ml-3 text-lg font-bold" style={{ color: colors.text }}>
                 Why Trust Matters
               </Text>
             </View>
             <Text className="text-base leading-6" style={{ color: colors.textSecondary }}>
-              Higher trust levels mean your reports get faster responses and higher priority from emergency responders. Level 3 users are fast-tracked, while Level 0 reports may be deprioritized. Build and maintain your trust to keep the community safe.
+              Higher trust levels mean your reports get faster responses and higher priority from
+              emergency responders. Level 3 users are fast-tracked, while Level 0 reports may be
+              deprioritized. Build and maintain your trust to keep the community safe.
             </Text>
           </View>
 
-          {/* Restoring Trust */}
           <View
             className="rounded-2xl p-6"
             style={{
               backgroundColor: colors.surface,
               borderWidth: 1,
               borderColor: colors.border,
-            }}
-          >
-            <Text className="text-lg font-bold mb-3" style={{ color: colors.text }}>
+            }}>
+            <Text className="mb-3 text-lg font-bold" style={{ color: colors.text }}>
               Restoring Your Trust Level
             </Text>
-            <Text className="text-base leading-6 mb-4" style={{ color: colors.textSecondary }}>
+            <Text className="mb-4 text-base leading-6" style={{ color: colors.textSecondary }}>
               If your Trust Level has been lowered, you can rebuild it by:
             </Text>
             <View className="space-y-2">
@@ -357,7 +376,6 @@ export default function TrustScorePage() {
           </View>
         </View>
 
-        {/* Bottom Spacing */}
         <View className="h-8" />
       </ScrollView>
     </View>
@@ -371,26 +389,24 @@ function TrustItem({
   title,
   description,
   colors,
-  isNegative = false,
 }: {
-  icon: any;
+  icon: LucideIcon;
   iconBg: string;
   iconColor: string;
   title: string;
   description: string;
-  colors: any;
+  colors: ThemeColors;
   isNegative?: boolean;
 }) {
   return (
     <View className="flex-row p-4">
       <View
-        className="w-10 h-10 rounded-full items-center justify-center mr-3"
-        style={{ backgroundColor: iconBg }}
-      >
+        className="mr-3 h-10 w-10 items-center justify-center rounded-full"
+        style={{ backgroundColor: iconBg }}>
         <Icon size={20} color={iconColor} />
       </View>
       <View className="flex-1">
-        <Text className="text-base font-semibold mb-1" style={{ color: colors.text }}>
+        <Text className="mb-1 text-base font-semibold" style={{ color: colors.text }}>
           {title}
         </Text>
         <Text className="text-sm leading-5" style={{ color: colors.textSecondary }}>
@@ -401,7 +417,7 @@ function TrustItem({
   );
 }
 
-function Divider({ colors }: { colors: any }) {
+function Divider({ colors }: { colors: ThemeColors }) {
   return (
     <View
       className="ml-16"
@@ -413,13 +429,13 @@ function Divider({ colors }: { colors: any }) {
   );
 }
 
-function BulletPoint({ text, colors }: { text: string; colors: any }) {
+function BulletPoint({ text, colors }: { text: string; colors: ThemeColors }) {
   return (
-    <View className="flex-row items-start mb-2">
-      <Text className="text-base mr-2" style={{ color: colors.primary }}>
+    <View className="mb-2 flex-row items-start">
+      <Text className="mr-2 text-base" style={{ color: colors.primary }}>
         •
       </Text>
-      <Text className="text-base flex-1" style={{ color: colors.textSecondary }}>
+      <Text className="flex-1 text-base" style={{ color: colors.textSecondary }}>
         {text}
       </Text>
     </View>

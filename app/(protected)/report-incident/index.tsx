@@ -20,19 +20,17 @@ import {
   Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import * as Location from 'expo-location';
 import MapView, { Marker, Polygon, PROVIDER_GOOGLE, Region } from 'react-native-maps';
-import { reverseGeocode } from 'lib/services/geocoding';
+import { geocodingService, reverseGeocode } from 'lib/services/geocoding';
 import { ReportData } from 'lib/types';
-import { geocodingService } from 'lib/services/geocoding';
 import { useTheme } from 'components/ThemeContext';
 import { useDispatchClient } from 'components/DispatchProvider';
 import { useAuthContext } from 'components/AuthProvider';
-import { useReports } from '@kiyoko-org/dispatch-lib';
+import { useReportsStore } from 'contexts/ReportsContext';
 import { distanceInMeters } from 'lib/locations';
 import { isWithinTuguegarao, TUGUEGARAO_BOUNDARY } from 'lib/locations/tuguegarao-boundary';
-import type { Database } from '@kiyoko-org/dispatch-lib/database.types';
 import AppDialog from 'components/AppDialog';
 import {
   Check,
@@ -40,7 +38,6 @@ import {
   ChevronDown,
   Calendar,
   Clock,
-  Plus,
   X,
   Mic,
   Camera,
@@ -92,10 +89,11 @@ export default function ReportIncidentIndex() {
   const { colors, isDark } = useTheme();
   const { categories, categoriesLoading, categoriesError, client } = useDispatchClient();
   const { session } = useAuthContext();
-  const { addReport, reports } = useReports();
+  const { createReport, reports } = useReportsStore();
   const reportsRef = useRef(reports); // Keep ref in sync with reports state
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const locationAbortControllerRef = useRef<AbortController | null>(null);
+  const handleUseCurrentLocationRef = useRef<((silent?: boolean) => Promise<void>) | null>(null);
   const [recorder, setRecorder] = useState<AudioRecorder | null>(null);
   const [recordingDuration, setRecordingDuration] = useState(0);
 
@@ -183,15 +181,15 @@ export default function ReportIncidentIndex() {
   const [quickLinksScrollable, setQuickLinksScrollable] = useState(false);
 
   // Helper functions for updating state
-  const updateFormData = (updates: Partial<ReportData>) => {
+  const updateFormData = useCallback((updates: Partial<ReportData>) => {
     setFormData((prev) => ({ ...prev, ...updates }));
-  };
+  }, []);
 
-  const updateUIState = (updates: Partial<UIState>) => {
+  const updateUIState = useCallback((updates: Partial<UIState>) => {
     setUIState((prev) => ({ ...prev, ...updates }));
-  };
+  }, []);
 
-  const showUnsupportedAreaDialog = (message?: string, onRetry?: () => void) => {
+  const showUnsupportedAreaDialog = useCallback((message?: string, onRetry?: () => void) => {
     setUnsupportedAreaDialog({
       visible: true,
       description:
@@ -199,150 +197,155 @@ export default function ReportIncidentIndex() {
         'Dispatch currently operates only within Tuguegarao City. Please choose a location within the city limits.',
       onRetry,
     });
-  };
+  }, []);
 
-  const closeUnsupportedAreaDialog = () => {
+  const closeUnsupportedAreaDialog = useCallback(() => {
     setUnsupportedAreaDialog((prev) => ({ ...prev, visible: false }));
-  };
+  }, []);
 
   // Check for nearby reports function
-  const checkForNearbyReports = async (latitude: number, longitude: number) => {
-    try {
-      const currentUserId = session?.user?.id;
-      // Wait for reports to be available (with timeout)
-      let availableReports = reportsRef.current;
-      let retries = 0;
-      const maxRetries = 5;
+  const checkForNearbyReports = useCallback(
+    async (latitude: number, longitude: number) => {
+      try {
+        const currentUserId = session?.user?.id;
+        // Wait for reports to be available (with timeout)
+        let availableReports = reportsRef.current;
+        let retries = 0;
+        const maxRetries = 5;
 
-      while ((!availableReports || availableReports.length === 0) && retries < maxRetries) {
+        while ((!availableReports || availableReports.length === 0) && retries < maxRetries) {
+          console.log(
+            `[Nearby Reports] Reports not yet loaded, waiting... (attempt ${retries + 1}/${maxRetries})`
+          );
+          await new Promise((resolve) => setTimeout(resolve, 200)); // Wait 200ms
+          availableReports = reportsRef.current; // Check the latest ref value
+          retries++;
+        }
+
+        if (!availableReports || availableReports.length === 0) {
+          console.log('[Nearby Reports] No reports available to check after waiting');
+          return;
+        }
+
+        console.log('[Nearby Reports] Starting nearby report check');
+        console.log('[Nearby Reports] Current location:', { latitude, longitude });
+        console.log('[Nearby Reports] Total reports in system:', availableReports.length);
+
+        // Get current timestamp
+        const now = new Date();
+        const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        console.log('[Nearby Reports] Checking for reports from last 24 hours');
         console.log(
-          `[Nearby Reports] Reports not yet loaded, waiting... (attempt ${retries + 1}/${maxRetries})`
+          '[Nearby Reports] Time window: from',
+          oneDayAgo.toISOString(),
+          'to',
+          now.toISOString()
         );
-        await new Promise((resolve) => setTimeout(resolve, 200)); // Wait 200ms
-        availableReports = reportsRef.current; // Check the latest ref value
-        retries++;
-      }
 
-      if (!availableReports || availableReports.length === 0) {
-        console.log('[Nearby Reports] No reports available to check after waiting');
-        return;
-      }
-
-      console.log('[Nearby Reports] Starting nearby report check');
-      console.log('[Nearby Reports] Current location:', { latitude, longitude });
-      console.log('[Nearby Reports] Total reports in system:', availableReports.length);
-
-      // Get current timestamp
-      const now = new Date();
-      const oneDayAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      console.log('[Nearby Reports] Checking for reports from last 24 hours');
-      console.log(
-        '[Nearby Reports] Time window: from',
-        oneDayAgo.toISOString(),
-        'to',
-        now.toISOString()
-      );
-
-      // Filter reports within 100 meters and from last 24 hours, ignoring resolved/cancelled
-      const nearbyReports = availableReports.filter((report: any) => {
-        // Check if report has location data
-        if (!report.latitude || !report.longitude) {
-          return false;
-        }
-
-        // Ignore reports that are resolved or cancelled
-        const status = (report.status || '').toString().toLowerCase();
-        if (status === 'resolved' || status === 'cancelled') {
-          console.log(
-            `[Nearby Reports] Ignoring report ${report.id} with status: ${report.status}`
-          );
-          return false;
-        }
-
-        // Ignore reports created by the current user
-        if (currentUserId) {
-          const creatorId =
-            report.reporter_id ||
-            report.user_id ||
-            report.created_by ||
-            report.creator_id ||
-            report.userId ||
-            report.creatorId ||
-            report.owner_id;
-
-          console.log(
-            `[Nearby Reports] Checking report ${report.id}, creatorId: ${creatorId}, currentUserId: ${currentUserId}, match: ${String(creatorId) === String(currentUserId)}`
-          );
-
-          if (creatorId && String(creatorId) === String(currentUserId)) {
-            console.log(`[Nearby Reports] Ignoring report ${report.id} - created by current user`);
+        // Filter reports within 100 meters and from last 24 hours, ignoring resolved/cancelled
+        const nearbyReports = availableReports.filter((report: any) => {
+          // Check if report has location data
+          if (!report.latitude || !report.longitude) {
             return false;
           }
-        }
 
-        // Ignore reports where current user already participated
-        if (currentUserId && Array.isArray(report.witnesses)) {
-          const hasUserWitnessed = report.witnesses.some((witness: any) => {
-            if (!witness || typeof witness !== 'object') {
-              return false;
-            }
-            const witnessUserId =
-              witness.user_id || witness.userId || witness.userID || witness.user;
-            return witnessUserId === currentUserId;
-          });
-
-          if (hasUserWitnessed) {
+          // Ignore reports that are resolved or cancelled
+          const status = (report.status || '').toString().toLowerCase();
+          if (status === 'resolved' || status === 'cancelled') {
             console.log(
-              `[Nearby Reports] Ignoring report ${report.id} - user has already added a +1 or statement`
+              `[Nearby Reports] Ignoring report ${report.id} with status: ${report.status}`
             );
             return false;
           }
-        }
 
-        // Check if report is within last 24 hours
-        const reportDate = new Date(report.created_at);
-        if (reportDate < oneDayAgo) {
-          return false;
-        }
+          // Ignore reports created by the current user
+          if (currentUserId) {
+            const creatorId =
+              report.reporter_id ||
+              report.user_id ||
+              report.created_by ||
+              report.creator_id ||
+              report.userId ||
+              report.creatorId ||
+              report.owner_id;
 
-        // Calculate distance using Haversine formula
-        const distance = distanceInMeters(
-          { lat: latitude, lon: longitude },
-          { lat: report.latitude, lon: report.longitude }
-        );
+            console.log(
+              `[Nearby Reports] Checking report ${report.id}, creatorId: ${creatorId}, currentUserId: ${currentUserId}, match: ${String(creatorId) === String(currentUserId)}`
+            );
 
-        // Log individual report checks for debugging
-        console.log(
-          `[Nearby Reports] Report ID: ${report.id}, Status: ${report.status}, Distance: ${distance.toFixed(2)}m, Created: ${report.created_at}`
-        );
+            if (creatorId && String(creatorId) === String(currentUserId)) {
+              console.log(
+                `[Nearby Reports] Ignoring report ${report.id} - created by current user`
+              );
+              return false;
+            }
+          }
 
-        return distance <= 20;
-      });
+          // Ignore reports where current user already participated
+          if (currentUserId && Array.isArray(report.witnesses)) {
+            const hasUserWitnessed = report.witnesses.some((witness: any) => {
+              if (!witness || typeof witness !== 'object') {
+                return false;
+              }
+              const witnessUserId =
+                witness.user_id || witness.userId || witness.userID || witness.user;
+              return witnessUserId === currentUserId;
+            });
 
-      console.log('[Nearby Reports] Nearby reports found:', nearbyReports.length);
-      if (nearbyReports.length > 0) {
-        console.log(
-          '[Nearby Reports] Report IDs:',
-          nearbyReports.map((r: any) => r.id)
-        );
-        updateUIState({
-          nearbyReportDialog: {
-            visible: true,
-            nearbyReports,
-          },
+            if (hasUserWitnessed) {
+              console.log(
+                `[Nearby Reports] Ignoring report ${report.id} - user has already added a +1 or statement`
+              );
+              return false;
+            }
+          }
+
+          // Check if report is within last 24 hours
+          const reportDate = new Date(report.created_at);
+          if (reportDate < oneDayAgo) {
+            return false;
+          }
+
+          // Calculate distance using Haversine formula
+          const distance = distanceInMeters(
+            { lat: latitude, lon: longitude },
+            { lat: report.latitude, lon: report.longitude }
+          );
+
+          // Log individual report checks for debugging
+          console.log(
+            `[Nearby Reports] Report ID: ${report.id}, Status: ${report.status}, Distance: ${distance.toFixed(2)}m, Created: ${report.created_at}`
+          );
+
+          return distance <= 20;
         });
-      } else {
-        updateUIState({
-          nearbyReportDialog: {
-            visible: false,
-            nearbyReports: [],
-          },
-        });
+
+        console.log('[Nearby Reports] Nearby reports found:', nearbyReports.length);
+        if (nearbyReports.length > 0) {
+          console.log(
+            '[Nearby Reports] Report IDs:',
+            nearbyReports.map((r: any) => r.id)
+          );
+          updateUIState({
+            nearbyReportDialog: {
+              visible: true,
+              nearbyReports,
+            },
+          });
+        } else {
+          updateUIState({
+            nearbyReportDialog: {
+              visible: false,
+              nearbyReports: [],
+            },
+          });
+        }
+      } catch (error) {
+        console.error('[Nearby Reports] Error checking for nearby reports:', error);
       }
-    } catch (error) {
-      console.error('[Nearby Reports] Error checking for nearby reports:', error);
-    }
-  };
+    },
+    [session?.user?.id, updateUIState]
+  );
 
   // Auto-populate current date and time on mount
   useEffect(() => {
@@ -362,16 +365,16 @@ export default function ReportIncidentIndex() {
       incident_date: dateString,
       incident_time: timeString,
     });
-  }, []);
+  }, [updateFormData]);
 
   // Try to get current location on mount
   useEffect(() => {
-    handleUseCurrentLocation(true);
+    void handleUseCurrentLocationRef.current?.(true);
   }, []);
 
   // Log reports availability for debugging
   useEffect(() => {
-    console.log('[Nearby Reports] Reports from useReports:', {
+    console.log('[Nearby Reports] Reports from reports store:', {
       available: reports ? 'yes' : 'no',
       count: reports?.length ?? 0,
       type: typeof reports,
@@ -415,8 +418,8 @@ export default function ReportIncidentIndex() {
         setSignedUrls((prev) => ({ ...prev, ...newSignedUrls }));
       }
     };
-    generateSignedUrls();
-  }, [uploadedFiles]);
+    void generateSignedUrls();
+  }, [uploadedFiles, signedUrls]);
 
   // Quick link handlers
   const handleQuickLink = (categoryName: string, subcategory: string) => {
@@ -526,81 +529,92 @@ export default function ReportIncidentIndex() {
   };
 
   // Function to handle using current location
-  const handleUseCurrentLocation = async (silent = false) => {
-    try {
-      // Create a new AbortController for this location fetch
-      locationAbortControllerRef.current = new AbortController();
-      updateUIState({ isGettingLocation: true, locationFetchFailed: false });
-
-      // Request location permissions
-      const { status } = await Location.requestForegroundPermissionsAsync();
-
-      if (status !== 'granted') {
-        updateUIState({ isGettingLocation: false, locationFetchFailed: true });
-        if (!silent) {
-          Alert.alert(
-            'Location Permission Denied',
-            'Permission to access location was denied. Please enable location services to use this feature.',
-            [{ text: 'OK' }]
-          );
-        }
-        return;
-      }
-
-      // Get current location
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-      });
-
-      const latitude = location.coords.latitude;
-      const longitude = location.coords.longitude;
-
-      if (!isWithinTuguegarao(latitude, longitude)) {
-        updateUIState({ locationFetchFailed: true });
-        if (!silent) {
-          showUnsupportedAreaDialog(
-            'This app currently only supports Tuguegarao City. Please choose a location within Tuguegarao City.',
-            () => handleUseCurrentLocation(true)
-          );
-        }
-        return;
-      }
-
-      setCurrentLocation({
-        latitude: latitude.toString(),
-        longitude: longitude.toString(),
-      });
-
+  const handleUseCurrentLocation = useCallback(
+    async (silent = false) => {
       try {
-        // Reverse geocode to get address
-        const address = await geocodingService.reverseGeocode(latitude, longitude);
+        // Create a new AbortController for this location fetch
+        locationAbortControllerRef.current = new AbortController();
+        updateUIState({ isGettingLocation: true, locationFetchFailed: false });
 
-        if (address.length > 0) {
-          const place = address[0];
+        // Request location permissions
+        const { status } = await Location.requestForegroundPermissionsAsync();
 
-          // Build a comprehensive street address
-          const addressParts = [
-            place.streetNumber,
-            place.street,
-            place.subregion,
-            place.city,
-          ].filter(Boolean);
-
-          const streetAddress =
-            addressParts.length > 0 ? addressParts.join(', ') : place.name || 'Current Location';
-
-          updateFormData({
-            street_address: streetAddress,
-          });
-          updateUIState({ locationFetchFailed: false, showLocationDialog: false });
+        if (status !== 'granted') {
+          updateUIState({ isGettingLocation: false, locationFetchFailed: true });
           if (!silent) {
-            Alert.alert('Location Updated', 'Your current location has been set successfully.', [
-              { text: 'OK' },
-            ]);
+            Alert.alert(
+              'Location Permission Denied',
+              'Permission to access location was denied. Please enable location services to use this feature.',
+              [{ text: 'OK' }]
+            );
           }
-          // Check for nearby reports
-          await checkForNearbyReports(latitude, longitude);
-        } else {
+          return;
+        }
+
+        // Get current location
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+        });
+
+        const latitude = location.coords.latitude;
+        const longitude = location.coords.longitude;
+
+        if (!isWithinTuguegarao(latitude, longitude)) {
+          updateUIState({ locationFetchFailed: true });
+          if (!silent) {
+            showUnsupportedAreaDialog(
+              'This app currently only supports Tuguegarao City. Please choose a location within Tuguegarao City.',
+              () => handleUseCurrentLocation(true)
+            );
+          }
+          return;
+        }
+
+        setCurrentLocation({
+          latitude: latitude.toString(),
+          longitude: longitude.toString(),
+        });
+
+        try {
+          // Reverse geocode to get address
+          const address = await geocodingService.reverseGeocode(latitude, longitude);
+
+          if (address.length > 0) {
+            const place = address[0];
+
+            // Build a comprehensive street address
+            const addressParts = [
+              place.streetNumber,
+              place.street,
+              place.subregion,
+              place.city,
+            ].filter(Boolean);
+
+            const streetAddress =
+              addressParts.length > 0 ? addressParts.join(', ') : place.name || 'Current Location';
+
+            updateFormData({
+              street_address: streetAddress,
+            });
+            updateUIState({ locationFetchFailed: false, showLocationDialog: false });
+            if (!silent) {
+              Alert.alert('Location Updated', 'Your current location has been set successfully.', [
+                { text: 'OK' },
+              ]);
+            }
+            // Check for nearby reports
+            await checkForNearbyReports(latitude, longitude);
+          } else {
+            // Fallback to coordinates if reverse geocoding fails
+            updateFormData({
+              street_address: `Lat: ${latitude.toFixed(6)}, Lng: ${longitude.toFixed(6)}`,
+            });
+            updateUIState({ locationFetchFailed: false, showLocationDialog: false });
+            // Check for nearby reports
+            await checkForNearbyReports(latitude, longitude);
+          }
+        } catch (geocodeError) {
+          console.error('Geocoding error:', geocodeError);
           // Fallback to coordinates if reverse geocoding fails
           updateFormData({
             street_address: `Lat: ${latitude.toFixed(6)}, Lng: ${longitude.toFixed(6)}`,
@@ -609,38 +623,31 @@ export default function ReportIncidentIndex() {
           // Check for nearby reports
           await checkForNearbyReports(latitude, longitude);
         }
-      } catch (geocodeError) {
-        console.error('Geocoding error:', geocodeError);
-        // Fallback to coordinates if reverse geocoding fails
-        updateFormData({
-          street_address: `Lat: ${latitude.toFixed(6)}, Lng: ${longitude.toFixed(6)}`,
-        });
-        updateUIState({ locationFetchFailed: false, showLocationDialog: false });
-        // Check for nearby reports
-        await checkForNearbyReports(latitude, longitude);
-      }
-    } catch (error) {
-      // Check if error is due to cancellation
-      if (error instanceof Error && error.name === 'AbortError') {
-        console.log('Location fetch was cancelled by user');
-        updateUIState({ isGettingLocation: false, locationFetchFailed: false });
-        return;
-      }
+      } catch (error) {
+        // Check if error is due to cancellation
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.log('Location fetch was cancelled by user');
+          updateUIState({ isGettingLocation: false, locationFetchFailed: false });
+          return;
+        }
 
-      console.error('Error getting location:', error);
-      updateUIState({ locationFetchFailed: true });
-      if (!silent) {
-        Alert.alert(
-          'Location Error',
-          'Unable to retrieve your current location. Please check your GPS settings and try again.',
-          [{ text: 'OK' }]
-        );
+        console.error('Error getting location:', error);
+        updateUIState({ locationFetchFailed: true });
+        if (!silent) {
+          Alert.alert(
+            'Location Error',
+            'Unable to retrieve your current location. Please check your GPS settings and try again.',
+            [{ text: 'OK' }]
+          );
+        }
+      } finally {
+        updateUIState({ isGettingLocation: false });
+        locationAbortControllerRef.current = null;
       }
-    } finally {
-      updateUIState({ isGettingLocation: false });
-      locationAbortControllerRef.current = null;
-    }
-  };
+    },
+    [checkForNearbyReports, showUnsupportedAreaDialog, updateFormData, updateUIState]
+  );
+  handleUseCurrentLocationRef.current = handleUseCurrentLocation;
 
   // Function to cancel current location fetch
   const handleCancelLocationFetch = () => {
@@ -1143,12 +1150,12 @@ export default function ReportIncidentIndex() {
       });
 
       // Race between the API call and timeout
-      const result = (await Promise.race([addReport(reportPayload), timeoutPromise])) as Awaited<
-        ReturnType<typeof addReport>
+      const result = (await Promise.race([createReport(reportPayload), timeoutPromise])) as Awaited<
+        ReturnType<typeof createReport>
       >;
 
       if (result.error) {
-        throw new Error(result.error.message || 'Failed to submit report');
+        throw new Error(result.error);
       }
 
       setSuccessDialogVisible(true);
@@ -1189,9 +1196,24 @@ export default function ReportIncidentIndex() {
   const quickLinks = [
     { icon: '🛡️', label: 'Someone stole from me', onPress: handleQuickLinkTheft, color: '#F59E0B' },
     { icon: '💰', label: 'I was robbed', onPress: handleQuickLinkRobbery, color: '#F59E0B' },
-    { icon: '🏠', label: 'My house was broken into', onPress: handleQuickLinkBurglary, color: '#F59E0B' },
-    { icon: '🎨', label: 'Property vandalized', onPress: handleQuickLinkVandalism, color: '#F59E0B' },
-    { icon: '🚗', label: 'Got into a car crash', onPress: handleQuickLinkCarCrash, color: '#3B82F6' },
+    {
+      icon: '🏠',
+      label: 'My house was broken into',
+      onPress: handleQuickLinkBurglary,
+      color: '#F59E0B',
+    },
+    {
+      icon: '🎨',
+      label: 'Property vandalized',
+      onPress: handleQuickLinkVandalism,
+      color: '#F59E0B',
+    },
+    {
+      icon: '🚗',
+      label: 'Got into a car crash',
+      onPress: handleQuickLinkCarCrash,
+      color: '#3B82F6',
+    },
     { icon: '🚙', label: 'Hit and run', onPress: handleQuickLinkHitAndRun, color: '#3B82F6' },
     { icon: '☠️', label: 'Witnessed a murder', onPress: handleQuickLinkMurder, color: '#DC2626' },
     { icon: '🔫', label: 'Shooting incident', onPress: handleQuickLinkShooting, color: '#DC2626' },
@@ -1260,7 +1282,10 @@ export default function ReportIncidentIndex() {
               Quick select or fill out the form below
             </Text>
             {quickLinksScrollable ? (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: 8 }}>
                 {quickLinks.map((link, index) => (
                   <TouchableOpacity
                     key={index}
@@ -1405,26 +1430,35 @@ export default function ReportIncidentIndex() {
                 <Calendar size={18} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 10, fontWeight: '600', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                <Text
+                  style={{
+                    fontSize: 10,
+                    fontWeight: '600',
+                    color: colors.textSecondary,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                  }}>
                   When
                 </Text>
-                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text }} numberOfLines={1}>
+                <Text
+                  style={{ fontSize: 13, fontWeight: '600', color: colors.text }}
+                  numberOfLines={1}>
                   {formData.incident_date && formData.incident_time
                     ? (() => {
-                      const [month, day, year] = formData.incident_date.split('/');
-                      const date = new Date(
-                        parseInt(year, 10),
-                        parseInt(month, 10) - 1,
-                        parseInt(day, 10)
-                      );
-                      const monthName = date.toLocaleDateString('en-US', { month: 'short' });
-                      const currentYear = new Date().getFullYear();
-                      const includeYear = date.getFullYear() !== currentYear;
-                      const dateDisplay = includeYear
-                        ? `${monthName} ${day}, ${year}`
-                        : `${monthName} ${day}`;
-                      return `${dateDisplay}, ${formData.incident_time}`;
-                    })()
+                        const [month, day, year] = formData.incident_date.split('/');
+                        const date = new Date(
+                          parseInt(year, 10),
+                          parseInt(month, 10) - 1,
+                          parseInt(day, 10)
+                        );
+                        const monthName = date.toLocaleDateString('en-US', { month: 'short' });
+                        const currentYear = new Date().getFullYear();
+                        const includeYear = date.getFullYear() !== currentYear;
+                        const dateDisplay = includeYear
+                          ? `${monthName} ${day}, ${year}`
+                          : `${monthName} ${day}`;
+                        return `${dateDisplay}, ${formData.incident_time}`;
+                      })()
                     : 'Set date & time'}
                 </Text>
               </View>
@@ -1481,7 +1515,14 @@ export default function ReportIncidentIndex() {
                 )}
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 10, fontWeight: '600', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                <Text
+                  style={{
+                    fontSize: 10,
+                    fontWeight: '600',
+                    color: colors.textSecondary,
+                    textTransform: 'uppercase',
+                    letterSpacing: 0.5,
+                  }}>
                   Where
                 </Text>
                 <Text
@@ -1561,7 +1602,9 @@ export default function ReportIncidentIndex() {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 backgroundColor: colors.card,
-                borderColor: uiState.validationErrors.incident_category ? colors.error : colors.border,
+                borderColor: uiState.validationErrors.incident_category
+                  ? colors.error
+                  : colors.border,
                 borderWidth: 1,
                 borderRadius: 14,
                 paddingHorizontal: 16,
@@ -1581,7 +1624,7 @@ export default function ReportIncidentIndex() {
                 {categoriesLoading
                   ? 'Loading categories...'
                   : categories.find((cat) => cat.id.toString() === formData.incident_category)
-                    ?.name || 'Select incident category'}
+                      ?.name || 'Select incident category'}
               </Text>
               <ChevronDown size={18} color={colors.textSecondary} />
             </TouchableOpacity>
@@ -1770,8 +1813,15 @@ export default function ReportIncidentIndex() {
               paddingHorizontal: 16,
               backgroundColor: colors.surfaceVariant,
             }}>
-            <Text style={{ fontSize: 12, color: colors.textSecondary, textAlign: 'center', lineHeight: 18 }}>
-              Your report will be reviewed and may be subject to verification. Please provide accurate information.
+            <Text
+              style={{
+                fontSize: 12,
+                color: colors.textSecondary,
+                textAlign: 'center',
+                lineHeight: 18,
+              }}>
+              Your report will be reviewed and may be subject to verification. Please provide
+              accurate information.
             </Text>
           </View>
         </View>
@@ -1804,9 +1854,7 @@ export default function ReportIncidentIndex() {
               borderColor: colors.border,
               borderWidth: 1,
             }}>
-            <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>
-              Cancel
-            </Text>
+            <Text style={{ fontSize: 15, fontWeight: '600', color: colors.text }}>Cancel</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -1829,7 +1877,9 @@ export default function ReportIncidentIndex() {
             {uiState.isSubmitting ? (
               <ActivityIndicator color="#FFFFFF" />
             ) : (
-              <Text style={{ fontSize: 15, fontWeight: '600', color: '#FFFFFF' }}>Submit Report</Text>
+              <Text style={{ fontSize: 15, fontWeight: '600', color: '#FFFFFF' }}>
+                Submit Report
+              </Text>
             )}
           </TouchableOpacity>
         </View>
@@ -1842,13 +1892,34 @@ export default function ReportIncidentIndex() {
         animationType="slide"
         onRequestClose={() => updateUIState({ showDateTimeDialog: false })}>
         <View className="flex-1 justify-end" style={{ backgroundColor: colors.overlay }}>
-          <View style={{ backgroundColor: colors.background, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingBottom: 32 }}>
+          <View
+            style={{
+              backgroundColor: colors.background,
+              borderTopLeftRadius: 28,
+              borderTopRightRadius: 28,
+              paddingHorizontal: 20,
+              paddingBottom: 32,
+            }}>
             <View style={{ alignItems: 'center', paddingVertical: 12 }}>
-              <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
+              <View
+                style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }}
+              />
             </View>
 
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <Text style={{ fontSize: 22, fontWeight: 'bold', color: colors.text, letterSpacing: -0.3 }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 20,
+              }}>
+              <Text
+                style={{
+                  fontSize: 22,
+                  fontWeight: 'bold',
+                  color: colors.text,
+                  letterSpacing: -0.3,
+                }}>
                 Select Date & Time
               </Text>
               <TouchableOpacity
@@ -1863,14 +1934,32 @@ export default function ReportIncidentIndex() {
               <TouchableOpacity
                 onPress={handleUseCurrentDateTime}
                 activeOpacity={0.7}
-                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceVariant, borderRadius: 16, padding: 16 }}>
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: colors.surfaceVariant,
+                  borderRadius: 16,
+                  padding: 16,
+                }}>
                 <View
-                  style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: colors.primary + '18', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                  style={{
+                    width: 46,
+                    height: 46,
+                    borderRadius: 14,
+                    backgroundColor: colors.primary + '18',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 14,
+                  }}>
                   <Clock size={22} color={colors.primary} />
                 </View>
                 <View>
-                  <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>Use Current Date & Time</Text>
-                  <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>Auto-fill with right now</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
+                    Use Current Date & Time
+                  </Text>
+                  <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>
+                    Auto-fill with right now
+                  </Text>
                 </View>
               </TouchableOpacity>
 
@@ -1880,14 +1969,32 @@ export default function ReportIncidentIndex() {
                   setShowDatePicker(true);
                 }}
                 activeOpacity={0.7}
-                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceVariant, borderRadius: 16, padding: 16 }}>
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: colors.surfaceVariant,
+                  borderRadius: 16,
+                  padding: 16,
+                }}>
                 <View
-                  style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: colors.primary + '18', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                  style={{
+                    width: 46,
+                    height: 46,
+                    borderRadius: 14,
+                    backgroundColor: colors.primary + '18',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 14,
+                  }}>
                   <Calendar size={22} color={colors.primary} />
                 </View>
                 <View>
-                  <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>Select Date</Text>
-                  <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>Choose a specific date</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
+                    Select Date
+                  </Text>
+                  <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>
+                    Choose a specific date
+                  </Text>
                 </View>
               </TouchableOpacity>
 
@@ -1897,14 +2004,32 @@ export default function ReportIncidentIndex() {
                   setShowTimePicker(true);
                 }}
                 activeOpacity={0.7}
-                style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceVariant, borderRadius: 16, padding: 16 }}>
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  backgroundColor: colors.surfaceVariant,
+                  borderRadius: 16,
+                  padding: 16,
+                }}>
                 <View
-                  style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: colors.primary + '18', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                  style={{
+                    width: 46,
+                    height: 46,
+                    borderRadius: 14,
+                    backgroundColor: colors.primary + '18',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginRight: 14,
+                  }}>
                   <Clock size={22} color={colors.primary} />
                 </View>
                 <View>
-                  <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>Select Time</Text>
-                  <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>Choose a specific time</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
+                    Select Time
+                  </Text>
+                  <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>
+                    Choose a specific time
+                  </Text>
                 </View>
               </TouchableOpacity>
             </View>
@@ -1919,13 +2044,34 @@ export default function ReportIncidentIndex() {
         animationType="slide"
         onRequestClose={() => updateUIState({ showLocationDialog: false })}>
         <View className="flex-1 justify-end" style={{ backgroundColor: colors.overlay }}>
-          <View style={{ backgroundColor: colors.background, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingBottom: 32 }}>
+          <View
+            style={{
+              backgroundColor: colors.background,
+              borderTopLeftRadius: 28,
+              borderTopRightRadius: 28,
+              paddingHorizontal: 20,
+              paddingBottom: 32,
+            }}>
             <View style={{ alignItems: 'center', paddingVertical: 12 }}>
-              <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
+              <View
+                style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }}
+              />
             </View>
 
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <Text style={{ fontSize: 22, fontWeight: 'bold', color: colors.text, letterSpacing: -0.3 }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 20,
+              }}>
+              <Text
+                style={{
+                  fontSize: 22,
+                  fontWeight: 'bold',
+                  color: colors.text,
+                  letterSpacing: -0.3,
+                }}>
                 Set Location
               </Text>
               <TouchableOpacity
@@ -1944,12 +2090,33 @@ export default function ReportIncidentIndex() {
                     setShowAddressSearch(true);
                   }}
                   activeOpacity={0.7}
-                  style={{ flex: 1, alignItems: 'center', backgroundColor: colors.surfaceVariant, borderRadius: 16, paddingVertical: 20, paddingHorizontal: 10 }}>
+                  style={{
+                    flex: 1,
+                    alignItems: 'center',
+                    backgroundColor: colors.surfaceVariant,
+                    borderRadius: 16,
+                    paddingVertical: 20,
+                    paddingHorizontal: 10,
+                  }}>
                   <View
-                    style={{ width: 50, height: 50, borderRadius: 16, backgroundColor: colors.primary + '18', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+                    style={{
+                      width: 50,
+                      height: 50,
+                      borderRadius: 16,
+                      backgroundColor: colors.primary + '18',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: 10,
+                    }}>
                     <MapPin size={24} color={colors.primary} />
                   </View>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text, textAlign: 'center' }}>
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: '600',
+                      color: colors.text,
+                      textAlign: 'center',
+                    }}>
                     Search Location
                   </Text>
                 </TouchableOpacity>
@@ -1960,12 +2127,33 @@ export default function ReportIncidentIndex() {
                     openMapView();
                   }}
                   activeOpacity={0.7}
-                  style={{ flex: 1, alignItems: 'center', backgroundColor: colors.surfaceVariant, borderRadius: 16, paddingVertical: 20, paddingHorizontal: 10 }}>
+                  style={{
+                    flex: 1,
+                    alignItems: 'center',
+                    backgroundColor: colors.surfaceVariant,
+                    borderRadius: 16,
+                    paddingVertical: 20,
+                    paddingHorizontal: 10,
+                  }}>
                   <View
-                    style={{ width: 50, height: 50, borderRadius: 16, backgroundColor: colors.primary + '18', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+                    style={{
+                      width: 50,
+                      height: 50,
+                      borderRadius: 16,
+                      backgroundColor: colors.primary + '18',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: 10,
+                    }}>
                     <Navigation size={24} color={colors.primary} />
                   </View>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text, textAlign: 'center' }}>
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: '600',
+                      color: colors.text,
+                      textAlign: 'center',
+                    }}>
                     Select on Map
                   </Text>
                 </TouchableOpacity>
@@ -1973,12 +2161,33 @@ export default function ReportIncidentIndex() {
                 <TouchableOpacity
                   onPress={() => handleUseCurrentLocation()}
                   activeOpacity={0.7}
-                  style={{ flex: 1, alignItems: 'center', backgroundColor: colors.surfaceVariant, borderRadius: 16, paddingVertical: 20, paddingHorizontal: 10 }}>
+                  style={{
+                    flex: 1,
+                    alignItems: 'center',
+                    backgroundColor: colors.surfaceVariant,
+                    borderRadius: 16,
+                    paddingVertical: 20,
+                    paddingHorizontal: 10,
+                  }}>
                   <View
-                    style={{ width: 50, height: 50, borderRadius: 16, backgroundColor: colors.primary + '18', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+                    style={{
+                      width: 50,
+                      height: 50,
+                      borderRadius: 16,
+                      backgroundColor: colors.primary + '18',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginBottom: 10,
+                    }}>
                     <MapPin size={24} color={colors.primary} />
                   </View>
-                  <Text style={{ fontSize: 13, fontWeight: '600', color: colors.text, textAlign: 'center' }}>
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      fontWeight: '600',
+                      color: colors.text,
+                      textAlign: 'center',
+                    }}>
                     Use Current Location
                   </Text>
                 </TouchableOpacity>
@@ -2022,13 +2231,34 @@ export default function ReportIncidentIndex() {
           }
         }}>
         <View className="flex-1 justify-end" style={{ backgroundColor: colors.overlay }}>
-          <View style={{ backgroundColor: colors.background, borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 20, paddingBottom: 32 }}>
+          <View
+            style={{
+              backgroundColor: colors.background,
+              borderTopLeftRadius: 28,
+              borderTopRightRadius: 28,
+              paddingHorizontal: 20,
+              paddingBottom: 32,
+            }}>
             <View style={{ alignItems: 'center', paddingVertical: 12 }}>
-              <View style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }} />
+              <View
+                style={{ width: 40, height: 4, borderRadius: 2, backgroundColor: colors.border }}
+              />
             </View>
 
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <Text style={{ fontSize: 22, fontWeight: 'bold', color: colors.text, letterSpacing: -0.3 }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 20,
+              }}>
+              <Text
+                style={{
+                  fontSize: 22,
+                  fontWeight: 'bold',
+                  color: colors.text,
+                  letterSpacing: -0.3,
+                }}>
                 {uiState.isRecording ? 'Recording Audio' : 'Add Evidence'}
               </Text>
               {!uiState.isRecording && (
@@ -2043,10 +2273,25 @@ export default function ReportIncidentIndex() {
 
             {uiState.isRecording ? (
               <View style={{ alignItems: 'center', paddingVertical: 32 }}>
-                <View style={{ width: 96, height: 96, borderRadius: 48, backgroundColor: colors.error, alignItems: 'center', justifyContent: 'center', marginBottom: 16 }}>
+                <View
+                  style={{
+                    width: 96,
+                    height: 96,
+                    borderRadius: 48,
+                    backgroundColor: colors.error,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    marginBottom: 16,
+                  }}>
                   <Mic size={40} color="white" />
                 </View>
-                <Text style={{ fontSize: 28, fontWeight: 'bold', color: colors.error, marginBottom: 8 }}>
+                <Text
+                  style={{
+                    fontSize: 28,
+                    fontWeight: 'bold',
+                    color: colors.error,
+                    marginBottom: 8,
+                  }}>
                   <Text>{Math.floor(recordingDuration / 60)}</Text>
                   <Text>:</Text>
                   <Text>{(recordingDuration % 60).toString().padStart(2, '0')}</Text>
@@ -2057,8 +2302,16 @@ export default function ReportIncidentIndex() {
                 <TouchableOpacity
                   onPress={handleVoiceRecording}
                   activeOpacity={0.8}
-                  style={{ width: '100%', alignItems: 'center', borderRadius: 14, paddingVertical: 16, backgroundColor: colors.error }}>
-                  <Text style={{ fontSize: 16, fontWeight: '600', color: '#FFFFFF' }}>Stop Recording</Text>
+                  style={{
+                    width: '100%',
+                    alignItems: 'center',
+                    borderRadius: 14,
+                    paddingVertical: 16,
+                    backgroundColor: colors.error,
+                  }}>
+                  <Text style={{ fontSize: 16, fontWeight: '600', color: '#FFFFFF' }}>
+                    Stop Recording
+                  </Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -2066,14 +2319,32 @@ export default function ReportIncidentIndex() {
                 <TouchableOpacity
                   onPress={handleVoiceRecording}
                   activeOpacity={0.7}
-                  style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceVariant, borderRadius: 16, padding: 16 }}>
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: colors.surfaceVariant,
+                    borderRadius: 16,
+                    padding: 16,
+                  }}>
                   <View
-                    style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: colors.error + '18', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                    style={{
+                      width: 46,
+                      height: 46,
+                      borderRadius: 14,
+                      backgroundColor: colors.error + '18',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: 14,
+                    }}>
                     <Mic size={22} color={colors.error} />
                   </View>
                   <View>
-                    <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>Record Audio</Text>
-                    <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>Voice note or narration</Text>
+                    <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
+                      Record Audio
+                    </Text>
+                    <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>
+                      Voice note or narration
+                    </Text>
                   </View>
                 </TouchableOpacity>
 
@@ -2082,16 +2353,32 @@ export default function ReportIncidentIndex() {
                   activeOpacity={0.7}
                   disabled={isUploading}
                   style={{
-                    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceVariant, borderRadius: 16, padding: 16,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: colors.surfaceVariant,
+                    borderRadius: 16,
+                    padding: 16,
                     opacity: isUploading ? 0.6 : 1,
                   }}>
                   <View
-                    style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: colors.primary + '18', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                    style={{
+                      width: 46,
+                      height: 46,
+                      borderRadius: 14,
+                      backgroundColor: colors.primary + '18',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: 14,
+                    }}>
                     <Camera size={22} color={colors.primary} />
                   </View>
                   <View>
-                    <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>Take a Picture</Text>
-                    <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>Use your camera</Text>
+                    <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
+                      Take a Picture
+                    </Text>
+                    <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>
+                      Use your camera
+                    </Text>
                   </View>
                 </TouchableOpacity>
 
@@ -2100,16 +2387,32 @@ export default function ReportIncidentIndex() {
                   activeOpacity={0.7}
                   disabled={isUploading}
                   style={{
-                    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceVariant, borderRadius: 16, padding: 16,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: colors.surfaceVariant,
+                    borderRadius: 16,
+                    padding: 16,
                     opacity: isUploading ? 0.6 : 1,
                   }}>
                   <View
-                    style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: colors.primary + '18', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                    style={{
+                      width: 46,
+                      height: 46,
+                      borderRadius: 14,
+                      backgroundColor: colors.primary + '18',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: 14,
+                    }}>
                     <Upload size={22} color={colors.primary} />
                   </View>
                   <View>
-                    <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>Upload a Picture</Text>
-                    <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>From your gallery</Text>
+                    <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
+                      Upload a Picture
+                    </Text>
+                    <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>
+                      From your gallery
+                    </Text>
                   </View>
                 </TouchableOpacity>
 
@@ -2118,16 +2421,32 @@ export default function ReportIncidentIndex() {
                   activeOpacity={0.7}
                   disabled={isUploading}
                   style={{
-                    flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceVariant, borderRadius: 16, padding: 16,
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    backgroundColor: colors.surfaceVariant,
+                    borderRadius: 16,
+                    padding: 16,
                     opacity: isUploading ? 0.6 : 1,
                   }}>
                   <View
-                    style={{ width: 46, height: 46, borderRadius: 14, backgroundColor: (colors.success || '#10B981') + '18', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}>
+                    style={{
+                      width: 46,
+                      height: 46,
+                      borderRadius: 14,
+                      backgroundColor: (colors.success || '#10B981') + '18',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: 14,
+                    }}>
                     <FileText size={22} color={colors.success || '#10B981'} />
                   </View>
                   <View>
-                    <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>Upload a Document</Text>
-                    <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>PDF, Word, or text files</Text>
+                    <Text style={{ fontSize: 16, fontWeight: '600', color: colors.text }}>
+                      Upload a Document
+                    </Text>
+                    <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 2 }}>
+                      PDF, Word, or text files
+                    </Text>
                   </View>
                 </TouchableOpacity>
               </View>
@@ -2438,7 +2757,7 @@ export default function ReportIncidentIndex() {
         </View>
       </Modal>
 
-      <Modal visible={isUploading} transparent animationType="fade" onRequestClose={() => { }}>
+      <Modal visible={isUploading} transparent animationType="fade" onRequestClose={() => {}}>
         <TouchableWithoutFeedback>
           <View
             className="flex-1 items-center justify-center"

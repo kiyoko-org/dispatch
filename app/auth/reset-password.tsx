@@ -37,7 +37,7 @@ export default function ResetPassword() {
         [{ text: 'Go Back', onPress: () => router.push('/auth/login') }]
       );
     }
-  }, [access_token]);
+  }, [access_token, router]);
 
   function validatePassword(value: string) {
     setPassword(value);

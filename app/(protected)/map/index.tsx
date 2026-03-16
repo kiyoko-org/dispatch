@@ -16,15 +16,18 @@ import MapView, {
   PROVIDER_GOOGLE,
   Circle,
   Region,
-  Polyline,
   Polygon,
 } from 'react-native-maps';
-import { useRealtimeReports, useCategories } from '@kiyoko-org/dispatch-lib';
+import * as FileSystem from 'expo-file-system';
+import { Asset } from 'expo-asset';
 import type { Database } from '@kiyoko-org/dispatch-lib/database.types';
+import { useDispatchClient } from 'components/DispatchProvider';
 import HeaderWithSidebar from 'components/HeaderWithSidebar';
+import { useReportsStore } from 'contexts/ReportsContext';
 import DatePicker from 'components/DatePicker';
 import { useTheme } from 'components/ThemeContext';
 import Papa from 'papaparse';
+import crimesCsvAsset from '../../../assets/crimes.csv';
 import { dbscan, kMeans, gridBinning, regionAggregation, Point, Cluster } from 'lib/clustering';
 import { TUGUEGARAO_BOUNDARY } from 'lib/locations/tuguegarao-boundary';
 import {
@@ -46,7 +49,14 @@ import {
   Map as MapIcon,
 } from 'lucide-react-native';
 
-const { width, height: windowHeight } = Dimensions.get('window');
+const { width } = Dimensions.get('window');
+
+const INITIAL_REGION: Region = {
+  latitude: 17.6132,
+  longitude: 121.727,
+  latitudeDelta: 0.15,
+  longitudeDelta: 0.15,
+};
 
 interface CrimeData {
   municipal: string;
@@ -62,13 +72,6 @@ interface CrimeData {
 }
 
 type CrimeCategory = 'violent' | 'property' | 'drug' | 'traffic' | 'operation' | 'other';
-
-interface CrimeTypeConfig {
-  category: CrimeCategory;
-  color: string;
-  icon: string;
-  label: string;
-}
 
 type DispatchReport = Database['public']['Tables']['reports']['Row'];
 type DispatchCategory = Database['public']['Tables']['categories']['Row'];
@@ -107,15 +110,7 @@ export default function MapPage() {
   const lastInteractionRef = useRef<number>(0);
   const maxTransitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Calculate center of Tuguegarao City
-  const initialRegion = {
-    latitude: 17.6132,
-    longitude: 121.727,
-    latitudeDelta: 0.15,
-    longitudeDelta: 0.15,
-  };
-
-  const [mapRegion, setMapRegion] = useState<Region | null>(initialRegion);
+  const [mapRegion, setMapRegion] = useState<Region | null>(INITIAL_REGION);
   const [activeClusterTab, setActiveClusterTab] = useState<'all' | CrimeCategory>('all');
   const mapRef = useRef<MapView>(null);
   const clusteringTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -166,11 +161,10 @@ export default function MapPage() {
 
   // Show legend expanded/collapsed
   const [legendExpanded, setLegendExpanded] = useState(false);
-  const legendContentMaxHeight = Math.min(windowHeight * 0.5, 400);
 
   // Reports integration
-  const { reports } = useRealtimeReports();
-  const { categories } = useCategories();
+  const { reports } = useReportsStore();
+  const { categories } = useDispatchClient();
 
   const categoryMap = useMemo(() => {
     return categories.reduce((map, category) => {
@@ -185,41 +179,43 @@ export default function MapPage() {
       return [];
     }
 
-    return reports.map((report) => {
-      const category =
-        report.category_id !== null && report.category_id !== undefined
-          ? categoryMap.get(report.category_id)
-          : undefined;
+    return reports
+      .map((report) => {
+        const category =
+          report.category_id !== null && report.category_id !== undefined
+            ? categoryMap.get(report.category_id)
+            : undefined;
 
-      let subCategoryName: string | null = null;
-      const rawSubCategory = report.sub_category as unknown;
-      if (
-        category?.sub_categories &&
-        Array.isArray(category.sub_categories) &&
-        typeof rawSubCategory === 'number' &&
-        rawSubCategory >= 0
-      ) {
-        subCategoryName = category.sub_categories[rawSubCategory] ?? null;
-      } else if (typeof rawSubCategory === 'string' && rawSubCategory.length > 0) {
-        subCategoryName = rawSubCategory;
-      }
+        let subCategoryName: string | null = null;
+        const rawSubCategory = report.sub_category as unknown;
+        if (
+          category?.sub_categories &&
+          Array.isArray(category.sub_categories) &&
+          typeof rawSubCategory === 'number' &&
+          rawSubCategory >= 0
+        ) {
+          subCategoryName = category.sub_categories[rawSubCategory] ?? null;
+        } else if (typeof rawSubCategory === 'string' && rawSubCategory.length > 0) {
+          subCategoryName = rawSubCategory;
+        }
 
-      return {
-        ...report,
-        categoryName: category?.name ?? null,
-        subCategoryName,
-      };
-    }).filter((report) => {
-      // Filter out reports with invalid coordinates
-      return (
-        Number.isFinite(report.latitude) &&
-        Number.isFinite(report.longitude) &&
-        report.latitude !== 0 &&
-        report.longitude !== 0 &&
-        Math.abs(report.latitude) <= 90 &&
-        Math.abs(report.longitude) <= 180
-      );
-    });
+        return {
+          ...report,
+          categoryName: category?.name ?? null,
+          subCategoryName,
+        };
+      })
+      .filter((report) => {
+        // Filter out reports with invalid coordinates
+        return (
+          Number.isFinite(report.latitude) &&
+          Number.isFinite(report.longitude) &&
+          report.latitude !== 0 &&
+          report.longitude !== 0 &&
+          Math.abs(report.latitude) <= 90 &&
+          Math.abs(report.longitude) <= 180
+        );
+      });
   }, [reports, categoryMap]);
 
   const selectedReport = useMemo(() => {
@@ -330,16 +326,10 @@ export default function MapPage() {
 
   const loadCrimeData = async () => {
     try {
-      // Import CSV as text using require
-      const Asset = require('expo-asset').Asset;
-      const FileSystem = require('expo-file-system');
-
-      // Load the asset
-      const asset = Asset.fromModule(require('../../../assets/crimes.csv'));
+      const asset = Asset.fromModule(crimesCsvAsset);
       await asset.downloadAsync();
 
-      // Read the file content
-      const csvText = await FileSystem.readAsStringAsync(asset.localUri);
+      const csvText = await FileSystem.readAsStringAsync(asset.localUri ?? asset.uri);
 
       Papa.parse(csvText, {
         header: true,
@@ -720,7 +710,9 @@ export default function MapPage() {
 
       // Key by location only to cluster at same location
       const cellKey = (lat: number, lon: number) => {
-        const r = Math.floor((lat - mapRegion.latitude + mapRegion.latitudeDelta / 2) / cellSizeLat);
+        const r = Math.floor(
+          (lat - mapRegion.latitude + mapRegion.latitudeDelta / 2) / cellSizeLat
+        );
         const c = Math.floor(
           (lon - mapRegion.longitude + mapRegion.longitudeDelta / 2) / cellSizeLon
         );
@@ -800,8 +792,8 @@ export default function MapPage() {
 
   // Function to reset map to initial region
   const resetMapRegion = () => {
-    mapRef.current?.animateToRegion(initialRegion, 1000);
-    setMapRegion(initialRegion);
+    mapRef.current?.animateToRegion(INITIAL_REGION, 1000);
+    setMapRegion(INITIAL_REGION);
     setSelectedCrime(null);
     setSelectedCluster(null);
     setSelectedReportId(null);
@@ -836,7 +828,13 @@ export default function MapPage() {
       console.warn('Multiple states active, resetting to prevent conflicts');
       safeResetSelections();
     }
-  }, [selectedCrime, selectedCluster, selectedReportId, selectedReportCluster, safeResetSelections]);
+  }, [
+    selectedCrime,
+    selectedCluster,
+    selectedReportId,
+    selectedReportCluster,
+    safeResetSelections,
+  ]);
 
   // Validate state on changes
   useEffect(() => {
@@ -846,8 +844,7 @@ export default function MapPage() {
   // Kernel Density Estimation (KDE) - Using cluster centroids for alignment with markers
   // This ensures heatmap centers align with visible markers on the map
   const heatmapPoints = useMemo(() => {
-    // Use mapRegion if available, otherwise use initialRegion
-    const region = mapRegion || initialRegion;
+    const region = mapRegion ?? INITIAL_REGION;
 
     // If no crimes, return empty array (will be handled by conditional rendering)
     if (filteredCrimes.length === 0) return [];
@@ -868,7 +865,7 @@ export default function MapPage() {
       grid[key].push(crime);
     }
 
-    const weightedPoints: Array<{ latitude: number; longitude: number; weight: number }> = [];
+    const weightedPoints: { latitude: number; longitude: number; weight: number }[] = [];
 
     for (const key in grid) {
       const items = grid[key];
@@ -983,9 +980,9 @@ export default function MapPage() {
 
   // Get graduated symbol size
   const getGraduatedSize = (count: number): number => {
-    const maxCount = Math.max(...Object.values(barangayCrimeData).map((d) => d.count));
+    const maxCount = Math.max(...Object.values(barangayCrimeData).map((d) => d.count), 1);
     const ratio = count / maxCount;
-    return 20 + ratio * 80; // Size between 20 and 100
+    return 200 + ratio * 1000;
   };
 
   // Bubble visualization - K-Means or DBSCAN for incident grouping
@@ -1084,7 +1081,7 @@ export default function MapPage() {
             ref={mapRef}
             provider={PROVIDER_GOOGLE}
             style={styles.map}
-            initialRegion={initialRegion}
+            initialRegion={INITIAL_REGION}
             onRegionChangeComplete={(region) => {
               try {
                 setMapRegion(region);
@@ -1110,75 +1107,84 @@ export default function MapPage() {
             {/* Kernel Density Estimation (KDE) with cluster-based positioning
 						    Algorithm: Grid-based clustering + weighted KDE rendering
 						    Use Case: Hotspot detection, intensity visualization aligned with markers */}
-            {showHeatmap && heatmapType === 'density' && heatmapPoints.length > 0 && (() => {
-              const maxWeight = Math.max(...heatmapPoints.map(p => p.weight), 1);
+            {showHeatmap &&
+              heatmapType === 'density' &&
+              heatmapPoints.length > 0 &&
+              (() => {
+                const maxWeight = Math.max(...heatmapPoints.map((p) => p.weight), 1);
 
-              // When intensity filter is active, render circles with that specific color only
-              if (filterIntensity) {
-                const intensityColorMap: Record<string, string> = {
-                  'Very High': 'rgba(139, 0, 0, 0.7)',
-                  'High': 'rgba(255, 0, 0, 0.6)',
-                  'Medium': 'rgba(255, 165, 0, 0.55)',
-                  'Low-Med': 'rgba(255, 255, 0, 0.5)',
-                  'Low': 'rgba(0, 255, 0, 0.4)',
-                };
-                const intensityStrokeMap: Record<string, string> = {
-                  'Very High': 'rgba(139, 0, 0, 0.9)',
-                  'High': 'rgba(255, 0, 0, 0.8)',
-                  'Medium': 'rgba(255, 165, 0, 0.75)',
-                  'Low-Med': 'rgba(255, 255, 0, 0.7)',
-                  'Low': 'rgba(0, 255, 0, 0.6)',
-                };
-                const fillColor = intensityColorMap[filterIntensity] || 'rgba(255,0,0,0.5)';
-                const strokeColor = intensityStrokeMap[filterIntensity] || 'rgba(255,0,0,0.8)';
+                // When intensity filter is active, render circles with that specific color only
+                if (filterIntensity) {
+                  const intensityColorMap: Record<string, string> = {
+                    'Very High': 'rgba(139, 0, 0, 0.7)',
+                    High: 'rgba(255, 0, 0, 0.6)',
+                    Medium: 'rgba(255, 165, 0, 0.55)',
+                    'Low-Med': 'rgba(255, 255, 0, 0.5)',
+                    Low: 'rgba(0, 255, 0, 0.4)',
+                  };
+                  const intensityStrokeMap: Record<string, string> = {
+                    'Very High': 'rgba(139, 0, 0, 0.9)',
+                    High: 'rgba(255, 0, 0, 0.8)',
+                    Medium: 'rgba(255, 165, 0, 0.75)',
+                    'Low-Med': 'rgba(255, 255, 0, 0.7)',
+                    Low: 'rgba(0, 255, 0, 0.6)',
+                  };
+                  const fillColor = intensityColorMap[filterIntensity] || 'rgba(255,0,0,0.5)';
+                  const strokeColor = intensityStrokeMap[filterIntensity] || 'rgba(255,0,0,0.8)';
 
-                const filteredPoints = heatmapPoints.filter(p => {
-                  const ratio = p.weight / maxWeight;
-                  switch (filterIntensity) {
-                    case 'Very High': return ratio >= 0.9;
-                    case 'High': return ratio >= 0.65 && ratio < 0.9;
-                    case 'Medium': return ratio >= 0.4 && ratio < 0.65;
-                    case 'Low-Med': return ratio >= 0.2 && ratio < 0.4;
-                    case 'Low': return ratio < 0.2;
-                    default: return true;
-                  }
-                });
+                  const filteredPoints = heatmapPoints.filter((p) => {
+                    const ratio = p.weight / maxWeight;
+                    switch (filterIntensity) {
+                      case 'Very High':
+                        return ratio >= 0.9;
+                      case 'High':
+                        return ratio >= 0.65 && ratio < 0.9;
+                      case 'Medium':
+                        return ratio >= 0.4 && ratio < 0.65;
+                      case 'Low-Med':
+                        return ratio >= 0.2 && ratio < 0.4;
+                      case 'Low':
+                        return ratio < 0.2;
+                      default:
+                        return true;
+                    }
+                  });
 
-                return filteredPoints.map((point, idx) => (
-                  <Circle
-                    key={`density-filtered-${idx}`}
-                    center={{ latitude: point.latitude, longitude: point.longitude }}
-                    radius={300 + (point.weight / maxWeight) * 400}
-                    fillColor={fillColor}
-                    strokeColor={strokeColor}
-                    strokeWidth={1}
+                  return filteredPoints.map((point, idx) => (
+                    <Circle
+                      key={`density-filtered-${idx}`}
+                      center={{ latitude: point.latitude, longitude: point.longitude }}
+                      radius={300 + (point.weight / maxWeight) * 400}
+                      fillColor={fillColor}
+                      strokeColor={strokeColor}
+                      strokeWidth={1}
+                    />
+                  ));
+                }
+
+                // No filter: render the full gradient heatmap
+                return (
+                  <Heatmap
+                    points={heatmapPoints}
+                    opacity={0.7}
+                    radius={50}
+                    gradient={{
+                      colors: [
+                        'rgba(0, 255, 0, 0)', // Transparent green
+                        'rgba(0, 255, 0, 0.5)', // Light green
+                        'rgba(124, 252, 0, 0.7)', // Lawn green
+                        'rgba(255, 255, 0, 0.8)', // Yellow
+                        'rgba(255, 165, 0, 0.85)', // Orange
+                        'rgba(255, 69, 0, 0.9)', // Red-orange
+                        'rgba(255, 0, 0, 0.95)', // Red
+                        'rgba(139, 0, 0, 1)', // Dark red
+                      ],
+                      startPoints: [0, 0.15, 0.3, 0.5, 0.65, 0.8, 0.9, 1.0],
+                      colorMapSize: 512,
+                    }}
                   />
-                ));
-              }
-
-              // No filter: render the full gradient heatmap
-              return (
-                <Heatmap
-                  points={heatmapPoints}
-                  opacity={0.7}
-                  radius={50}
-                  gradient={{
-                    colors: [
-                      'rgba(0, 255, 0, 0)', // Transparent green
-                      'rgba(0, 255, 0, 0.5)', // Light green
-                      'rgba(124, 252, 0, 0.7)', // Lawn green
-                      'rgba(255, 255, 0, 0.8)', // Yellow
-                      'rgba(255, 165, 0, 0.85)', // Orange
-                      'rgba(255, 69, 0, 0.9)', // Red-orange
-                      'rgba(255, 0, 0, 0.95)', // Red
-                      'rgba(139, 0, 0, 1)', // Dark red
-                    ],
-                    startPoints: [0, 0.15, 0.3, 0.5, 0.65, 0.8, 0.9, 1.0],
-                    colorMapSize: 512,
-                  }}
-                />
-              );
-            })()}
+                );
+              })()}
 
             {/* Choropleth Map - Region-based Aggregation
 						    Algorithm: Region Aggregation by barangay/administrative boundaries
@@ -1229,7 +1235,7 @@ export default function MapPage() {
                     (filterIntensity === 'Fewest' && ratio < 0.3);
                   if (!matchesIntensity) return null;
                 }
-                const size = 200 + ratio * 1000;
+                const size = getGraduatedSize(data.count);
 
                 return (
                   <Circle
@@ -2365,7 +2371,14 @@ export default function MapPage() {
         {selectedCrime && !showFilters && !selectedCluster && !selectedReport && (
           <View
             className="absolute bottom-6 left-3 right-3 rounded-2xl p-4"
-            style={{ backgroundColor: colors.card, shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 6 }}>
+            style={{
+              backgroundColor: colors.card,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: -2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 8,
+              elevation: 6,
+            }}>
             <View className="mb-3 flex-row items-start justify-between">
               <View className="flex-1">
                 <View
@@ -2432,7 +2445,15 @@ export default function MapPage() {
           !selectedReportCluster && (
             <View
               className="absolute bottom-6 left-3 right-3 rounded-2xl p-4"
-              style={{ backgroundColor: colors.card, maxHeight: '70%', shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 6 }}>
+              style={{
+                backgroundColor: colors.card,
+                maxHeight: '70%',
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: -2 },
+                shadowOpacity: 0.1,
+                shadowRadius: 8,
+                elevation: 6,
+              }}>
               <View className="mb-3 flex-row items-start justify-between">
                 <View className="flex-1">
                   <View
@@ -2536,8 +2557,6 @@ export default function MapPage() {
                     </Text>
                   </View>
                 )}
-
-
               </ScrollView>
             </View>
           )}
@@ -2546,7 +2565,15 @@ export default function MapPage() {
         {selectedReportCluster && !showFilters && (
           <View
             className="absolute bottom-6 left-3 right-3 rounded-2xl p-4"
-            style={{ backgroundColor: colors.card, maxHeight: '70%', shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 6 }}>
+            style={{
+              backgroundColor: colors.card,
+              maxHeight: '70%',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: -2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 8,
+              elevation: 6,
+            }}>
             {/* Blocking overlay when clustering is in progress */}
             {isClusteringInProgress && (
               <View
@@ -2676,7 +2703,15 @@ export default function MapPage() {
         {selectedCluster && !showFilters && (
           <View
             className="absolute bottom-6 left-3 right-3 rounded-2xl p-4"
-            style={{ backgroundColor: colors.card, maxHeight: '70%', shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.1, shadowRadius: 8, elevation: 6 }}>
+            style={{
+              backgroundColor: colors.card,
+              maxHeight: '70%',
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: -2 },
+              shadowOpacity: 0.1,
+              shadowRadius: 8,
+              elevation: 6,
+            }}>
             <View className="mb-3 flex-row items-start justify-between">
               <View style={{ flex: 1, marginRight: 12 }}>
                 <Text className="text-base font-bold" style={{ color: colors.text }}>
@@ -2942,7 +2977,7 @@ export default function MapPage() {
               <Text className="text-sm font-bold" style={{ color: colors.primary }}>
                 {filteredCrimes.length}
               </Text>
-              <Text className="text-xs mx-1" style={{ color: colors.textSecondary }}>
+              <Text className="mx-1 text-xs" style={{ color: colors.textSecondary }}>
                 /
               </Text>
               <Text className="text-xs" style={{ color: colors.textSecondary }}>
@@ -2970,7 +3005,7 @@ export default function MapPage() {
                 <View className="flex-row items-center">
                   <Layers size={14} color={colors.textSecondary} />
                   <Text
-                    className="ml-1.5 text-xs font-semibold flex-1"
+                    className="ml-1.5 flex-1 text-xs font-semibold"
                     style={{ color: colors.text }}>
                     {heatmapType === 'density' && 'Density'}
                     {heatmapType === 'choropleth' && 'Choropleth'}
@@ -2978,7 +3013,7 @@ export default function MapPage() {
                     {heatmapType === 'grid' && 'Grid'}
                     {heatmapType === 'bubble' && 'Bubble'}
                   </Text>
-                  <Text className="text-xs ml-2" style={{ color: colors.textSecondary }}>
+                  <Text className="ml-2 text-xs" style={{ color: colors.textSecondary }}>
                     {legendExpanded ? '▾' : '▸'}
                   </Text>
                 </View>
@@ -3014,14 +3049,27 @@ export default function MapPage() {
                                   paddingVertical: 3,
                                   paddingHorizontal: 6,
                                   borderRadius: 6,
-                                  backgroundColor: isActive ? item.color.replace(/[\d.]+\)$/, '0.2)') : 'transparent',
+                                  backgroundColor: isActive
+                                    ? item.color.replace(/[\d.]+\)$/, '0.2)')
+                                    : 'transparent',
                                 }}
                                 activeOpacity={0.6}
                                 onPress={() => setFilterIntensity(isActive ? null : item.label)}>
                                 <View
-                                  style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: item.color, marginRight: 6 }}
+                                  style={{
+                                    width: 10,
+                                    height: 10,
+                                    borderRadius: 5,
+                                    backgroundColor: item.color,
+                                    marginRight: 6,
+                                  }}
                                 />
-                                <Text className="text-xs" style={{ color: colors.text, fontWeight: isActive ? '700' : '400' }}>
+                                <Text
+                                  className="text-xs"
+                                  style={{
+                                    color: colors.text,
+                                    fontWeight: isActive ? '700' : '400',
+                                  }}>
                                   {item.label}
                                 </Text>
                               </TouchableOpacity>
@@ -3046,14 +3094,27 @@ export default function MapPage() {
                                   paddingVertical: 3,
                                   paddingHorizontal: 6,
                                   borderRadius: 6,
-                                  backgroundColor: isActive ? item.color.replace(/[\d.]+\)$/, '0.2)') : 'transparent',
+                                  backgroundColor: isActive
+                                    ? item.color.replace(/[\d.]+\)$/, '0.2)')
+                                    : 'transparent',
                                 }}
                                 activeOpacity={0.6}
                                 onPress={() => setFilterIntensity(isActive ? null : item.label)}>
                                 <View
-                                  style={{ width: item.size, height: item.size, borderRadius: item.size / 2, backgroundColor: item.color, marginRight: 6 }}
+                                  style={{
+                                    width: item.size,
+                                    height: item.size,
+                                    borderRadius: item.size / 2,
+                                    backgroundColor: item.color,
+                                    marginRight: 6,
+                                  }}
                                 />
-                                <Text className="text-xs" style={{ color: colors.text, fontWeight: isActive ? '700' : '400' }}>
+                                <Text
+                                  className="text-xs"
+                                  style={{
+                                    color: colors.text,
+                                    fontWeight: isActive ? '700' : '400',
+                                  }}>
                                   {item.label}
                                 </Text>
                               </TouchableOpacity>
@@ -3078,19 +3139,29 @@ export default function MapPage() {
                                   paddingVertical: 3,
                                   paddingHorizontal: 6,
                                   borderRadius: 6,
-                                  backgroundColor: isActive ? 'rgba(220, 38, 38, 0.15)' : 'transparent',
+                                  backgroundColor: isActive
+                                    ? 'rgba(220, 38, 38, 0.15)'
+                                    : 'transparent',
                                 }}
                                 activeOpacity={0.6}
                                 onPress={() => setFilterIntensity(isActive ? null : item.label)}>
                                 <View
                                   style={{
-                                    width: item.size, height: item.size, borderRadius: item.size / 2,
+                                    width: item.size,
+                                    height: item.size,
+                                    borderRadius: item.size / 2,
                                     backgroundColor: 'rgba(220, 38, 38, 0.5)',
-                                    borderWidth: 1.5, borderColor: 'rgba(220, 38, 38, 0.9)',
+                                    borderWidth: 1.5,
+                                    borderColor: 'rgba(220, 38, 38, 0.9)',
                                     marginRight: 6,
                                   }}
                                 />
-                                <Text className="text-xs" style={{ color: colors.text, fontWeight: isActive ? '700' : '400' }}>
+                                <Text
+                                  className="text-xs"
+                                  style={{
+                                    color: colors.text,
+                                    fontWeight: isActive ? '700' : '400',
+                                  }}>
                                   {item.label}
                                 </Text>
                               </TouchableOpacity>
@@ -3116,14 +3187,27 @@ export default function MapPage() {
                                   paddingVertical: 3,
                                   paddingHorizontal: 6,
                                   borderRadius: 6,
-                                  backgroundColor: isActive ? item.color.replace(/[\d.]+\)$/, '0.2)') : 'transparent',
+                                  backgroundColor: isActive
+                                    ? item.color.replace(/[\d.]+\)$/, '0.2)')
+                                    : 'transparent',
                                 }}
                                 activeOpacity={0.6}
                                 onPress={() => setFilterIntensity(isActive ? null : item.label)}>
                                 <View
-                                  style={{ width: 14, height: 10, borderRadius: 2, backgroundColor: item.color, marginRight: 6 }}
+                                  style={{
+                                    width: 14,
+                                    height: 10,
+                                    borderRadius: 2,
+                                    backgroundColor: item.color,
+                                    marginRight: 6,
+                                  }}
                                 />
-                                <Text className="text-xs" style={{ color: colors.text, fontWeight: isActive ? '700' : '400' }}>
+                                <Text
+                                  className="text-xs"
+                                  style={{
+                                    color: colors.text,
+                                    fontWeight: isActive ? '700' : '400',
+                                  }}>
                                   {item.label}
                                 </Text>
                               </TouchableOpacity>
@@ -3156,9 +3240,20 @@ export default function MapPage() {
                                 activeOpacity={0.6}
                                 onPress={() => setFilterIntensity(isActive ? null : item.label)}>
                                 <View
-                                  style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: item.color, marginRight: 6 }}
+                                  style={{
+                                    width: 10,
+                                    height: 10,
+                                    borderRadius: 5,
+                                    backgroundColor: item.color,
+                                    marginRight: 6,
+                                  }}
                                 />
-                                <Text className="text-xs" style={{ color: colors.text, fontWeight: isActive ? '700' : '400' }}>
+                                <Text
+                                  className="text-xs"
+                                  style={{
+                                    color: colors.text,
+                                    fontWeight: isActive ? '700' : '400',
+                                  }}>
                                   {item.label}
                                 </Text>
                               </TouchableOpacity>
@@ -3178,12 +3273,32 @@ export default function MapPage() {
                         </Text>
                         <View style={{ gap: 2 }}>
                           {[
-                            { color: '#DC2626', label: 'Violent', category: 'violent' as CrimeCategory },
-                            { color: '#F59E0B', label: 'Property', category: 'property' as CrimeCategory },
+                            {
+                              color: '#DC2626',
+                              label: 'Violent',
+                              category: 'violent' as CrimeCategory,
+                            },
+                            {
+                              color: '#F59E0B',
+                              label: 'Property',
+                              category: 'property' as CrimeCategory,
+                            },
                             { color: '#7C3AED', label: 'Drug', category: 'drug' as CrimeCategory },
-                            { color: '#3B82F6', label: 'Traffic', category: 'traffic' as CrimeCategory },
-                            { color: '#10B981', label: 'Operations', category: 'operation' as CrimeCategory },
-                            { color: '#6B7280', label: 'Other', category: 'other' as CrimeCategory },
+                            {
+                              color: '#3B82F6',
+                              label: 'Traffic',
+                              category: 'traffic' as CrimeCategory,
+                            },
+                            {
+                              color: '#10B981',
+                              label: 'Operations',
+                              category: 'operation' as CrimeCategory,
+                            },
+                            {
+                              color: '#6B7280',
+                              label: 'Other',
+                              category: 'other' as CrimeCategory,
+                            },
                             { color: '#9333ea', label: 'Mixed', category: null },
                           ].map((item) => {
                             const isActive = item.category && filterCategory === item.category;
@@ -3203,9 +3318,20 @@ export default function MapPage() {
                                   setFilterCategory(isActive ? 'all' : item.category);
                                 }}>
                                 <View
-                                  style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: item.color, marginRight: 6 }}
+                                  style={{
+                                    width: 10,
+                                    height: 10,
+                                    borderRadius: 5,
+                                    backgroundColor: item.color,
+                                    marginRight: 6,
+                                  }}
                                 />
-                                <Text className="text-xs" style={{ color: isActive ? item.color : colors.text, fontWeight: isActive ? '700' : '400' }}>
+                                <Text
+                                  className="text-xs"
+                                  style={{
+                                    color: isActive ? item.color : colors.text,
+                                    fontWeight: isActive ? '700' : '400',
+                                  }}>
                                   {item.label}
                                 </Text>
                               </TouchableOpacity>
@@ -3229,9 +3355,21 @@ export default function MapPage() {
                         backgroundColor: showReports ? '#FF6B35' + '20' : 'transparent',
                       }}>
                       <View
-                        style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#FF6B35', marginRight: 6, opacity: showReports ? 1 : 0.4 }}
+                        style={{
+                          width: 10,
+                          height: 10,
+                          borderRadius: 5,
+                          backgroundColor: '#FF6B35',
+                          marginRight: 6,
+                          opacity: showReports ? 1 : 0.4,
+                        }}
                       />
-                      <Text className="text-xs" style={{ color: showReports ? '#FF6B35' : colors.textSecondary, fontWeight: showReports ? '700' : '400' }}>
+                      <Text
+                        className="text-xs"
+                        style={{
+                          color: showReports ? '#FF6B35' : colors.textSecondary,
+                          fontWeight: showReports ? '700' : '400',
+                        }}>
                         User Reports
                       </Text>
                     </TouchableOpacity>
@@ -3247,7 +3385,14 @@ export default function MapPage() {
           <View className="absolute bottom-4 left-0 right-0 flex-row justify-center">
             <TouchableOpacity
               className="flex-row items-center rounded-full px-5 py-3"
-              style={{ backgroundColor: colors.primary, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 6, elevation: 5 }}
+              style={{
+                backgroundColor: colors.primary,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 2 },
+                shadowOpacity: 0.2,
+                shadowRadius: 6,
+                elevation: 5,
+              }}
               onPress={() => router.push('/(protected)/report-incident')}>
               <AlertTriangle size={18} color="#FFF" />
               <Text className="ml-2 text-sm font-bold text-white">Report Incident</Text>
@@ -3263,8 +3408,17 @@ export default function MapPage() {
             pointerEvents="none">
             <View
               className="rounded-full px-4 py-2"
-              style={{ backgroundColor: colors.card, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 4, elevation: 3 }}>
-              <Text className="text-xs" style={{ color: colors.textSecondary }}>Updating...</Text>
+              style={{
+                backgroundColor: colors.card,
+                shadowColor: '#000',
+                shadowOffset: { width: 0, height: 1 },
+                shadowOpacity: 0.1,
+                shadowRadius: 4,
+                elevation: 3,
+              }}>
+              <Text className="text-xs" style={{ color: colors.textSecondary }}>
+                Updating...
+              </Text>
             </View>
           </View>
         )}
@@ -3283,7 +3437,7 @@ export default function MapPage() {
         initialDate={formatDateForPicker(filterEndDate)}
         onSelectDate={handleSelectEndDate}
       />
-    </View >
+    </View>
   );
 }
 

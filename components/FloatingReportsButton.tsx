@@ -1,23 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { View, TouchableOpacity, Modal, Text, ScrollView, StyleSheet } from 'react-native';
 import { FileText, X, Clock } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from './ThemeContext';
-import { useRealtimeReports } from 'hooks/useRealtimeReports';
+import { useReportsStore } from 'contexts/ReportsContext';
 
 export function FloatingReportsButton() {
   const { colors } = useTheme();
-  const { reports, loading } = useRealtimeReports();
+  const { currentUserReports, loading } = useReportsStore();
   const router = useRouter();
   const [modalVisible, setModalVisible] = useState(false);
 
-  // Initialize the realtime listener
-  useEffect(() => {
-    // The hook is called here to start listening for changes
-  }, []);
-
   const getStatusColor = (status: string) => {
-    switch (status?.toLowerCase()) {
+    switch (status.toLowerCase()) {
       case 'pending':
         return colors.warning || '#F59E0B';
       case 'in_progress':
@@ -43,24 +38,27 @@ export function FloatingReportsButton() {
     if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
     if (diffInHours < 24) return `${diffInHours}h ago`;
     if (diffInDays < 7) return `${diffInDays}d ago`;
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
   };
 
   return (
     <>
       <TouchableOpacity
         style={[styles.floatingButton, { backgroundColor: colors.primary }]}
-        onPress={() => setModalVisible(true)}
-      >
+        onPress={() => setModalVisible(true)}>
         <FileText size={24} color={colors.surface} />
       </TouchableOpacity>
 
       <Modal
         visible={modalVisible}
-        transparent={true}
+        transparent
         animationType="slide"
-        onRequestClose={() => setModalVisible(false)}
-      >
+        onRequestClose={() => setModalVisible(false)}>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
             <View style={styles.modalHeader}>
@@ -78,24 +76,31 @@ export function FloatingReportsButton() {
                     Loading your reports...
                   </Text>
                 </View>
-              ) : reports.length > 0 ? (
-                reports.map((report) => (
+              ) : currentUserReports.length > 0 ? (
+                currentUserReports.map((report) => (
                   <TouchableOpacity
                     key={report.id}
-                    style={[styles.reportItem, { borderColor: colors.border, backgroundColor: colors.card }]}
+                    style={[
+                      styles.reportItem,
+                      { borderColor: colors.border, backgroundColor: colors.card },
+                    ]}
                     onPress={() => {
                       setModalVisible(false);
                       router.push(`/cases/${report.id}`);
-                    }}
-                  >
+                    }}>
                     <View style={styles.reportContent}>
                       <Text style={[styles.reportTitle, { color: colors.text }]}>
                         {report.incident_title || 'Incident Report'}
                       </Text>
                       <View style={styles.reportMeta}>
-                        <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(report.status)}20` }]}>
-                          <Text style={[styles.statusText, { color: getStatusColor(report.status) }]}>
-                            {report.status?.replace('_', ' ') || 'Pending'}
+                        <View
+                          style={[
+                            styles.statusBadge,
+                            { backgroundColor: `${getStatusColor(report.status)}20` },
+                          ]}>
+                          <Text
+                            style={[styles.statusText, { color: getStatusColor(report.status) }]}>
+                            {report.status.replace('_', ' ')}
                           </Text>
                         </View>
                         <Text style={[styles.reportTime, { color: colors.textSecondary }]}>
@@ -116,8 +121,7 @@ export function FloatingReportsButton() {
                     onPress={() => {
                       setModalVisible(false);
                       router.push('/report-incident');
-                    }}
-                  >
+                    }}>
                     <Text style={[styles.createButtonText, { color: colors.surface }]}>
                       Create Report
                     </Text>

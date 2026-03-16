@@ -203,7 +203,7 @@ const signUpSchema = z
 		}
 	);
 
-const withTimeout = async<T>(
+const withTimeout = async <T,>(
 	promise: Promise<T>,
 	timeoutMs: number,
 	timeoutMessage: string
