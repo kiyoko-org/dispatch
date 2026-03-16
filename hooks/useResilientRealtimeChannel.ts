@@ -93,8 +93,6 @@ export function useResilientRealtimeChannel({
       nextChannel.subscribe((nextStatus) => {
         if (channelRef.current !== nextChannel) return;
 
-        console.log(`[${channelName}] Realtime subscription status: ${nextStatus}`);
-
         currentStatusRef.current = nextStatus;
         setStatus(nextStatus);
 

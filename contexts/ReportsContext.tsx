@@ -249,12 +249,6 @@ export function ReportsProvider({ children }: { children: React.ReactNode }) {
         table: 'reports',
       },
       (payload: RealtimePostgresChangesPayload<ReportRow>) => {
-        console.log('[reports-store] Realtime report change received', {
-          eventType: payload.eventType,
-          reportId: payload.eventType === 'DELETE' ? payload.old.id : payload.new.id,
-          status: payload.eventType === 'DELETE' ? payload.old.status : payload.new.status,
-        });
-
         switch (payload.eventType) {
           case 'INSERT': {
             handleInsert(payload.new as ReportRow);
