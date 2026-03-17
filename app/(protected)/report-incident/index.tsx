@@ -28,7 +28,10 @@ import { ReportData } from 'lib/types';
 import { useTheme } from 'components/ThemeContext';
 import { useDispatchClient } from 'components/DispatchProvider';
 import { useAuthContext } from 'components/AuthProvider';
-import { useReportsStore } from 'contexts/ReportsContext';
+import {
+  REPORT_SUBMISSION_TIMEOUT_ERROR,
+  useReportsStore,
+} from 'contexts/ReportsContext';
 import { distanceInMeters } from 'lib/locations';
 import { isWithinTuguegarao, TUGUEGARAO_BOUNDARY } from 'lib/locations/tuguegarao-boundary';
 import AppDialog from 'components/AppDialog';
@@ -1141,44 +1144,36 @@ export default function ReportIncidentIndex() {
     try {
       // Transform data to dispatch-lib schema
       const reportPayload = transformToDispatchLibSchema(formData, attachments);
-
-      // Create a timeout promise (60 seconds)
-      const timeoutPromise = new Promise((_, reject) => {
-        setTimeout(() => {
-          reject(new Error('TIMEOUT'));
-        }, 60000); // 60 seconds
-      });
-
-      // Race between the API call and timeout
-      const result = (await Promise.race([createReport(reportPayload), timeoutPromise])) as Awaited<
-        ReturnType<typeof createReport>
-      >;
+      const result = await createReport(reportPayload);
 
       if (result.error) {
-        throw new Error(result.error);
+        const isTimeout = result.error === REPORT_SUBMISSION_TIMEOUT_ERROR;
+
+        Alert.alert(
+          isTimeout ? 'Submission Timeout' : 'Submission Error',
+          isTimeout
+            ? `${result.error} Would you like to retry?`
+            : `There was an error submitting your report: ${result.error}. Please try again.`,
+          isTimeout
+            ? [
+                {
+                  text: 'Cancel',
+                  style: 'cancel',
+                },
+                {
+                  text: 'Retry',
+                  onPress: () => handleSubmitReport(),
+                },
+              ]
+            : [{ text: 'OK' }]
+        );
+        return;
       }
 
       setSuccessDialogVisible(true);
     } catch (error) {
       console.error('Report submission error:', error);
 
-      // Handle timeout specifically
-      if (error instanceof Error && error.message === 'TIMEOUT') {
-        updateUIState({ isSubmitting: false });
-        Alert.alert('Submission Timeout', 'Submitting took too long. Would you like to retry?', [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-          {
-            text: 'Retry',
-            onPress: () => handleSubmitReport(),
-          },
-        ]);
-        return;
-      }
-
-      // Handle other errors
       const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
       Alert.alert(
         'Submission Error',

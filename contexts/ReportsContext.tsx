@@ -42,6 +42,31 @@ type ReportsContextValue = {
 
 const ReportsContext = createContext<ReportsContextValue | undefined>(undefined);
 
+export const REPORT_SUBMISSION_TIMEOUT_MS = 30_000;
+export const REPORT_SUBMISSION_TIMEOUT_ERROR =
+  'Submitting your report timed out after 30 seconds. Please try again.';
+
+function getCreateReportErrorMessage(error: unknown, signal: AbortSignal) {
+  if (signal.aborted) {
+    return REPORT_SUBMISSION_TIMEOUT_ERROR;
+  }
+
+  if (error instanceof Error) {
+    return error.name === 'AbortError' ? REPORT_SUBMISSION_TIMEOUT_ERROR : error.message;
+  }
+
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'message' in error &&
+    typeof (error as { message: unknown }).message === 'string'
+  ) {
+    return (error as { message: string }).message;
+  }
+
+  return 'Failed to submit report';
+}
+
 function sortReportsByNewest(reports: ReportRow[]) {
   return [...reports].sort((left, right) => {
     const leftCreatedAt = new Date(left.created_at).getTime();
@@ -173,27 +198,54 @@ export function ReportsProvider({ children }: { children: React.ReactNode }) {
         };
       }
 
-      const { data, error: createError } = await supabase
-        .from('reports')
-        .insert(payload)
-        .select()
-        .single();
+      const abortController = new AbortController();
+      const timeoutId = setTimeout(() => {
+        abortController.abort();
+      }, REPORT_SUBMISSION_TIMEOUT_MS);
 
-      if (createError) {
-        setError(createError.message);
+      try {
+        const { data, error: createError } = await supabase
+          .from('reports')
+          .insert(payload)
+          .select()
+          .abortSignal(abortController.signal)
+          .single();
+
+        if (createError) {
+          const errorMessage = getCreateReportErrorMessage(createError, abortController.signal);
+          setError(errorMessage);
+          return {
+            data: null,
+            error: errorMessage,
+          };
+        }
+
+        if (!data) {
+          const errorMessage = 'Failed to submit report';
+          setError(errorMessage);
+          return {
+            data: null,
+            error: errorMessage,
+          };
+        }
+
+        upsertReport(data);
+        setError(null);
+
+        return {
+          data,
+          error: null,
+        };
+      } catch (createError) {
+        const errorMessage = getCreateReportErrorMessage(createError, abortController.signal);
+        setError(errorMessage);
         return {
           data: null,
-          error: createError.message,
+          error: errorMessage,
         };
+      } finally {
+        clearTimeout(timeoutId);
       }
-
-      upsertReport(data);
-      setError(null);
-
-      return {
-        data,
-        error: null,
-      };
     },
     [upsertReport, userId]
   );
