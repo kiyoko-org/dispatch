@@ -76,7 +76,7 @@ export default function HeaderWithSidebar({
   const [isActivityOpen, setIsActivityOpen] = useState(false);
   const [localNotifCount, setLocalNotifCount] = useState<number>(0);
 
-  const userName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || 'User';
+  const userName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || 'Resident';
 
   // Load local notification count
   useEffect(() => {
@@ -491,7 +491,7 @@ export default function HeaderWithSidebar({
             </View>
             <View className="ml-3">
               <Text className="text-sm font-medium" style={{ color: colors.text }}>
-                {userName || 'User'}
+                {userName || 'Resident'}
               </Text>
             </View>
           </View>

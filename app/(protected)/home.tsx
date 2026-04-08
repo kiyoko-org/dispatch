@@ -120,10 +120,12 @@ export default function Home() {
                 fontWeight: 'bold',
                 color: currentColors.headerText,
               }}>
-              Welcome back, {profile?.first_name ?? 'there'}
+              {profile?.first_name ? `Welcome back, ${profile.first_name}` : 'Welcome back!'}
             </Text>
             <Text style={{ fontSize: 16, color: currentColors.headerSubtext }}>
-              Your community safety dashboard
+              {profile?.first_name
+                ? 'Your community safety dashboard'
+                : 'Complete your profile to unlock all features'}
             </Text>
           </View>
         </View>

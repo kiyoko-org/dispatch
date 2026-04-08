@@ -48,7 +48,7 @@ export default function ProfilePage() {
   const accountSublabel = profile?.id_card_number
     ? `PCN: ${profile.id_card_number}`
     : [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') ||
-      (loading ? 'Loading your account...' : 'National ID information');
+      (loading ? 'Loading your account...' : 'Tap to complete profile');
 
   const menuSections: MenuSection[] = [
     {
