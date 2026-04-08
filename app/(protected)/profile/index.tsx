@@ -1,120 +1,50 @@
-import { useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  StatusBar,
-  Alert,
-  TextInput,
-} from 'react-native';
-import { User, LogOut, ChevronRight, Palette, Search, Info } from 'lucide-react-native';
-import { useRouter } from 'expo-router';
-import { useAuthContext } from 'components/AuthProvider';
-import { useTheme } from 'components/ThemeContext';
+import { View, Text, ScrollView, StatusBar, ActivityIndicator } from 'react-native';
+import { User, Mail, Calendar, CreditCard, MapPin, Cake } from 'lucide-react-native';
 import HeaderWithSidebar from 'components/HeaderWithSidebar';
+import { useTheme } from 'components/ThemeContext';
+import { useAuthContext } from 'components/AuthProvider';
 import { useCurrentProfile } from 'contexts/CurrentProfileContext';
-import { LogoutOverlay } from 'components/LogoutOverlay';
-
-type MenuSection = {
-  title: string;
-  items: MenuItem[];
-};
-
-type MenuItem = {
-  id: string;
-  label: string;
-  sublabel?: string;
-  icon: typeof User;
-  onPress: () => void;
-  showChevron?: boolean;
-  danger?: boolean;
-};
 
 export default function ProfilePage() {
-  const router = useRouter();
-  const { signOut, isLoggingOut } = useAuthContext();
-  const { colors, isDark, themeMode } = useTheme();
+  const { colors, isDark } = useTheme();
+  const { session } = useAuthContext();
   const { profile, loading } = useCurrentProfile();
-  const [searchQuery, setSearchQuery] = useState('');
 
-  const handleLogout = () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign Out', style: 'destructive', onPress: signOut },
-    ]);
+  const fullName = [profile?.first_name, profile?.middle_name, profile?.last_name, profile?.suffix]
+    .filter(Boolean)
+    .join(' ');
+
+  const placeOfBirth = [profile?.birth_city, profile?.birth_province].filter(Boolean).join(', ');
+
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+
+    if (Number.isNaN(date.getTime())) {
+      return 'N/A';
+    }
+
+    return date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
   };
 
-  const accountSublabel = profile?.id_card_number
-    ? `PCN: ${profile.id_card_number}`
-    : [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') ||
-      (loading ? 'Loading your account...' : 'Tap to complete profile');
-
-  const menuSections: MenuSection[] = [
-    {
-      title: '',
-      items: [
-        {
-          id: 'account',
-          label: 'Your account',
-          sublabel: accountSublabel,
-          icon: User,
-          onPress: () => router.push('/(protected)/profile/account'),
-          showChevron: true,
-        },
-      ],
-    },
-    {
-      title: 'Preferences',
-      items: [
-        {
-          id: 'appearance',
-          label: 'Appearance',
-          sublabel: `${themeMode.charAt(0).toUpperCase() + themeMode.slice(1)} theme`,
-          icon: Palette,
-          onPress: () => router.push('/(protected)/profile/appearance'),
-          showChevron: true,
-        },
-      ],
-    },
-    {
-      title: 'Support',
-      items: [
-        {
-          id: 'about',
-          label: 'About',
-          sublabel: 'App version and information',
-          icon: Info,
-          onPress: () => router.push('/(protected)/profile/about'),
-          showChevron: true,
-        },
-      ],
-    },
-    {
-      title: '',
-      items: [
-        {
-          id: 'logout',
-          label: 'Sign out',
-          icon: LogOut,
-          onPress: handleLogout,
-          showChevron: false,
-          danger: true,
-        },
-      ],
-    },
-  ];
-
-  const filteredSections = menuSections
-    .map((section) => ({
-      ...section,
-      items: section.items.filter(
-        (item) =>
-          item.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          item.sublabel?.toLowerCase().includes(searchQuery.toLowerCase())
-      ),
-    }))
-    .filter((section) => section.items.length > 0);
+  if (loading && !profile) {
+    return (
+      <View className="flex-1" style={{ backgroundColor: colors.background }}>
+        <StatusBar
+          barStyle={isDark ? 'light-content' : 'dark-content'}
+          backgroundColor={colors.background}
+        />
+        <HeaderWithSidebar title="Profile" showBackButton={false} />
+        <View className="flex-1 items-center justify-center">
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
@@ -122,119 +52,150 @@ export default function ProfilePage() {
         barStyle={isDark ? 'light-content' : 'dark-content'}
         backgroundColor={colors.background}
       />
-      <HeaderWithSidebar title="Settings" showBackButton={false} />
 
-      <View className="px-4 py-4" style={{ backgroundColor: colors.background }}>
-        <View
-          className="flex-row items-center rounded-2xl px-4 py-3"
-          style={{
-            backgroundColor: colors.surfaceVariant,
-            borderWidth: 1,
-            borderColor: colors.border,
-          }}>
-          <Search size={20} color={colors.textSecondary} />
-          <TextInput
-            placeholder="Search Settings"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            className="ml-3 flex-1 text-base"
-            style={{ color: colors.text }}
-            placeholderTextColor={colors.textSecondary}
-            maxLength={100}
-          />
-        </View>
-      </View>
+      <HeaderWithSidebar title="Profile" showBackButton={false} />
 
-      <ScrollView
-        className="flex-1"
-        showsVerticalScrollIndicator={false}
-        style={{ backgroundColor: colors.background }}>
-        {filteredSections.map((section, sectionIndex) => (
-          <View key={sectionIndex}>
-            {section.title ? (
-              <View className="px-6 pb-2 pt-6">
-                <Text
-                  className="text-sm font-semibold uppercase tracking-wide"
-                  style={{ color: colors.textSecondary }}>
-                  {section.title}
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+        <View className="px-6 py-6">
+          <Text
+            className="mb-4 text-sm font-semibold uppercase tracking-wide"
+            style={{ color: colors.textSecondary }}>
+            National ID Information
+          </Text>
+
+          <View
+            className="overflow-hidden rounded-2xl"
+            style={{
+              backgroundColor: colors.surface,
+              borderWidth: 1,
+              borderColor: colors.border,
+            }}>
+            <View className="px-4 py-4">
+              <View className="mb-2 flex-row items-center">
+                <CreditCard size={16} color={colors.textSecondary} />
+                <Text className="ml-2 text-xs font-medium" style={{ color: colors.textSecondary }}>
+                  ID CARD NUMBER (PCN)
                 </Text>
               </View>
-            ) : null}
+              <Text className="text-base font-medium" style={{ color: colors.text }}>
+                {profile?.id_card_number || 'N/A'}
+              </Text>
+            </View>
 
-            <View
-              className="mx-4 mb-4 overflow-hidden rounded-2xl"
-              style={{
-                backgroundColor: colors.surface,
-                borderWidth: 1,
-                borderColor: colors.border,
-              }}>
-              {section.items.map((item, itemIndex) => (
-                <View key={item.id}>
-                  <TouchableOpacity
-                    onPress={item.onPress}
-                    className="flex-row items-center px-4 py-4"
-                    style={{ backgroundColor: colors.surface }}
-                    activeOpacity={0.7}>
-                    <View
-                      className="mr-3 h-10 w-10 items-center justify-center rounded-full"
-                      style={{
-                        backgroundColor: item.danger ? colors.error + '20' : colors.surfaceVariant,
-                      }}>
-                      <item.icon size={20} color={item.danger ? colors.error : colors.text} />
-                    </View>
+            <View className="ml-4 h-px" style={{ backgroundColor: colors.border }} />
 
-                    <View className="flex-1">
-                      <Text
-                        className="text-base font-medium"
-                        style={{ color: item.danger ? colors.error : colors.text }}>
-                        {item.label}
-                      </Text>
-                      {item.sublabel ? (
-                        <Text
-                          className="mt-1 text-sm"
-                          style={{ color: colors.textSecondary }}
-                          numberOfLines={1}>
-                          {item.sublabel}
-                        </Text>
-                      ) : null}
-                    </View>
+            <View className="px-4 py-4">
+              <View className="mb-2 flex-row items-center">
+                <User size={16} color={colors.textSecondary} />
+                <Text className="ml-2 text-xs font-medium" style={{ color: colors.textSecondary }}>
+                  FULL NAME
+                </Text>
+              </View>
+              <Text className="text-base font-medium" style={{ color: colors.text }}>
+                {fullName || 'N/A'}
+              </Text>
+            </View>
 
-                    {item.showChevron ? (
-                      <ChevronRight size={20} color={colors.textSecondary} />
-                    ) : null}
-                  </TouchableOpacity>
+            <View className="ml-4 h-px" style={{ backgroundColor: colors.border }} />
 
-                  {itemIndex < section.items.length - 1 ? (
-                    <View
-                      className="ml-16"
-                      style={{
-                        height: 1,
-                        backgroundColor: colors.border,
-                      }}
-                    />
-                  ) : null}
-                </View>
-              ))}
+            <View className="px-4 py-4">
+              <View className="mb-2 flex-row items-center">
+                <Cake size={16} color={colors.textSecondary} />
+                <Text className="ml-2 text-xs font-medium" style={{ color: colors.textSecondary }}>
+                  DATE OF BIRTH
+                </Text>
+              </View>
+              <Text className="text-base" style={{ color: colors.text }}>
+                {formatDate(profile?.birth_date)}
+              </Text>
+            </View>
+
+            <View className="ml-4 h-px" style={{ backgroundColor: colors.border }} />
+
+            <View className="px-4 py-4">
+              <Text className="mb-2 text-xs font-medium" style={{ color: colors.textSecondary }}>
+                SEX
+              </Text>
+              <Text className="text-base" style={{ color: colors.text }}>
+                {profile?.sex || 'N/A'}
+              </Text>
+            </View>
+
+            <View className="ml-4 h-px" style={{ backgroundColor: colors.border }} />
+
+            <View className="px-4 py-4">
+              <View className="mb-2 flex-row items-center">
+                <MapPin size={16} color={colors.textSecondary} />
+                <Text className="ml-2 text-xs font-medium" style={{ color: colors.textSecondary }}>
+                  PLACE OF BIRTH
+                </Text>
+              </View>
+              <Text className="text-base" style={{ color: colors.text }}>
+                {placeOfBirth || 'N/A'}
+              </Text>
+            </View>
+
+            <View className="ml-4 h-px" style={{ backgroundColor: colors.border }} />
+
+            <View className="px-4 py-4">
+              <View className="mb-2 flex-row items-center">
+                <Mail size={16} color={colors.textSecondary} />
+                <Text className="ml-2 text-xs font-medium" style={{ color: colors.textSecondary }}>
+                  EMAIL
+                </Text>
+              </View>
+              <Text className="text-base" style={{ color: colors.text }}>
+                {session?.user?.email || 'N/A'}
+              </Text>
             </View>
           </View>
-        ))}
 
-        {filteredSections.length === 0 ? (
-          <View className="items-center px-6 py-12">
-            <Search size={48} color={colors.textSecondary} />
-            <Text className="mt-4 text-lg font-medium" style={{ color: colors.text }}>
-              No results found
-            </Text>
-            <Text className="mt-2 text-center text-sm" style={{ color: colors.textSecondary }}>
-              Try adjusting your search query
+          <View
+            className="mt-4 rounded-2xl p-4"
+            style={{
+              backgroundColor: colors.surfaceVariant,
+              borderWidth: 1,
+              borderColor: colors.border,
+            }}>
+            <Text className="text-sm" style={{ color: colors.textSecondary }}>
+              This information is sourced from your verified National ID and cannot be edited.
+              Contact support if you need to update your details.
             </Text>
           </View>
-        ) : null}
+        </View>
+
+        <View className="px-6 py-4">
+          <Text
+            className="mb-4 text-sm font-semibold uppercase tracking-wide"
+            style={{ color: colors.textSecondary }}>
+            Account Details
+          </Text>
+
+          <View
+            className="overflow-hidden rounded-2xl"
+            style={{
+              backgroundColor: colors.surface,
+              borderWidth: 1,
+              borderColor: colors.border,
+            }}>
+            <View className="px-4 py-4">
+              <View className="flex-row items-center">
+                <Calendar size={16} color={colors.textSecondary} />
+                <Text className="ml-2 text-sm" style={{ color: colors.textSecondary }}>
+                  Member since:{' '}
+                  <Text style={{ color: colors.text }}>
+                    {session?.user?.created_at
+                      ? new Date(session.user.created_at).toLocaleDateString()
+                      : 'N/A'}
+                  </Text>
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
 
         <View className="h-8" />
       </ScrollView>
-
-      <LogoutOverlay visible={isLoggingOut} />
     </View>
   );
 }
