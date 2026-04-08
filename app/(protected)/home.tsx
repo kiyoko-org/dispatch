@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, StatusBar } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StatusBar, Alert } from 'react-native';
 import { Shield, FileText, Zap, AlertTriangle, MapPin, Phone, Bell } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
@@ -89,6 +89,30 @@ export default function Home() {
     return <Splash />;
   }
 
+  const handleVerifiedAction = (route: string) => {
+    const isVerified =
+      profile?.is_verified === true ||
+      profile?.role === 'admin' ||
+      profile?.role === 'officer';
+
+    if (!isVerified) {
+      Alert.alert(
+        'Verification Required',
+        'You must verify your identity to access this feature. Please complete your profile and verify your account.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Go to Profile',
+            onPress: () => router.push('/(protected)/profile'),
+          },
+        ]
+      );
+      return;
+    }
+
+    router.push(route as any);
+  };
+
   return (
     <View style={{ flex: 1, backgroundColor: currentColors.background }}>
       <StatusBar
@@ -159,7 +183,7 @@ export default function Home() {
                 shadowOpacity: 0.1,
                 shadowRadius: 4,
               }}
-              onPress={() => router.push('/emergency')}>
+              onPress={() => handleVerifiedAction('/emergency')}>
               <View style={{ alignItems: 'center' }}>
                 <View
                   style={{
@@ -201,7 +225,7 @@ export default function Home() {
                 shadowOpacity: 0.1,
                 shadowRadius: 4,
               }}
-              onPress={() => router.push('/report-incident')}>
+              onPress={() => handleVerifiedAction('/report-incident')}>
               <View style={{ alignItems: 'center' }}>
                 <View
                   style={{
