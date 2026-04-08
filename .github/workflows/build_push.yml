@@ -43,9 +43,12 @@ jobs:
 
       - name: Get commit info for artifact name
         run: |
-           COMMIT_MESSAGE=$(git log -1 --pretty=%B | head -1 | tr ' ' '-' | tr '/' '-' | tr '\n' '-' | sed 's/^-*//;s/-*$//')
+           sanitize() {
+             echo "$1" | tr ' "<>*?|\\/' '-' | tr -s '-' | sed 's/^-*//;s/-*$//'
+           }
+           COMMIT_MESSAGE=$(git log -1 --pretty=%B | head -1 | sanitize)
            COMMIT_HASH=$(git rev-parse --short=8 HEAD)
-           BRANCH=${{ github.ref_name }}
+           BRANCH=$(sanitize "${{ github.ref_name }}")
            echo "ARTIFACT_NAME=${COMMIT_MESSAGE}-${COMMIT_HASH}-${BRANCH}" >> $GITHUB_ENV
 
       - name: Install dependencies
