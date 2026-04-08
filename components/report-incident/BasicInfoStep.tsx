@@ -125,6 +125,7 @@ export default function BasicInfoStep({
         className="mb-3 rounded-lg px-4 py-3"
         style={{ backgroundColor: colors.surface, borderColor: colors.border, borderWidth: 1, color: colors.text }}
         placeholderTextColor={colors.textSecondary}
+        maxLength={150}
         />
         {validationErrors.incident_title && (
         <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.incident_title}</Text>
@@ -151,6 +152,7 @@ export default function BasicInfoStep({
             }}
             placeholderTextColor={colors.textSecondary}
             textAlignVertical="top"
+            maxLength={2000}
           />
           {validationErrors.what_happened && (
             <Text className="mt-1 mb-3 text-sm text-red-600">{validationErrors.what_happened}</Text>

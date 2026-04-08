@@ -325,6 +325,7 @@ export default function Login() {
           placeholderTextColor={colors.textSecondary}
           keyboardType="email-address"
           autoCapitalize="none"
+          maxLength={254}
         />
 
         <View className="relative mb-2">
@@ -341,6 +342,7 @@ export default function Login() {
             onChangeText={setPassword}
             secureTextEntry={!showPassword}
             placeholderTextColor={colors.textSecondary}
+            maxLength={64}
           />
           <TouchableOpacity
             className="absolute right-4 top-1/2 -translate-y-1/2 transform"
@@ -430,6 +432,7 @@ export default function Login() {
                   value={helpName}
                   onChangeText={validateHelpName}
                   placeholderTextColor={colors.textSecondary}
+                  maxLength={50}
                 />
                 {helpNameError ? (
                   <Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
@@ -461,6 +464,7 @@ export default function Login() {
                   placeholderTextColor={colors.textSecondary}
                   keyboardType="email-address"
                   autoCapitalize="none"
+                  maxLength={254}
                 />
                 {helpEmailError ? (
                   <Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
@@ -490,6 +494,7 @@ export default function Login() {
                   value={helpSubject}
                   onChangeText={validateHelpSubject}
                   placeholderTextColor={colors.textSecondary}
+                  maxLength={100}
                 />
                 {helpSubjectError ? (
                   <Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
@@ -523,6 +528,7 @@ export default function Login() {
                   placeholderTextColor={colors.textSecondary}
                   multiline
                   numberOfLines={5}
+                  maxLength={1000}
                 />
                 {helpMessageError ? (
                   <Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
@@ -607,6 +613,7 @@ export default function Login() {
                 placeholderTextColor={colors.textSecondary}
                 keyboardType="email-address"
                 autoCapitalize="none"
+                maxLength={254}
               />
             </View>
 

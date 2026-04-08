@@ -140,6 +140,7 @@ export default function ProfilePage() {
             className="ml-3 flex-1 text-base"
             style={{ color: colors.text }}
             placeholderTextColor={colors.textSecondary}
+            maxLength={100}
           />
         </View>
       </View>
