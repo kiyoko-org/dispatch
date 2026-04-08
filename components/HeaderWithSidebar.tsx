@@ -12,6 +12,7 @@ import {
   LogOut,
   Bell,
   ChevronLeft,
+  Settings,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from './ThemeContext';
@@ -209,10 +210,10 @@ export default function HeaderWithSidebar({
       title: 'Settings & Logout',
       items: [
         {
-          id: 'profile',
+          id: 'settings',
           label: 'Settings',
-          icon: User,
-          route: '/(protected)/profile',
+          icon: Settings,
+          route: '/(protected)/settings',
         },
         {
           id: 'logout',
@@ -238,7 +239,7 @@ export default function HeaderWithSidebar({
 
       if (selectedItem) {
         if (selectedItem.route) {
-          router.push(selectedItem.route);
+          router.push(selectedItem.route as any);
         } else if (selectedItem.id === 'logout') {
           logoutPressed?.();
         }

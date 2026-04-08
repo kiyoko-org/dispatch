@@ -89,29 +89,6 @@ export default function Home() {
     return <Splash />;
   }
 
-  const handleVerifiedAction = (route: string) => {
-    const isVerified =
-      profile?.is_verified === true ||
-      profile?.role === 'admin' ||
-      profile?.role === 'officer';
-
-    if (!isVerified) {
-      Alert.alert(
-        'Verification Required',
-        'You must verify your identity to access this feature. Please complete your profile and verify your account.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Go to Profile',
-            onPress: () => router.push('/(protected)/profile'),
-          },
-        ]
-      );
-      return;
-    }
-
-    router.push(route as any);
-  };
 
   return (
     <View style={{ flex: 1, backgroundColor: currentColors.background }}>
@@ -183,7 +160,7 @@ export default function Home() {
                 shadowOpacity: 0.1,
                 shadowRadius: 4,
               }}
-              onPress={() => handleVerifiedAction('/emergency')}>
+              onPress={() => router.push('/emergency')}>
               <View style={{ alignItems: 'center' }}>
                 <View
                   style={{
@@ -225,7 +202,7 @@ export default function Home() {
                 shadowOpacity: 0.1,
                 shadowRadius: 4,
               }}
-              onPress={() => handleVerifiedAction('/report-incident')}>
+              onPress={() => router.push('/report-incident')}>
               <View style={{ alignItems: 'center' }}>
                 <View
                   style={{
