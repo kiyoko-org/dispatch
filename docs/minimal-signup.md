@@ -46,6 +46,23 @@ Add an `is_verified` column to the profiles table to track verification status.
 - Add UI indicators for incomplete profiles
 - Prompt users to complete profile when accessing restricted features
 
+## Progress Checklist
+
+### Done
+- [x] Simplified `app/auth/sign-up.tsx` to email/password/confirm password only
+- [x] Kept email verification flow
+- [x] Kept FCM token capture during signup
+- [x] Derived input `maxLength` from the Zod schema
+- [x] Removed `app/auth/sign-up-new.tsx`
+- [x] Merged the new signup page into the existing signup route
+
+### Still blocked
+- [ ] Sync the live `profiles` schema with the new trigger
+- [ ] Add `role` + `is_verified` to the live database if they are missing
+- [ ] Regenerate `dispatch-lib` types after the schema update
+- [ ] Build profile completion + verification flow
+- [ ] Add feature gates for unverified users
+
 ## Current State Analysis
 
 ### Database Schema
@@ -65,25 +82,37 @@ Add an `is_verified` column to the profiles table to track verification status.
 - `birth_province` (text)
 - `id_card_number` (text)
 - `fcm_token` (text)
+- ❌ **NO `role` field currently exists**
 - ❌ **NO `is_verified` field currently exists**
 
 ### Current Signup Flow
 File: `app/auth/sign-up.tsx`
-- Multi-step form (currently 1 main step with many fields)
-- Validates all personal information upfront
-- Uses Zod schema for validation
-- National ID QR verification (optional)
-- Creates user with extensive metadata
-- Sends email verification
+- [x] Minimal signup form is in place
+- [x] Email, password, and confirm password only
+- [x] National ID QR verification removed from signup
+- [x] Client-side password confirmation validation
+- [x] Signup uses `role` + `fcm_token` metadata only
+- [x] Email verification still redirects users to login
+- [x] Input `maxLength` comes from the Zod schema
+- [x] `app/auth/sign-up-new.tsx` removed from the working tree
+- [ ] Live DB trigger/schema sync still needed
 
 ### Database Trigger
 File: `supabase/migrations/20250818_profiles_schema.sql`
-The `handle_new_user()` trigger currently extracts the following from `raw_user_meta_data`:
+The original `handle_new_user()` trigger extracted the following from `raw_user_meta_data`:
 - `first_name`
 - `middle_name`
 - `last_name`
 - `avatar_url`
 - `id_card_number`
+
+The working-tree trigger in `supabase/functions/new_user.sql` now inserts:
+- `id`
+- `fcm_token`
+- `role`
+- `is_verified`
+
+That means the live `profiles` schema must include `role` and `is_verified`, or signup will fail with a 500.
 
 ## Implementation Todos
 
