@@ -109,6 +109,7 @@ const signUpSchema = z
 		permanentStreet: z
 			.string()
 			.trim()
+			.max(128, 'Street address must not exceed 128 characters')
 			.refine(
 				(val) => val === '' || !hasDangerousCharacters(val),
 				'Invalid characters detected. Please remove special characters like quotes, brackets, or semicolons'
@@ -146,6 +147,7 @@ const signUpSchema = z
 			.trim()
 			.min(1, 'Email is required')
 			.email('Please enter a valid email address')
+			.max(254, 'Email must not exceed 254 characters')
 			.refine(
 				(val) => !hasDangerousCharacters(val),
 				'Invalid characters detected. Please remove special characters like quotes, brackets, or semicolons'
@@ -770,6 +772,7 @@ const withTimeout = async <T,>(
 												}}
 												placeholder="Enter your first name"
 												placeholderTextColor={colors.textSecondary}
+												maxLength={20}
 											/>
 											{validationErrors.firstName && (
 												<Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
@@ -819,6 +822,7 @@ const withTimeout = async <T,>(
 												placeholder="Enter your middle name"
 												placeholderTextColor={colors.textSecondary}
 												editable={!noMiddleName && !isIdLocked}
+												maxLength={20}
 											/>
 											{validationErrors.middleName && !noMiddleName && (
 												<Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
@@ -888,6 +892,7 @@ const withTimeout = async <T,>(
 													}}
 													placeholder="Enter your last name"
 													placeholderTextColor={colors.textSecondary}
+													maxLength={20}
 												/>
 
 												{/* Suffix Dropdown */}
@@ -1217,6 +1222,7 @@ const withTimeout = async <T,>(
 													}
 												}}
 												placeholderTextColor={colors.textSecondary}
+												maxLength={128}
 											/>
 											{validationErrors.permanentStreet && (
 												<Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
@@ -1321,6 +1327,7 @@ const withTimeout = async <T,>(
 												placeholderTextColor={colors.textSecondary}
 												keyboardType="email-address"
 												autoCapitalize="none"
+												maxLength={254}
 											/>
 											{validationErrors.email && (
 												<Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
@@ -1363,6 +1370,7 @@ const withTimeout = async <T,>(
 													}}
 													secureTextEntry={!showPassword}
 													placeholderTextColor={colors.textSecondary}
+													maxLength={64}
 												/>
 												<TouchableOpacity
 													className="absolute right-4 top-1/2 -translate-y-1/2 transform"
