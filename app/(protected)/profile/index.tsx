@@ -5,7 +5,6 @@ import HeaderWithSidebar from 'components/HeaderWithSidebar';
 import { useTheme } from 'components/ThemeContext';
 import { useCurrentProfile } from 'contexts/CurrentProfileContext';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { verifyNationalIdQR } from 'lib/id-client';
 import { supabase } from 'lib/supabase';
 
 export default function ProfilePage() {
@@ -37,37 +36,29 @@ export default function ProfilePage() {
   const processQrValue = async (qrValue: string) => {
     try {
       setVerifyLoading(true);
-      const result = await verifyNationalIdQR(qrValue);
 
-      if (result.isVerified && result.data && profile) {
-        try {
-          // Additional layer: Check if the scanned QR belongs to the user
-          // For now, we will verify the user and save the PCN.
-          // In a real app we might also check if result.data.data.first_name matches profile?.first_name etc.
-          const { error } = await supabase
-            .from('profiles')
-            .update({ 
-               is_verified: true, 
-               id_card_number: result.data.data.pcn 
-            })
-            .eq('id', profile.id);
+      // We send the QR Value to the secure Supabase Edge Function
+      const { data, error } = await supabase.functions.invoke('verify-national-id', {
+        body: { qrData: qrValue },
+      });
 
-          if (error) {
-            Alert.alert('Verification failed', error.message || 'Failed to update profile verification status.');
-          } else {
-            Alert.alert('Success', 'Your account has been successfully verified!');
-            await refresh(); // Refresh the context so it updates UI
-          }
-        } catch (error) {
-          console.error('Database update error', error);
-          Alert.alert('Verification failed', 'An error occurred while linking verification info.');
-        }
-      } else {
+      if (error) {
+        console.error('Edge Function Verification Error:', error);
         Alert.alert('Verification failed', 'Unable to verify the scanned QR. Please make sure the QR belongs to a valid National ID.');
+      } else if (data && data.success) {
+        // Logging the debug info for parsing checks
+        console.warn("\n\n=== NATIONAL ID SCAN PARSED PAYLOAD ===");
+        console.log(JSON.stringify(data.debugData, null, 2));
+        console.warn("=======================================\n\n");
+
+        Alert.alert('Success', 'Your account has been securely verified!');
+        await refresh(); // Refresh the context so it updates UI
+      } else {
+        Alert.alert('Verification failed', data?.error || 'Invalid or fraudulent ID recognized.');
       }
     } catch (err) {
-      console.error('Verification error', err);
-      Alert.alert('Verification error', 'An error occurred while verifying. Please try again.');
+      console.error('Verification request error', err);
+      Alert.alert('Verification error', 'An error occurred while communicating with the server. Please try again.');
     } finally {
       setIsScanning(false);
       setVerifyLoading(false);
