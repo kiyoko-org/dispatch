@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import {
   View,
   StatusBar,
@@ -19,6 +19,7 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
+  WifiOff,
 } from 'lucide-react-native';
 import HeaderWithSidebar from 'components/HeaderWithSidebar';
 import { useTheme } from 'components/ThemeContext';
@@ -26,6 +27,7 @@ import { useUserData } from 'contexts/UserDataContext';
 import { useHotlines } from '@kiyoko-org/dispatch-lib';
 import { useRouter } from 'expo-router';
 import { HotlineGroup } from 'lib/services/user-data.service';
+import NetInfo from '@react-native-community/netinfo';
 
 type Hotline = {
   id: string;
@@ -49,6 +51,15 @@ export default function HotlinesPage() {
   } = useUserData();
 
   const { hotlines: serverHotlines, deleteHotline: deleteHotlineFromServer } = useHotlines();
+
+  const [isOffline, setIsOffline] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      setIsOffline(!state.isConnected || state.isInternetReachable === false);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const serverHotlinesMapped: Hotline[] = serverHotlines.map((h) => ({
     id: `server-${h.id}`,
@@ -313,6 +324,24 @@ export default function HotlinesPage() {
       />
 
       <HeaderWithSidebar title="Emergency Hotlines" showBackButton={false} showSyncIndicator />
+
+      {isOffline && (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: '#F59E0B' + '18',
+            paddingVertical: 10,
+            paddingHorizontal: 16,
+            gap: 8,
+          }}
+        >
+          <WifiOff size={16} color="#F59E0B" />
+          <Text style={{ fontSize: 13, color: '#92400E', flex: 1 }}>
+            You're offline. Showing locally saved hotlines only.
+          </Text>
+        </View>
+      )}
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
         {/* Action Buttons */}

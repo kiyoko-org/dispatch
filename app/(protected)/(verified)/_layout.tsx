@@ -1,56 +1,55 @@
 import { Stack, useRouter } from 'expo-router';
-import { useCurrentProfile } from 'contexts/CurrentProfileContext';
-import Splash from 'components/ui/Splash';
 import { useEffect, useState } from 'react';
 import { Alert } from 'react-native';
+import { useAuth } from 'hooks/useAuth';
+import { useGuest } from 'contexts/GuestContext';
+import Splash from 'components/ui/Splash';
 
 export default function VerifiedLayout() {
-  const { profile, loading } = useCurrentProfile();
+  const { session, isLoading } = useAuth();
+  const { isGuest, isLoadingGuest } = useGuest();
   const router = useRouter();
   const [alertShown, setAlertShown] = useState(false);
 
-  const isVerified =
-    profile?.is_verified === true ||
-    profile?.role === 'admin' ||
-    profile?.role === 'officer';
+  const loading = isLoading || isLoadingGuest;
+  const isAuthenticated = !!session;
 
   useEffect(() => {
-    if (!loading && !isVerified && !alertShown) {
+    if (!loading && !isAuthenticated && isGuest && !alertShown) {
       setAlertShown(true);
       Alert.alert(
-        'Verification Required',
-        'You must verify your identity to access this feature. Please complete your profile and verify your account.',
+        'Sign Up Required',
+        'Create an account to access this feature.',
         [
-          { 
-            text: 'Cancel', 
+          {
+            text: 'Cancel',
             style: 'cancel',
             onPress: () => {
-              if (router.canGoBack()) {
-                router.back();
-              } else {
-                router.replace('/home');
-              }
-            }
+              if (router.canGoBack()) router.back();
+              else router.replace('/(protected)/home');
+            },
           },
           {
-            text: 'Go to Profile',
-            onPress: () => router.replace('/(protected)/profile')
+            text: 'Sign Up',
+            onPress: () => router.push('/auth/sign-up'),
           },
         ],
         { cancelable: false }
       );
     }
-  }, [loading, isVerified, alertShown, router]);
+  }, [loading, isAuthenticated, isGuest, alertShown, router]);
 
-  if (loading || !isVerified) {
-    // Keep rendering the splash screen until the user makes a choice via the Alert
-    return <Splash />;
-  }
+  if (loading) return <Splash />;
+
+  // Guests should not reach here — redirect home
+  if (!isAuthenticated && isGuest) return <Splash />;
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="report-incident/index" />
-      <Stack.Screen name="emergency/index" />
+      <Stack.Screen name="cases/index" />
+      <Stack.Screen name="map/index" />
+      <Stack.Screen name="trust-score/index" />
     </Stack>
   );
 }

@@ -9,14 +9,18 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  Animated,
+  Dimensions,
 } from 'react-native';
-import { Eye, EyeOff, Lock, Mail, Shield } from 'lucide-react-native';
+import { Eye, EyeOff, Lock, Mail, Shield, CheckCircle2, XCircle } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from 'lib/supabase';
 import { registerForFCMToken } from 'hooks/useFCMToken';
 import { useTheme } from 'components/ThemeContext';
 import { z } from 'zod';
+
+const { width } = Dimensions.get('window');
 
 const signUpFieldsSchema = z.object({
   email: z
@@ -66,6 +70,27 @@ export default function SignUp() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+
+  // Animations
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+  const formFade = useRef(new Animated.Value(0)).current;
+  const formSlide = useRef(new Animated.Value(20)).current;
+  const shieldScale = useRef(new Animated.Value(0.6)).current;
+
+  useEffect(() => {
+    Animated.sequence([
+      Animated.parallel([
+        Animated.spring(shieldScale, { toValue: 1, tension: 60, friction: 8, useNativeDriver: true }),
+        Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
+      ]),
+      Animated.parallel([
+        Animated.timing(formFade, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.timing(formSlide, { toValue: 0, duration: 400, useNativeDriver: true }),
+      ]),
+    ]).start();
+  }, []);
 
   const setFieldError = (fieldName: SignUpField, message?: string) => {
     setValidationErrors((currentErrors) => {
@@ -187,9 +212,49 @@ export default function SignUp() {
     }
   }
 
+  // Password strength checks
+  const passwordChecks = [
+    { label: '8+ characters', met: password.length >= 8 },
+    { label: 'Uppercase letter', met: /[A-Z]/.test(password) },
+    { label: 'Lowercase letter', met: /[a-z]/.test(password) },
+    { label: 'Number', met: /[0-9]/.test(password) },
+    { label: 'Special character', met: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password) },
+  ];
+  const strengthMet = passwordChecks.filter((c) => c.met).length;
+
+  // Shared input container style
+  const getInputStyle = (hasError: boolean) => ({
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    backgroundColor: colors.surface,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: hasError ? colors.error : colors.border,
+    paddingHorizontal: 16,
+    height: 56,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: isDark ? 0.2 : 0.04,
+    shadowRadius: 4,
+    elevation: 2,
+  });
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+
+      {/* Decorative orb */}
+      <View
+        style={{
+          position: 'absolute',
+          top: -width * 0.3,
+          left: -width * 0.2,
+          width: width * 0.8,
+          height: width * 0.8,
+          borderRadius: width * 0.4,
+          backgroundColor: colors.primary + '08',
+        }}
+      />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -199,205 +264,326 @@ export default function SignUp() {
             flexGrow: 1,
             justifyContent: 'center',
             paddingHorizontal: 24,
-            paddingVertical: 32,
+            paddingVertical: 40,
           }}
-          keyboardShouldPersistTaps="handled">
-          <View style={{ alignItems: 'center', marginBottom: 48 }}>
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
+          {/* Header */}
+          <Animated.View
+            style={{
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }, { scale: shieldScale }],
+              alignItems: 'center',
+              marginBottom: 12,
+            }}
+          >
             <View
               style={{
-                width: 80,
-                height: 80,
-                borderRadius: 40,
-                backgroundColor: colors.primary + '20',
+                width: 64,
+                height: 64,
+                borderRadius: 32,
+                backgroundColor: colors.primary + '15',
                 justifyContent: 'center',
                 alignItems: 'center',
-                marginBottom: 16,
-              }}>
-              <Shield size={40} color={colors.primary} />
+                marginBottom: 20,
+              }}
+            >
+              <View
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                  backgroundColor: colors.primary,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  shadowColor: colors.primary,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 12,
+                  elevation: 8,
+                }}
+              >
+                <Shield size={24} color="#FFFFFF" strokeWidth={2.5} />
+              </View>
             </View>
+          </Animated.View>
+
+          <Animated.View
+            style={{
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+              alignItems: 'center',
+              marginBottom: 36,
+            }}
+          >
             <Text
               style={{
-                fontSize: 32,
-                fontWeight: 'bold',
+                fontSize: 28,
+                fontWeight: '800',
                 color: colors.text,
-                marginBottom: 8,
+                marginBottom: 6,
               }}>
               Create Account
             </Text>
             <Text
               style={{
-                fontSize: 16,
+                fontSize: 15,
                 color: colors.textSecondary,
                 textAlign: 'center',
               }}>
-              Sign up to get started with Dispatch
+              Join Dispatch to protect your community
             </Text>
-          </View>
+          </Animated.View>
 
-          <View style={{ marginBottom: 20 }}>
-            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: 8 }}>
-              Email Address
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: colors.card,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: validationErrors.email ? colors.error : colors.border,
-                paddingHorizontal: 16,
-                height: 56,
-              }}>
-              <Mail size={20} color={colors.textSecondary} style={{ marginRight: 12 }} />
-              <TextInput
-                value={email}
-                onChangeText={(text) => {
-                  setEmail(text);
-                  validateField('email', text);
-                }}
-                placeholder="Enter your email"
-                placeholderTextColor={colors.textSecondary}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                maxLength={emailMaxLength}
-                style={{ flex: 1, fontSize: 16, color: colors.text }}
-                editable={!loading}
-              />
-            </View>
-            {validationErrors.email && (
-              <Text style={{ color: colors.error, fontSize: 12, marginTop: 4 }}>
-                {validationErrors.email}
-              </Text>
-            )}
-          </View>
-
-          <View style={{ marginBottom: 20 }}>
-            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: 8 }}>
-              Password
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: colors.card,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: validationErrors.password ? colors.error : colors.border,
-                paddingHorizontal: 16,
-                height: 56,
-              }}>
-              <Lock size={20} color={colors.textSecondary} style={{ marginRight: 12 }} />
-              <TextInput
-                value={password}
-                onChangeText={(text) => {
-                  setPassword(text);
-                  validateField('password', text);
-                  validateConfirmPassword(text, confirmPassword);
-                }}
-                placeholder="Create a password"
-                placeholderTextColor={colors.textSecondary}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                autoCorrect={false}
-                maxLength={passwordMaxLength}
-                style={{ flex: 1, fontSize: 16, color: colors.text }}
-                editable={!loading}
-              />
-              <TouchableOpacity onPress={() => setShowPassword((currentValue) => !currentValue)}>
-                {showPassword ? (
-                  <EyeOff size={20} color={colors.textSecondary} />
-                ) : (
-                  <Eye size={20} color={colors.textSecondary} />
-                )}
-              </TouchableOpacity>
-            </View>
-            {validationErrors.password && (
-              <Text style={{ color: colors.error, fontSize: 12, marginTop: 4 }}>
-                {validationErrors.password}
-              </Text>
-            )}
-            <Text style={{ color: colors.textSecondary, fontSize: 12, marginTop: 4 }}>
-              Must be 8+ characters with uppercase, lowercase, number, and special character
-            </Text>
-          </View>
-
-          <View style={{ marginBottom: 32 }}>
-            <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: 8 }}>
-              Confirm Password
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                backgroundColor: colors.card,
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: validationErrors.confirmPassword ? colors.error : colors.border,
-                paddingHorizontal: 16,
-                height: 56,
-              }}>
-              <Lock size={20} color={colors.textSecondary} style={{ marginRight: 12 }} />
-              <TextInput
-                value={confirmPassword}
-                onChangeText={(text) => {
-                  setConfirmPassword(text);
-                  validateConfirmPassword(password, text);
-                }}
-                placeholder="Confirm your password"
-                placeholderTextColor={colors.textSecondary}
-                secureTextEntry={!showConfirmPassword}
-                autoCapitalize="none"
-                autoCorrect={false}
-                maxLength={confirmPasswordMaxLength}
-                style={{ flex: 1, fontSize: 16, color: colors.text }}
-                editable={!loading}
-              />
-              <TouchableOpacity
-                onPress={() => setShowConfirmPassword((currentValue) => !currentValue)}>
-                {showConfirmPassword ? (
-                  <EyeOff size={20} color={colors.textSecondary} />
-                ) : (
-                  <Eye size={20} color={colors.textSecondary} />
-                )}
-              </TouchableOpacity>
-            </View>
-            {validationErrors.confirmPassword && (
-              <Text style={{ color: colors.error, fontSize: 12, marginTop: 4 }}>
-                {validationErrors.confirmPassword}
-              </Text>
-            )}
-          </View>
-
-          <TouchableOpacity
-            onPress={signUpWithEmail}
-            disabled={loading}
+          {/* Form */}
+          <Animated.View
             style={{
-              backgroundColor: loading ? colors.textSecondary : colors.primary,
-              borderRadius: 12,
-              height: 56,
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginBottom: 16,
-            }}>
-            {loading ? (
-              <ActivityIndicator color={colors.background} />
-            ) : (
-              <Text style={{ color: colors.background, fontSize: 16, fontWeight: '600' }}>
-                Sign Up
+              opacity: formFade,
+              transform: [{ translateY: formSlide }],
+            }}
+          >
+            {/* Email */}
+            <View style={{ marginBottom: 20 }}>
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontWeight: '600',
+                  color: colors.textSecondary,
+                  marginBottom: 8,
+                  marginLeft: 4,
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.8,
+                }}
+              >
+                Email Address
               </Text>
-            )}
-          </TouchableOpacity>
+              <View style={getInputStyle(!!validationErrors.email)}>
+                <Mail size={18} color={colors.textSecondary} style={{ marginRight: 12 }} />
+                <TextInput
+                  value={email}
+                  onChangeText={(text) => {
+                    setEmail(text);
+                    validateField('email', text);
+                  }}
+                  placeholder="Enter your email"
+                  placeholderTextColor={colors.textSecondary + '80'}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  maxLength={emailMaxLength}
+                  style={{ flex: 1, fontSize: 16, color: colors.text }}
+                  editable={!loading}
+                />
+              </View>
+              {validationErrors.email && (
+                <Text style={{ color: colors.error, fontSize: 12, marginTop: 6, marginLeft: 4 }}>
+                  {validationErrors.email}
+                </Text>
+              )}
+            </View>
 
-          <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
-            <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
-              Already have an account?{' '}
-            </Text>
-            <TouchableOpacity onPress={() => router.replace('/auth/login')} disabled={loading}>
-              <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '600' }}>Log In</Text>
+            {/* Password */}
+            <View style={{ marginBottom: 20 }}>
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontWeight: '600',
+                  color: colors.textSecondary,
+                  marginBottom: 8,
+                  marginLeft: 4,
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.8,
+                }}
+              >
+                Password
+              </Text>
+              <View style={getInputStyle(!!validationErrors.password)}>
+                <Lock size={18} color={colors.textSecondary} style={{ marginRight: 12 }} />
+                <TextInput
+                  value={password}
+                  onChangeText={(text) => {
+                    setPassword(text);
+                    validateField('password', text);
+                    validateConfirmPassword(text, confirmPassword);
+                  }}
+                  placeholder="Create a password"
+                  placeholderTextColor={colors.textSecondary + '80'}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  maxLength={passwordMaxLength}
+                  style={{ flex: 1, fontSize: 16, color: colors.text }}
+                  editable={!loading}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword((v) => !v)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  {showPassword ? (
+                    <EyeOff size={20} color={colors.textSecondary} />
+                  ) : (
+                    <Eye size={20} color={colors.textSecondary} />
+                  )}
+                </TouchableOpacity>
+              </View>
+              {validationErrors.password && (
+                <Text style={{ color: colors.error, fontSize: 12, marginTop: 6, marginLeft: 4 }}>
+                  {validationErrors.password}
+                </Text>
+              )}
+
+              {/* Password Strength Indicators */}
+              {password.length > 0 && (
+                <View style={{ marginTop: 12, marginLeft: 4 }}>
+                  {/* Strength Bar */}
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      gap: 4,
+                      marginBottom: 10,
+                    }}
+                  >
+                    {[1, 2, 3, 4, 5].map((i) => (
+                      <View
+                        key={i}
+                        style={{
+                          flex: 1,
+                          height: 3,
+                          borderRadius: 1.5,
+                          backgroundColor:
+                            i <= strengthMet
+                              ? strengthMet <= 2
+                                ? colors.error
+                                : strengthMet <= 4
+                                ? colors.warning
+                                : colors.success
+                              : colors.border,
+                        }}
+                      />
+                    ))}
+                  </View>
+                  {/* Requirement checks */}
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                    {passwordChecks.map(({ label, met }) => (
+                      <View
+                        key={label}
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          paddingHorizontal: 8,
+                          paddingVertical: 4,
+                          borderRadius: 8,
+                          backgroundColor: met ? colors.success + '12' : colors.surfaceVariant,
+                        }}
+                      >
+                        {met ? (
+                          <CheckCircle2 size={12} color={colors.success} style={{ marginRight: 4 }} />
+                        ) : (
+                          <XCircle size={12} color={colors.textSecondary} style={{ marginRight: 4 }} />
+                        )}
+                        <Text
+                          style={{
+                            fontSize: 11,
+                            fontWeight: '500',
+                            color: met ? colors.success : colors.textSecondary,
+                          }}
+                        >
+                          {label}
+                        </Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+            </View>
+
+            {/* Confirm Password */}
+            <View style={{ marginBottom: 32 }}>
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontWeight: '600',
+                  color: colors.textSecondary,
+                  marginBottom: 8,
+                  marginLeft: 4,
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.8,
+                }}
+              >
+                Confirm Password
+              </Text>
+              <View style={getInputStyle(!!validationErrors.confirmPassword)}>
+                <Lock size={18} color={colors.textSecondary} style={{ marginRight: 12 }} />
+                <TextInput
+                  value={confirmPassword}
+                  onChangeText={(text) => {
+                    setConfirmPassword(text);
+                    validateConfirmPassword(password, text);
+                  }}
+                  placeholder="Re-enter your password"
+                  placeholderTextColor={colors.textSecondary + '80'}
+                  secureTextEntry={!showConfirmPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  maxLength={confirmPasswordMaxLength}
+                  style={{ flex: 1, fontSize: 16, color: colors.text }}
+                  editable={!loading}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowConfirmPassword((v) => !v)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff size={20} color={colors.textSecondary} />
+                  ) : (
+                    <Eye size={20} color={colors.textSecondary} />
+                  )}
+                </TouchableOpacity>
+              </View>
+              {validationErrors.confirmPassword && (
+                <Text style={{ color: colors.error, fontSize: 12, marginTop: 6, marginLeft: 4 }}>
+                  {validationErrors.confirmPassword}
+                </Text>
+              )}
+            </View>
+
+            {/* Sign Up Button */}
+            <TouchableOpacity
+              onPress={signUpWithEmail}
+              disabled={loading}
+              activeOpacity={0.85}
+              style={{
+                backgroundColor: loading ? colors.textSecondary : colors.primary,
+                borderRadius: 14,
+                height: 56,
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginBottom: 20,
+                shadowColor: colors.primary,
+                shadowOffset: { width: 0, height: 6 },
+                shadowOpacity: loading ? 0 : 0.3,
+                shadowRadius: 14,
+                elevation: loading ? 0 : 8,
+              }}>
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700', letterSpacing: 0.5 }}>
+                  Create Account
+                </Text>
+              )}
             </TouchableOpacity>
-          </View>
+
+            {/* Login Link */}
+            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 14 }}>
+                Already have an account?{' '}
+              </Text>
+              <TouchableOpacity onPress={() => router.replace('/auth/login')} disabled={loading}>
+                <Text style={{ color: colors.primary, fontSize: 14, fontWeight: '700' }}>Log In</Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>

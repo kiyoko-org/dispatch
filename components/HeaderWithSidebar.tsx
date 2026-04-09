@@ -13,11 +13,13 @@ import {
   Bell,
   ChevronLeft,
   Settings,
+  Lock,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from './ThemeContext';
 import { useAuthContext } from './AuthProvider';
 import { useCurrentProfile } from 'contexts/CurrentProfileContext';
+import { useGuest } from 'contexts/GuestContext';
 import { SyncIndicator } from './SyncIndicator';
 import { useNotifications } from '@kiyoko-org/dispatch-lib';
 import NotificationSidebar from './NotificationSidebar';
@@ -44,6 +46,8 @@ interface HeaderWithSidebarProps {
   showSyncIndicator?: boolean;
   showNotificationBell?: boolean;
   rightActions?: ReactNode;
+  headerBgColor?: string;
+  headerTextColor?: string;
 }
 
 export default function HeaderWithSidebar({
@@ -58,11 +62,14 @@ export default function HeaderWithSidebar({
   showSyncIndicator = false,
   showNotificationBell = false,
   rightActions,
+  headerBgColor,
+  headerTextColor,
 }: HeaderWithSidebarProps) {
   const router = useRouter();
   const { colors } = useTheme();
-  const { session } = useAuthContext();
+  const { session, signOut } = useAuthContext();
   const { profile } = useCurrentProfile();
+  const { isGuest, guestName, clearGuest } = useGuest();
   const { notifications, loading: notificationsLoading, deleteNotification } = useNotifications();
 
   const userNotifications = notifications
@@ -159,10 +166,18 @@ export default function HeaderWithSidebar({
       title: 'Dashboard',
       items: [
         {
+          id: 'profile',
+          label: 'Profile',
+          icon: User,
+          route: '/(protected)/profile',
+          locked: false,
+        },
+        {
           id: 'dashboard',
           label: 'Home Dashboard',
           icon: Home,
           route: '/(protected)/home',
+          locked: false,
         },
       ],
     },
@@ -173,13 +188,15 @@ export default function HeaderWithSidebar({
           id: 'emergency',
           label: 'Emergency Response',
           icon: AlertTriangle,
-          route: '/(protected)/emergency',
+          route: '/(protected)/(guest)/emergency',
+          locked: false,
         },
         {
           id: 'report',
           label: 'Report Incident',
           icon: FileText,
-          route: '/(protected)/report-incident',
+          route: '/(protected)/(verified)/report-incident',
+          locked: true,
         },
       ],
     },
@@ -190,19 +207,22 @@ export default function HeaderWithSidebar({
           id: 'trust-score',
           label: 'Trust Score',
           icon: Shield,
-          route: '/(protected)/trust-score',
+          route: '/(protected)/(verified)/trust-score',
+          locked: true,
         },
         {
           id: 'map',
           label: 'Map',
           icon: MapPin,
-          route: '/(protected)/map',
+          route: '/(protected)/(verified)/map',
+          locked: true,
         },
         {
           id: 'hotlines',
           label: 'Hotlines',
           icon: Phone,
-          route: '/(protected)/hotlines',
+          route: '/(protected)/(guest)/hotlines',
+          locked: false,
         },
       ],
     },
@@ -214,12 +234,14 @@ export default function HeaderWithSidebar({
           label: 'Settings',
           icon: Settings,
           route: '/(protected)/settings',
+          locked: false,
         },
         {
           id: 'logout',
           label: 'Logout',
           icon: LogOut,
           route: null,
+          locked: false,
         },
       ],
     },
@@ -241,7 +263,11 @@ export default function HeaderWithSidebar({
         if (selectedItem.route) {
           router.push(selectedItem.route as any);
         } else if (selectedItem.id === 'logout') {
-          logoutPressed?.();
+          if (isGuest) {
+            clearGuest().then(() => router.replace('/auth/login'));
+          } else {
+            signOut();
+          }
         }
         // For items without routes, we don't navigate (placeholder items)
       }
@@ -272,8 +298,9 @@ export default function HeaderWithSidebar({
           styles.header,
           {
             opacity: fadeAnim,
-            backgroundColor: colors.surface,
-            borderBottomColor: colors.border,
+            backgroundColor: headerBgColor || colors.surface,
+            borderBottomColor: headerBgColor ? 'transparent' : colors.border,
+            borderBottomWidth: headerBgColor ? 0 : 1,
           },
         ]}>
         <View className="w-full flex-row items-center px-6">
@@ -281,22 +308,22 @@ export default function HeaderWithSidebar({
             <TouchableOpacity
               onPress={handleBackPress}
               className="mr-4 h-10 w-10 items-center justify-center rounded-full"
-              style={{ backgroundColor: colors.surfaceVariant }}
+              style={{ backgroundColor: headerBgColor ? 'rgba(255,255,255,0.2)' : colors.surfaceVariant }}
               activeOpacity={0.7}>
-              <ChevronLeft size={20} color={colors.text} />
+              <ChevronLeft size={20} color={headerTextColor || colors.text} />
             </TouchableOpacity>
           ) : (
             <TouchableOpacity
               onPress={toggleSidebar}
               className="mr-4 h-10 w-10 items-center justify-center rounded-full"
-              style={{ backgroundColor: colors.primary }}
+              style={{ backgroundColor: headerBgColor ? 'rgba(255,255,255,0.2)' : colors.primary }}
               activeOpacity={0.7}>
-              <User size={20} color={colors.surface} />
+              <User size={20} color={headerBgColor ? '#FFFFFF' : colors.surface} />
             </TouchableOpacity>
           )}
 
           <View className="flex-1 flex-row items-center">
-            <Text className="flex-1 text-xl font-bold" style={{ color: colors.text }}>
+            <Text className="flex-1 text-xl font-bold" style={{ color: headerTextColor || colors.text }}>
               {title}
             </Text>
           </View>
@@ -317,13 +344,13 @@ export default function HeaderWithSidebar({
               <TouchableOpacity
                 onPress={toggleActivity}
                 className="h-10 w-10 items-center justify-center rounded-full"
-                style={{ backgroundColor: colors.surfaceVariant }}
+                style={{ backgroundColor: headerBgColor ? 'rgba(255,255,255,0.2)' : colors.surfaceVariant }}
                 activeOpacity={0.7}>
-                <Bell size={20} color={colors.text} />
+                <Bell size={20} color={headerTextColor || colors.text} />
                 {localNotifCount < userNotifications.length && (
                   <View
                     className="absolute right-1 top-1 h-2 w-2 rounded-full"
-                    style={{ backgroundColor: colors.error }}
+                    style={{ backgroundColor: headerBgColor ? '#FFFFFF' : colors.error }}
                   />
                 )}
               </TouchableOpacity>
@@ -438,45 +465,41 @@ export default function HeaderWithSidebar({
 
               {/* Section Items */}
               <View className="px-2">
-                {section.items.map((item) => (
-                  <TouchableOpacity
-                    key={item.id}
-                    className="mx-2 mb-1 flex-row items-center rounded-lg px-3 py-3"
-                    style={{
-                      backgroundColor:
-                        !item.route && item.id !== 'logout' ? colors.surfaceVariant : 'transparent',
-                    }}
-                    onPress={() => handleSidebarNavigation(item.id)}
-                    disabled={!item.route && item.id !== 'logout'}>
-                    <item.icon
-                      size={20}
-                      color={
-                        !item.route && item.id !== 'logout'
-                          ? colors.textSecondary
-                          : item.id === 'logout'
-                            ? colors.error
-                            : colors.text
-                      }
-                    />
-                    <Text
-                      className="ml-3 font-medium"
+                {section.items.map((item) => {
+                  const isItemLocked = isGuest && item.locked;
+                  const isDisabled = (!item.route && item.id !== 'logout') || isItemLocked;
+                  const iconColor = item.id === 'logout'
+                    ? colors.error
+                    : isDisabled
+                      ? colors.textSecondary
+                      : colors.text;
+
+                  return (
+                    <TouchableOpacity
+                      key={item.id}
+                      className="mx-2 mb-1 flex-row items-center rounded-lg px-3 py-3"
                       style={{
-                        color:
-                          !item.route && item.id !== 'logout'
-                            ? colors.textSecondary
-                            : item.id === 'logout'
-                              ? colors.error
-                              : colors.text,
-                      }}>
-                      {item.label}
-                    </Text>
-                    {!item.route && item.id !== 'logout' && (
-                      <Text className="ml-auto text-xs" style={{ color: colors.textSecondary }}>
-                        Soon
+                        opacity: isItemLocked ? 0.45 : 1,
+                        backgroundColor: 'transparent',
+                      }}
+                      onPress={() => handleSidebarNavigation(item.id)}
+                      disabled={isDisabled}>
+                      {isItemLocked ? (
+                        <Lock size={20} color={iconColor} />
+                      ) : (
+                        <item.icon size={20} color={iconColor} />
+                      )}
+                      <Text
+                        className="ml-3 font-medium"
+                        style={{ color: iconColor, flex: 1 }}>
+                        {item.label}
                       </Text>
-                    )}
-                  </TouchableOpacity>
-                ))}
+                      {isItemLocked && (
+                        <Lock size={14} color={colors.textSecondary} />
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
           ))}
@@ -487,13 +510,18 @@ export default function HeaderWithSidebar({
           <View className="flex-row items-center">
             <View
               className="h-10 w-10 items-center justify-center rounded-full"
-              style={{ backgroundColor: colors.primary }}>
-              <User size={20} color={colors.surface} />
+              style={{ backgroundColor: isGuest ? colors.surfaceVariant : colors.primary }}>
+              <User size={20} color={isGuest ? colors.textSecondary : colors.surface} />
             </View>
-            <View className="ml-3">
+            <View className="ml-3 flex-1">
               <Text className="text-sm font-medium" style={{ color: colors.text }}>
-                {userName || 'Resident'}
+                {isGuest ? guestName : userName || 'Resident'}
               </Text>
+              {isGuest && (
+                <Text className="text-xs" style={{ color: colors.textSecondary }}>
+                  Guest
+                </Text>
+              )}
             </View>
           </View>
         </View>

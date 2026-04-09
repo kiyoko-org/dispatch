@@ -7,14 +7,20 @@ import {
   StatusBar,
   Modal,
   ScrollView,
+  Animated,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
-import { Eye, EyeOff, X } from 'lucide-react-native';
-import { useState } from 'react';
+import { Eye, EyeOff, X, Shield, Mail, Lock, HelpCircle } from 'lucide-react-native';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import { supabase } from 'lib/supabase';
 import { useTheme } from 'components/ThemeContext';
 import { registerForFCMToken } from 'hooks/useFCMToken';
 import ActiveSessionDialog from 'components/ActiveSessionDialog';
+
+const { width } = Dimensions.get('window');
 
 export default function Login() {
   const router = useRouter();
@@ -37,6 +43,29 @@ export default function Login() {
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState('');
   const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
+
+  // Animations
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(30)).current;
+  const formFade = useRef(new Animated.Value(0)).current;
+  const formSlide = useRef(new Animated.Value(20)).current;
+  const buttonFade = useRef(new Animated.Value(0)).current;
+  const shieldScale = useRef(new Animated.Value(0.6)).current;
+
+  useEffect(() => {
+    Animated.sequence([
+      Animated.parallel([
+        Animated.spring(shieldScale, { toValue: 1, tension: 60, friction: 8, useNativeDriver: true }),
+        Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
+      ]),
+      Animated.parallel([
+        Animated.timing(formFade, { toValue: 1, duration: 400, useNativeDriver: true }),
+        Animated.timing(formSlide, { toValue: 0, duration: 400, useNativeDriver: true }),
+      ]),
+      Animated.timing(buttonFade, { toValue: 1, duration: 300, useNativeDriver: true }),
+    ]).start();
+  }, []);
 
   async function signInWithEmail() {
     setLoading(true);
@@ -294,102 +323,320 @@ export default function Login() {
     }
   }
 
+  // Shared input style
+  const inputStyle = {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 14,
+    height: 56,
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    paddingHorizontal: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: isDark ? 0.2 : 0.04,
+    shadowRadius: 4,
+    elevation: 2,
+  };
+
   return (
-    <View className="flex-1 px-6 pt-12" style={{ backgroundColor: colors.background }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <StatusBar
         barStyle={isDark ? 'light-content' : 'dark-content'}
         backgroundColor={colors.background}
       />
 
-      <View className="mb-8">
-        <Text className="mb-2 text-3xl font-bold" style={{ color: colors.text }}>
-          Welcome Back
-        </Text>
-        <Text className="text-base" style={{ color: colors.textSecondary }}>
-          Sign in to continue
-        </Text>
-      </View>
+      {/* Decorative orb */}
+      <View
+        style={{
+          position: 'absolute',
+          top: -width * 0.35,
+          right: -width * 0.25,
+          width: width * 0.9,
+          height: width * 0.9,
+          borderRadius: width * 0.45,
+          backgroundColor: colors.primary + '08',
+        }}
+      />
 
-      <View className="mb-4">
-        <RNTextInput
-          className="mb-4 rounded-xl px-4 py-4 text-base"
-          style={{
-            backgroundColor: colors.surfaceVariant,
-            borderWidth: 1,
-            borderColor: colors.border,
-            color: colors.text,
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+      >
+        <ScrollView
+          contentContainerStyle={{
+            flexGrow: 1,
+            justifyContent: 'center',
+            paddingHorizontal: 24,
+            paddingVertical: 40,
           }}
-          placeholder="Please enter your Email"
-          value={email}
-          onChangeText={setEmail}
-          placeholderTextColor={colors.textSecondary}
-          keyboardType="email-address"
-          autoCapitalize="none"
-          maxLength={254}
-        />
-
-        <View className="relative mb-2">
-          <RNTextInput
-            className="rounded-xl px-4 py-4 pr-12 text-base"
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <Animated.View
             style={{
-              backgroundColor: colors.surfaceVariant,
-              borderWidth: 1,
-              borderColor: colors.border,
-              color: colors.text,
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }, { scale: shieldScale }],
+              alignItems: 'center',
+              marginBottom: 12,
             }}
-            placeholder="Please enter your password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={!showPassword}
-            placeholderTextColor={colors.textSecondary}
-            maxLength={64}
-          />
-          <TouchableOpacity
-            className="absolute right-4 top-1/2 -translate-y-1/2 transform"
-            onPress={() => setShowPassword(!showPassword)}>
-            {showPassword ? (
-              <Eye size={20} color={colors.textSecondary} />
-            ) : (
-              <EyeOff size={20} color={colors.textSecondary} />
-            )}
-          </TouchableOpacity>
-        </View>
+          >
+            <View
+              style={{
+                width: 64,
+                height: 64,
+                borderRadius: 32,
+                backgroundColor: colors.primary + '15',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginBottom: 20,
+              }}
+            >
+              <View
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 24,
+                  backgroundColor: colors.primary,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  shadowColor: colors.primary,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 12,
+                  elevation: 8,
+                }}
+              >
+                <Shield size={24} color="#FFFFFF" strokeWidth={2.5} />
+              </View>
+            </View>
+          </Animated.View>
 
-        <View className="items-end">
-          <TouchableOpacity onPress={() => setShowForgotPasswordModal(true)}>
-            <Text className="text-sm" style={{ color: colors.textSecondary }}>
-              Forgot password?
+          <Animated.View
+            style={{
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+              marginBottom: 36,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 28,
+                fontWeight: '800',
+                color: colors.text,
+                marginBottom: 6,
+                textAlign: 'center',
+              }}
+            >
+              Welcome Back
             </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+            <Text
+              style={{
+                fontSize: 15,
+                color: colors.textSecondary,
+                textAlign: 'center',
+              }}
+            >
+              Sign in to protect your community
+            </Text>
+          </Animated.View>
 
-      <TouchableOpacity
-        className="mt-3 rounded-xl py-4"
-        style={{ backgroundColor: colors.primary }}
-        onPress={signInWithEmail}
-        disabled={loading}>
-        <Text className="text-center text-base font-semibold text-white">
-          {loading ? 'LOADING...' : 'LOGIN'}
-        </Text>
-      </TouchableOpacity>
+          {/* Form */}
+          <Animated.View
+            style={{
+              opacity: formFade,
+              transform: [{ translateY: formSlide }],
+            }}
+          >
+            {/* Email Input */}
+            <View style={{ marginBottom: 16 }}>
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontWeight: '600',
+                  color: colors.textSecondary,
+                  marginBottom: 8,
+                  marginLeft: 4,
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.8,
+                }}
+              >
+                Email
+              </Text>
+              <View style={inputStyle}>
+                <Mail size={18} color={colors.textSecondary} style={{ marginRight: 12 }} />
+                <RNTextInput
+                  style={{ flex: 1, fontSize: 16, color: colors.text }}
+                  placeholder="Enter your email"
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholderTextColor={colors.textSecondary + '80'}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  maxLength={254}
+                />
+              </View>
+            </View>
 
-      <View className="mt-4 items-center">
-        <Text className="text-center text-sm" style={{ color: colors.textSecondary }}>
-          Don&apos;t have an account?{' '}
-          <Text style={{ color: colors.primary }} onPress={() => router.push('/auth/sign-up')}>
-            Sign up
-          </Text>
-        </Text>
-      </View>
+            {/* Password Input */}
+            <View style={{ marginBottom: 8 }}>
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontWeight: '600',
+                  color: colors.textSecondary,
+                  marginBottom: 8,
+                  marginLeft: 4,
+                  textTransform: 'uppercase',
+                  letterSpacing: 0.8,
+                }}
+              >
+                Password
+              </Text>
+              <View style={inputStyle}>
+                <Lock size={18} color={colors.textSecondary} style={{ marginRight: 12 }} />
+                <RNTextInput
+                  style={{ flex: 1, fontSize: 16, color: colors.text }}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  placeholderTextColor={colors.textSecondary + '80'}
+                  maxLength={64}
+                />
+                <TouchableOpacity
+                  onPress={() => setShowPassword(!showPassword)}
+                  hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                >
+                  {showPassword ? (
+                    <Eye size={20} color={colors.textSecondary} />
+                  ) : (
+                    <EyeOff size={20} color={colors.textSecondary} />
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
 
-      <View className="mt-6 items-center pb-8">
-        <TouchableOpacity onPress={() => setShowHelpModal(true)}>
-          <Text className="text-center text-sm underline" style={{ color: colors.primary }}>
-            Need help? Contact support
-          </Text>
-        </TouchableOpacity>
-      </View>
+            {/* Forgot Password */}
+            <View style={{ alignItems: 'flex-end', marginBottom: 28 }}>
+              <TouchableOpacity onPress={() => setShowForgotPasswordModal(true)}>
+                <Text style={{ fontSize: 13, fontWeight: '600', color: colors.primary }}>
+                  Forgot password?
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Login Button */}
+            <TouchableOpacity
+              onPress={signInWithEmail}
+              disabled={loading}
+              activeOpacity={0.85}
+              style={{
+                backgroundColor: loading ? colors.textSecondary : colors.primary,
+                borderRadius: 14,
+                paddingVertical: 16,
+                shadowColor: colors.primary,
+                shadowOffset: { width: 0, height: 6 },
+                shadowOpacity: 0.3,
+                shadowRadius: 14,
+                elevation: 8,
+                marginBottom: 16,
+              }}
+            >
+              <Text
+                style={{
+                  color: '#FFFFFF',
+                  fontSize: 16,
+                  fontWeight: '700',
+                  textAlign: 'center',
+                  letterSpacing: 0.5,
+                }}
+              >
+                {loading ? 'Signing In...' : 'Sign In'}
+              </Text>
+            </TouchableOpacity>
+
+            {/* Sign Up Link */}
+            <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 12 }}>
+              <Text style={{ fontSize: 14, color: colors.textSecondary }}>
+                Don&apos;t have an account?{' '}
+              </Text>
+              <TouchableOpacity onPress={() => router.push('/auth/sign-up')}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: colors.primary }}>
+                  Sign up
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Divider */}
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginVertical: 16,
+              }}
+            >
+              <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
+              <Text
+                style={{
+                  marginHorizontal: 16,
+                  fontSize: 12,
+                  color: colors.textSecondary,
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  letterSpacing: 1,
+                }}
+              >
+                or
+              </Text>
+              <View style={{ flex: 1, height: 1, backgroundColor: colors.border }} />
+            </View>
+
+            {/* Guest Button */}
+            <TouchableOpacity
+              onPress={() => router.push('/auth/guest')}
+              activeOpacity={0.85}
+              style={{
+                backgroundColor: colors.primary + '10',
+                borderRadius: 14,
+                paddingVertical: 16,
+                borderWidth: 1.5,
+                borderColor: colors.primary + '25',
+                marginBottom: 20,
+              }}
+            >
+              <Text
+                style={{
+                  color: colors.primary,
+                  fontSize: 16,
+                  fontWeight: '700',
+                  textAlign: 'center',
+                }}
+              >
+                Continue as Guest
+              </Text>
+            </TouchableOpacity>
+
+            {/* Help Link */}
+            <TouchableOpacity
+              onPress={() => setShowHelpModal(true)}
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'center',
+                alignItems: 'center',
+                paddingVertical: 8,
+              }}
+            >
+              <HelpCircle size={14} color={colors.textSecondary} style={{ marginRight: 6 }} />
+              <Text style={{ fontSize: 13, color: colors.textSecondary, fontWeight: '500' }}>
+                Need help? Contact support
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
       {/* Help Modal */}
       <Modal
@@ -397,164 +644,204 @@ export default function Login() {
         animationType="slide"
         transparent={true}
         onRequestClose={() => setShowHelpModal(false)}>
-        <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <View
-            className="rounded-t-3xl px-6 pb-8 pt-6"
-            style={{ backgroundColor: colors.background, maxHeight: '90%' }}>
-            <View className="mb-6 flex-row items-center justify-between">
-              <Text className="text-xl font-bold" style={{ color: colors.text }}>
+            style={{
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              paddingHorizontal: 24,
+              paddingBottom: 32,
+              paddingTop: 24,
+              backgroundColor: colors.background,
+              maxHeight: '90%',
+            }}>
+            {/* Handle bar */}
+            <View
+              style={{
+                width: 40,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: colors.border,
+                alignSelf: 'center',
+                marginBottom: 20,
+              }}
+            />
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+              <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text }}>
                 Contact Support
               </Text>
-              <TouchableOpacity onPress={() => setShowHelpModal(false)}>
-                <X size={24} color={colors.text} />
+              <TouchableOpacity
+                onPress={() => setShowHelpModal(false)}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: colors.surfaceVariant,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+              >
+                <X size={18} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
             <ScrollView showsVerticalScrollIndicator={false}>
-              <View className="mb-4">
-                <View className="mb-2 flex-row items-center">
-                  <Text className="text-sm font-medium" style={{ color: colors.text }}>
+              <View style={{ marginBottom: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.8 }}>
                     Your Name
                   </Text>
-                  <Text className="ml-1 text-base font-bold" style={{ color: '#EF4444' }}>
-                    *
-                  </Text>
+                  <Text style={{ marginLeft: 4, fontSize: 14, fontWeight: 'bold', color: '#EF4444' }}>*</Text>
                 </View>
                 <RNTextInput
-                  className="rounded-xl px-4 py-3 text-base"
                   style={{
-                    backgroundColor: colors.surfaceVariant,
+                    backgroundColor: colors.surface,
                     borderWidth: 1,
                     borderColor: helpNameError ? '#EF4444' : colors.border,
+                    borderRadius: 14,
+                    paddingHorizontal: 16,
+                    paddingVertical: 14,
+                    fontSize: 16,
                     color: colors.text,
                   }}
                   placeholder="Enter your name"
                   value={helpName}
                   onChangeText={validateHelpName}
-                  placeholderTextColor={colors.textSecondary}
+                  placeholderTextColor={colors.textSecondary + '80'}
                   maxLength={50}
                 />
                 {helpNameError ? (
-                  <Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
+                  <Text style={{ marginTop: 4, fontSize: 12, color: '#EF4444' }}>
                     {helpNameError}
                   </Text>
                 ) : null}
               </View>
 
-              <View className="mb-4">
-                <View className="mb-2 flex-row items-center">
-                  <Text className="text-sm font-medium" style={{ color: colors.text }}>
+              <View style={{ marginBottom: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.8 }}>
                     Your Email
                   </Text>
-                  <Text className="ml-1 text-base font-bold" style={{ color: '#EF4444' }}>
-                    *
-                  </Text>
+                  <Text style={{ marginLeft: 4, fontSize: 14, fontWeight: 'bold', color: '#EF4444' }}>*</Text>
                 </View>
                 <RNTextInput
-                  className="rounded-xl px-4 py-3 text-base"
                   style={{
-                    backgroundColor: colors.surfaceVariant,
+                    backgroundColor: colors.surface,
                     borderWidth: 1,
                     borderColor: helpEmailError ? '#EF4444' : colors.border,
+                    borderRadius: 14,
+                    paddingHorizontal: 16,
+                    paddingVertical: 14,
+                    fontSize: 16,
                     color: colors.text,
                   }}
                   placeholder="Enter your email"
                   value={helpEmail}
                   onChangeText={validateHelpEmail}
-                  placeholderTextColor={colors.textSecondary}
+                  placeholderTextColor={colors.textSecondary + '80'}
                   keyboardType="email-address"
                   autoCapitalize="none"
                   maxLength={254}
                 />
                 {helpEmailError ? (
-                  <Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
+                  <Text style={{ marginTop: 4, fontSize: 12, color: '#EF4444' }}>
                     {helpEmailError}
                   </Text>
                 ) : null}
               </View>
 
-              <View className="mb-4">
-                <View className="mb-2 flex-row items-center">
-                  <Text className="text-sm font-medium" style={{ color: colors.text }}>
-                    What do you need help with?
+              <View style={{ marginBottom: 16 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                    Subject
                   </Text>
-                  <Text className="ml-1 text-base font-bold" style={{ color: '#EF4444' }}>
-                    *
-                  </Text>
+                  <Text style={{ marginLeft: 4, fontSize: 14, fontWeight: 'bold', color: '#EF4444' }}>*</Text>
                 </View>
                 <RNTextInput
-                  className="rounded-xl px-4 py-3 text-base"
                   style={{
-                    backgroundColor: colors.surfaceVariant,
+                    backgroundColor: colors.surface,
                     borderWidth: 1,
                     borderColor: helpSubjectError ? '#EF4444' : colors.border,
+                    borderRadius: 14,
+                    paddingHorizontal: 16,
+                    paddingVertical: 14,
+                    fontSize: 16,
                     color: colors.text,
                   }}
-                  placeholder="Enter the subject"
+                  placeholder="What do you need help with?"
                   value={helpSubject}
                   onChangeText={validateHelpSubject}
-                  placeholderTextColor={colors.textSecondary}
+                  placeholderTextColor={colors.textSecondary + '80'}
                   maxLength={100}
                 />
                 {helpSubjectError ? (
-                  <Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
+                  <Text style={{ marginTop: 4, fontSize: 12, color: '#EF4444' }}>
                     {helpSubjectError}
                   </Text>
                 ) : null}
               </View>
 
-              <View className="mb-6">
-                <View className="mb-2 flex-row items-center">
-                  <Text className="text-sm font-medium" style={{ color: colors.text }}>
-                    Describe your issue
+              <View style={{ marginBottom: 24 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: colors.textSecondary, textTransform: 'uppercase', letterSpacing: 0.8 }}>
+                    Message
                   </Text>
-                  <Text className="ml-1 text-base font-bold" style={{ color: '#EF4444' }}>
-                    *
-                  </Text>
+                  <Text style={{ marginLeft: 4, fontSize: 14, fontWeight: 'bold', color: '#EF4444' }}>*</Text>
                 </View>
                 <RNTextInput
-                  className="rounded-xl px-4 py-3 text-base"
                   style={{
-                    backgroundColor: colors.surfaceVariant,
+                    backgroundColor: colors.surface,
                     borderWidth: 1,
                     borderColor: helpMessageError ? '#EF4444' : colors.border,
+                    borderRadius: 14,
+                    paddingHorizontal: 16,
+                    paddingVertical: 14,
+                    fontSize: 16,
                     color: colors.text,
                     minHeight: 120,
                     textAlignVertical: 'top',
                   }}
-                  placeholder="Please describe your issue in detail..."
+                  placeholder="Describe your issue in detail..."
                   value={helpMessage}
                   onChangeText={validateHelpMessage}
-                  placeholderTextColor={colors.textSecondary}
+                  placeholderTextColor={colors.textSecondary + '80'}
                   multiline
                   numberOfLines={5}
                   maxLength={1000}
                 />
                 {helpMessageError ? (
-                  <Text className="mt-1 text-xs" style={{ color: '#EF4444' }}>
+                  <Text style={{ marginTop: 4, fontSize: 12, color: '#EF4444' }}>
                     {helpMessageError}
                   </Text>
                 ) : null}
               </View>
 
               <TouchableOpacity
-                className="rounded-xl py-4"
-                style={{ backgroundColor: colors.primary }}
+                style={{
+                  backgroundColor: colors.primary,
+                  borderRadius: 14,
+                  paddingVertical: 16,
+                  shadowColor: colors.primary,
+                  shadowOffset: { width: 0, height: 4 },
+                  shadowOpacity: 0.25,
+                  shadowRadius: 12,
+                  elevation: 6,
+                }}
                 onPress={handleSendHelp}>
-                <Text className="text-center text-base font-semibold text-white">Send Message</Text>
+                <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700', textAlign: 'center' }}>
+                  Send Message
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                className="mt-3 rounded-xl py-4"
                 style={{
+                  marginTop: 12,
+                  borderRadius: 14,
+                  paddingVertical: 16,
                   backgroundColor: colors.surfaceVariant,
-                  borderWidth: 1,
-                  borderColor: colors.border,
                 }}
                 onPress={() => setShowHelpModal(false)}>
-                <Text
-                  className="text-center text-base font-semibold"
-                  style={{ color: colors.text }}>
+                <Text style={{ color: colors.textSecondary, fontSize: 16, fontWeight: '600', textAlign: 'center' }}>
                   Cancel
                 </Text>
               </TouchableOpacity>
@@ -579,63 +866,105 @@ export default function Login() {
         animationType="slide"
         transparent={true}
         onRequestClose={() => setShowForgotPasswordModal(false)}>
-        <View className="flex-1 justify-end" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <View
-            className="rounded-t-3xl px-6 pb-8 pt-6"
-            style={{ backgroundColor: colors.background }}>
-            <View className="mb-6 flex-row items-center justify-between">
-              <Text className="text-xl font-bold" style={{ color: colors.text }}>
+            style={{
+              borderTopLeftRadius: 24,
+              borderTopRightRadius: 24,
+              paddingHorizontal: 24,
+              paddingBottom: 32,
+              paddingTop: 24,
+              backgroundColor: colors.background,
+            }}>
+            {/* Handle bar */}
+            <View
+              style={{
+                width: 40,
+                height: 4,
+                borderRadius: 2,
+                backgroundColor: colors.border,
+                alignSelf: 'center',
+                marginBottom: 20,
+              }}
+            />
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+              <Text style={{ fontSize: 20, fontWeight: '800', color: colors.text }}>
                 Reset Password
               </Text>
-              <TouchableOpacity onPress={() => setShowForgotPasswordModal(false)}>
-                <X size={24} color={colors.text} />
+              <TouchableOpacity
+                onPress={() => setShowForgotPasswordModal(false)}
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 16,
+                  backgroundColor: colors.surfaceVariant,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}
+              >
+                <X size={18} color={colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
-            <View className="mb-6">
-              <Text className="mb-2 text-sm font-medium" style={{ color: colors.text }}>
-                Enter your email address and we&apos;ll send you a link to reset your password.
-              </Text>
-            </View>
+            <Text
+              style={{
+                fontSize: 14,
+                color: colors.textSecondary,
+                marginBottom: 20,
+                lineHeight: 20,
+              }}
+            >
+              Enter your email address and we&apos;ll send you a link to reset your password.
+            </Text>
 
-            <View className="mb-6">
-              <RNTextInput
-                className="rounded-xl px-4 py-4 text-base"
-                style={{
-                  backgroundColor: colors.surfaceVariant,
-                  borderWidth: 1,
-                  borderColor: colors.border,
-                  color: colors.text,
-                }}
-                placeholder="Enter your email"
-                value={forgotPasswordEmail}
-                onChangeText={setForgotPasswordEmail}
-                placeholderTextColor={colors.textSecondary}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                maxLength={254}
-              />
-            </View>
+            <RNTextInput
+              style={{
+                backgroundColor: colors.surface,
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderRadius: 14,
+                paddingHorizontal: 16,
+                paddingVertical: 14,
+                fontSize: 16,
+                color: colors.text,
+                marginBottom: 20,
+              }}
+              placeholder="Enter your email"
+              value={forgotPasswordEmail}
+              onChangeText={setForgotPasswordEmail}
+              placeholderTextColor={colors.textSecondary + '80'}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              maxLength={254}
+            />
 
             <TouchableOpacity
-              className="rounded-xl py-4"
-              style={{ backgroundColor: colors.primary }}
+              style={{
+                backgroundColor: colors.primary,
+                borderRadius: 14,
+                paddingVertical: 16,
+                shadowColor: colors.primary,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.25,
+                shadowRadius: 12,
+                elevation: 6,
+              }}
               onPress={handleForgotPassword}
               disabled={forgotPasswordLoading}>
-              <Text className="text-center text-base font-semibold text-white">
-                {forgotPasswordLoading ? 'SENDING...' : 'Send Reset Link'}
+              <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700', textAlign: 'center' }}>
+                {forgotPasswordLoading ? 'Sending...' : 'Send Reset Link'}
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              className="mt-3 rounded-xl py-4"
               style={{
+                marginTop: 12,
+                borderRadius: 14,
+                paddingVertical: 16,
                 backgroundColor: colors.surfaceVariant,
-                borderWidth: 1,
-                borderColor: colors.border,
               }}
               onPress={() => setShowForgotPasswordModal(false)}>
-              <Text className="text-center text-base font-semibold" style={{ color: colors.text }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 16, fontWeight: '600', textAlign: 'center' }}>
                 Cancel
               </Text>
             </TouchableOpacity>

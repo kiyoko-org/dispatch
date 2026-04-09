@@ -27,6 +27,7 @@ import {
   Trash2,
   Settings,
   Zap,
+  WifiOff,
 } from 'lucide-react-native';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
@@ -42,6 +43,7 @@ import * as Location from 'expo-location';
 import { useTheme } from 'components/ThemeContext';
 import { useUserData } from 'contexts/UserDataContext';
 import { useHotlines } from '@kiyoko-org/dispatch-lib';
+import NetInfo from '@react-native-community/netinfo';
 
 let ImmediatePhoneCallModule: any = null;
 try {
@@ -160,6 +162,14 @@ export default function EmergencyScreen() {
 
   const { hotlines: serverHotlines } = useHotlines();
   const [emergencyNumber, setEmergencyNumber] = useState('');
+  const [isOffline, setIsOffline] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      setIsOffline(!state.isConnected || state.isInternetReachable === false);
+    });
+    return () => unsubscribe();
+  }, []);
   const [emergencyProtocolActive, setEmergencyProtocolActive] = useState(false);
   const [pressedButtons, setPressedButtons] = useState<Set<string>>(new Set());
   const [isQuickContactsExpanded, setIsQuickContactsExpanded] = useState(false);
@@ -734,6 +744,24 @@ export default function EmergencyScreen() {
       />
 
       <HeaderWithSidebar title="Emergency Response" showBackButton={false} />
+
+      {isOffline && (
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            backgroundColor: '#F59E0B' + '18',
+            paddingVertical: 10,
+            paddingHorizontal: 16,
+            gap: 8,
+          }}
+        >
+          <WifiOff size={16} color="#F59E0B" />
+          <Text style={{ fontSize: 13, color: '#92400E', flex: 1 }}>
+            You're offline. Calls and local contacts still work.
+          </Text>
+        </View>
+      )}
 
       <ScreenContent
         contentContainerStyle={{

@@ -27,7 +27,7 @@ import { useReportsStore } from 'contexts/ReportsContext';
 import DatePicker from 'components/DatePicker';
 import { useTheme } from 'components/ThemeContext';
 import Papa from 'papaparse';
-import crimesCsvAsset from '../../../assets/crimes.csv';
+import crimesCsvAsset from '../../../../assets/crimes.csv';
 import { dbscan, kMeans, gridBinning, regionAggregation, Point, Cluster } from 'lib/clustering';
 import { TUGUEGARAO_BOUNDARY } from 'lib/locations/tuguegarao-boundary';
 import {

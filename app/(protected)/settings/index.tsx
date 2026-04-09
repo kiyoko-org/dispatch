@@ -4,15 +4,12 @@ import {
   ScrollView,
   TouchableOpacity,
   StatusBar,
-  Alert,
 } from 'react-native';
-import { User, LogOut, ChevronRight, Palette, Info } from 'lucide-react-native';
+import { ChevronRight, Palette, Info } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { useAuthContext } from 'components/AuthProvider';
+import React from 'react';
 import { useTheme } from 'components/ThemeContext';
 import HeaderWithSidebar from 'components/HeaderWithSidebar';
-import { useCurrentProfile } from 'contexts/CurrentProfileContext';
-import { LogoutOverlay } from 'components/LogoutOverlay';
 
 type MenuSection = {
   title: string;
@@ -23,7 +20,7 @@ type MenuItem = {
   id: string;
   label: string;
   sublabel?: string;
-  icon: typeof User;
+  icon: React.ComponentType<{ size: number; color: string }>;
   onPress: () => void;
   showChevron?: boolean;
   danger?: boolean;
@@ -31,36 +28,9 @@ type MenuItem = {
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { signOut, isLoggingOut } = useAuthContext();
   const { colors, isDark, themeMode } = useTheme();
-  const { profile, loading } = useCurrentProfile();
-
-  const handleLogout = () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Sign Out', style: 'destructive', onPress: signOut },
-    ]);
-  };
-
-  const accountSublabel = profile?.id_card_number
-    ? `PCN: ${profile.id_card_number}`
-    : [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') ||
-      (loading ? 'Loading profile...' : 'Tap to complete profile');
 
   const menuSections: MenuSection[] = [
-    {
-      title: '',
-      items: [
-        {
-          id: 'account',
-          label: 'Profile',
-          sublabel: accountSublabel,
-          icon: User,
-          onPress: () => router.push('/(protected)/profile'),
-          showChevron: true,
-        },
-      ],
-    },
     {
       title: 'Preferences',
       items: [
@@ -84,19 +54,6 @@ export default function SettingsPage() {
           icon: Info,
           onPress: () => router.push('/(protected)/settings/about'),
           showChevron: true,
-        },
-      ],
-    },
-    {
-      title: '',
-      items: [
-        {
-          id: 'logout',
-          label: 'Sign out',
-          icon: LogOut,
-          onPress: handleLogout,
-          showChevron: false,
-          danger: true,
         },
       ],
     },
@@ -186,8 +143,6 @@ export default function SettingsPage() {
 
         <View className="h-8" />
       </ScrollView>
-
-      <LogoutOverlay visible={isLoggingOut} />
     </View>
   );
 }

@@ -19,7 +19,7 @@ import {
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useMemo, useState } from 'react';
-import HeaderWithSidebar from '../../../components/HeaderWithSidebar';
+import HeaderWithSidebar from 'components/HeaderWithSidebar';
 import { useTheme } from 'components/ThemeContext';
 import { useDispatchClient } from 'components/DispatchProvider';
 import { useReportsStore } from 'contexts/ReportsContext';

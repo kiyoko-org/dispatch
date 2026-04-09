@@ -20,7 +20,7 @@ import {
   Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import * as Location from 'expo-location';
 import MapView, { Marker, Polygon, PROVIDER_GOOGLE, Region } from 'react-native-maps';
 import { geocodingService, reverseGeocode } from 'lib/services/geocoding';
@@ -52,6 +52,7 @@ import {
   UserPlus,
   MessageSquare,
   DoorClosed,
+  ChevronUp,
 } from 'lucide-react-native';
 import {
   UploadManager,
@@ -181,7 +182,7 @@ export default function ReportIncidentIndex() {
     visible: false,
     report: null,
   });
-  const [quickLinksScrollable, setQuickLinksScrollable] = useState(false);
+
 
   // Helper functions for updating state
   const updateFormData = useCallback((updates: Partial<ReportData>) => {
@@ -424,8 +425,8 @@ export default function ReportIncidentIndex() {
     void generateSignedUrls();
   }, [uploadedFiles, signedUrls]);
 
-  // Quick link handlers
-  const handleQuickLink = (categoryName: string, subcategory: string) => {
+  // Quick link handler
+  const handleQuickLink = useCallback((categoryName: string, subcategory: string) => {
     const category = categories.find((cat) => cat.name === categoryName);
     if (category) {
       updateFormData({
@@ -433,20 +434,7 @@ export default function ReportIncidentIndex() {
         incident_subcategory: subcategory,
       });
     }
-  };
-
-  const handleQuickLinkTheft = () => handleQuickLink('Property Crimes', 'Theft');
-  const handleQuickLinkCarCrash = () => handleQuickLink('Traffic Incidents', 'Vehicular Accident');
-  const handleQuickLinkRobbery = () => handleQuickLink('Property Crimes', 'Robbery');
-  const handleQuickLinkBurglary = () => handleQuickLink('Property Crimes', 'Burglary');
-  const handleQuickLinkVandalism = () => handleQuickLink('Property Crimes', 'Vandalism');
-  const handleQuickLinkMurder = () => handleQuickLink('Violent Crimes', 'Murder');
-  const handleQuickLinkAssault = () => handleQuickLink('Violent Crimes', 'Assault');
-  const handleQuickLinkShooting = () => handleQuickLink('Violent Crimes', 'Shooting');
-  const handleQuickLinkStabbing = () => handleQuickLink('Violent Crimes', 'Stabbing');
-  const handleQuickLinkDrug = () => handleQuickLink('Drug-Related', 'Drug Possession');
-  const handleQuickLinkHitAndRun = () => handleQuickLink('Traffic Incidents', 'Hit and Run');
-  const handleQuickLinkHacking = () => handleQuickLink('Other Crimes', 'Hacking');
+  }, [categories, updateFormData]);
 
   // Helper function to transform ReportData to dispatch-lib schema
   const transformToDispatchLibSchema = (data: ReportData, attachments: string[]) => {
@@ -668,9 +656,6 @@ export default function ReportIncidentIndex() {
     if (!data.incident_category.trim()) {
       errors.incident_category = 'Please select an incident category';
     }
-    if (!data.incident_title.trim()) {
-      errors.incident_title = 'Please enter a title for the incident';
-    }
     if (!data.incident_date.trim()) {
       errors.incident_date = 'Please select the incident date';
     }
@@ -696,9 +681,6 @@ export default function ReportIncidentIndex() {
     }
 
     // Length validations
-    if (data.incident_title.length > 100) {
-      errors.incident_title = 'Title must be 100 characters or less';
-    }
     if (data.what_happened.length > 2000) {
       errors.what_happened = 'Description must be 2000 characters or less';
     }
@@ -994,25 +976,6 @@ export default function ReportIncidentIndex() {
     setShowMapView(true);
   };
 
-  // Transform categories from database to match component expectations
-  const incidentCategories: { id: number; name: string; severity: string }[] = categories
-    .map((category) => ({
-      id: category.id,
-      name: category.name,
-      severity: 'Medium',
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name));
-
-  // Create subcategories mapping from categories data
-  const subcategories: Record<string, string[]> = {};
-  categories.forEach((category) => {
-    if (category.sub_categories && category.sub_categories.length > 0) {
-      subcategories[category.id.toString()] = ['Other', ...category.sub_categories].sort();
-    } else {
-      subcategories[category.id.toString()] = ['Other'];
-    }
-  });
-
   // Handle adding +1 to a report
   const handleAddPlusOne = async (reportId: number) => {
     if (!client) {
@@ -1125,6 +1088,13 @@ export default function ReportIncidentIndex() {
       return;
     }
 
+    // Auto-generate incident title from description
+    if (!formData.incident_title.trim() && formData.what_happened.trim()) {
+      const autoTitle = formData.what_happened.trim().slice(0, 100);
+      updateFormData({ incident_title: autoTitle });
+      formData.incident_title = autoTitle;
+    }
+
     // Run validation first
     const errors = validateForm(formData);
 
@@ -1188,35 +1158,889 @@ export default function ReportIncidentIndex() {
   const nearbyReportCount = uiState.nearbyReportDialog.nearbyReports.length;
   const hasNearbyReports = nearbyReportCount > 0;
 
-  const quickLinks = [
-    { icon: '🛡️', label: 'Someone stole from me', onPress: handleQuickLinkTheft, color: '#F59E0B' },
-    { icon: '💰', label: 'I was robbed', onPress: handleQuickLinkRobbery, color: '#F59E0B' },
-    {
-      icon: '🏠',
-      label: 'My house was broken into',
-      onPress: handleQuickLinkBurglary,
-      color: '#F59E0B',
-    },
-    {
-      icon: '🎨',
-      label: 'Property vandalized',
-      onPress: handleQuickLinkVandalism,
-      color: '#F59E0B',
-    },
-    {
-      icon: '🚗',
-      label: 'Got into a car crash',
-      onPress: handleQuickLinkCarCrash,
-      color: '#3B82F6',
-    },
-    { icon: '🚙', label: 'Hit and run', onPress: handleQuickLinkHitAndRun, color: '#3B82F6' },
-    { icon: '☠️', label: 'Witnessed a murder', onPress: handleQuickLinkMurder, color: '#DC2626' },
-    { icon: '🔫', label: 'Shooting incident', onPress: handleQuickLinkShooting, color: '#DC2626' },
-    { icon: '🔪', label: 'Stabbing incident', onPress: handleQuickLinkStabbing, color: '#DC2626' },
-    { icon: '👊', label: 'Physical assault', onPress: handleQuickLinkAssault, color: '#DC2626' },
-    { icon: '💻', label: 'I was hacked', onPress: handleQuickLinkHacking, color: '#6B7280' },
-    { icon: '💊', label: 'Drug activity', onPress: handleQuickLinkDrug, color: '#7C3AED' },
-  ];
+  // Build category-based quicklinks from database categories
+  type QuickLinkItem = { label: string; categoryName: string; subcategory: string; icon: string };
+  type QuickLinkSection = { categoryName: string; categoryId: string; color: string; icon: string; items: QuickLinkItem[] };
+
+  const CATEGORY_META: Record<string, { color: string; icon: string }> = {
+    'Property Crimes': { color: '#F59E0B', icon: '🏠' },
+    'Violent Crimes': { color: '#DC2626', icon: '⚔️' },
+    'Traffic Incidents': { color: '#3B82F6', icon: '🚗' },
+    'Fire Incidents': { color: '#EF4444', icon: '🔥' },
+    'Natural Disasters': { color: '#0EA5E9', icon: '🌊' },
+    'Drug-Related': { color: '#7C3AED', icon: '💊' },
+    'Other Crimes': { color: '#6B7280', icon: '📋' },
+  };
+
+  const SUBCATEGORY_ICONS: Record<string, string> = {
+    // Property Crimes
+    'Theft': '🔓', 'Robbery': '💰', 'Burglary': '🏚️', 'Vandalism': '🎨', 'Snatching': '📱', 'Trespassing': '🚪',
+    'Carnapping': '🚙',
+    // Traffic Incidents
+    'Vehicular Accident': '🚗', 'Hit and Run': '💨', 'DUI': '🍺',
+    'Traffic-in-persons (TIP)': '🚸', 'TIP': '🚸',
+    // Violent Crimes
+    'Murder': '☠️', 'Homicide': '☠️', 'Shooting': '🔫', 'Stabbing': '🔪',
+    'Assault': '👊', 'Physical Assault': '👊', 'Physical Injury': '🩹',
+    'Domestic Violence': '🏠', 'Violence Against Women': '🚺', 'VAW': '🚺',
+    'Kidnapping': '👤', 'Sexual Assault': '⚠️', 'Rape': '⚠️',
+    // Fire Incidents
+    'Structural Fire': '🔥', 'Fire': '🔥', 'Arson': '🧨',
+    // Natural Disasters
+    'Flood': '🌊', 'Earthquake': '🌍', 'Typhoon': '🌀',
+    // Drug-Related
+    'Possession of Dangerous Drugs': '💊', 'Drug Possession': '💊', 'Drug Dealing': '💉', 'Drug Use': '🚬',
+    // Other Crimes
+    'Hacking': '💻', 'Cyber-Identity Theft': '🔐', 'Identity Theft': '🔐',
+    'Scam': '🎭', 'Swindling': '🎭', 'Fraud': '🎭', 'Estafa': '🎭',
+    'Noise Disturbance': '📢', 'Extortion': '💸', 'Grave Threats': '😡',
+    'Child Abuse': '🧒', 'Acts of Lasciviousness': '🚫', 'Adultery': '💔',
+    'Alarms and scandals': '🔔', 'Anti-Fencing Law': '🏷️',
+    'Found Cadaver/Death under Investigation': '🔍', 'Illegal Gambling': '🎰',
+    'Illegal Logging': '🪵', 'Illegal Mining': '⛏️', 'Illegal Fishing': '🐟',
+    'Illegal Firearms': '🔫', 'Illegal Possession of Firearms': '🔫',
+    'Illegal Detention': '🔒', 'Illegal Recruitment': '📝', 'Illegal Drugs': '💊',
+    'Less Serious Physical Injuries': '🩹', 'Malicious Mischief': '😈',
+    'Obstruction of Justice': '⚖️', 'Qualified Theft': '🗝️',
+    'Resistance and Disobedience': '✊', 'Reckless Imprudence': '⚡',
+    'Serious Illegal Detention': '🔒', 'Serious Physical Injuries': '🏥',
+    'Slight Physical Injuries': '🤕', 'Special Laws': '📜',
+    'Suicide': '🆘', 'Unjust Vexation': '😤', 'Usurpation of Authority': '👑',
+    'Violation of RA 9262': '🚺', 'Violation of City Ordinance': '📋',
+    'Other': '📋',
+  };
+
+  const quickLinkSections: QuickLinkSection[] = categories
+    .map((cat) => {
+      const meta = CATEGORY_META[cat.name] ?? { color: '#6B7280', icon: '📋' };
+      return {
+        categoryName: cat.name,
+        categoryId: cat.id.toString(),
+        color: meta.color,
+        icon: meta.icon,
+        items: (cat.sub_categories && cat.sub_categories.length > 0
+          ? cat.sub_categories.map((sub: string) => ({
+              label: sub,
+              categoryName: cat.name,
+              subcategory: sub,
+              icon: SUBCATEGORY_ICONS[sub] ?? meta.icon,
+            }))
+          : [{ label: cat.name, categoryName: cat.name, subcategory: '', icon: meta.icon }]
+        ),
+      };
+    })
+    .sort((a, b) => {
+      if (a.categoryName === 'Other Crimes') return 1;
+      if (b.categoryName === 'Other Crimes') return -1;
+      return a.categoryName.localeCompare(b.categoryName);
+    });
+
+  const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({});
+
+  const toggleSection = useCallback((categoryId: string) => {
+    setExpandedSections((prev) => ({ ...prev, [categoryId]: !prev[categoryId] }));
+  }, []);
+
+  // Flat list of all quicklinks for keyword matching
+  const allQuickLinks = useMemo(() =>
+    quickLinkSections.flatMap((section) =>
+      section.items.map((item) => ({ ...item, color: section.color }))
+    ), [quickLinkSections]);
+
+  // ── Levenshtein distance for fuzzy matching ──
+  const levenshtein = (a: string, b: string): number => {
+    const m = a.length, n = b.length;
+    if (m === 0) return n;
+    if (n === 0) return m;
+    const dp: number[][] = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+    for (let i = 0; i <= m; i++) dp[i][0] = i;
+    for (let j = 0; j <= n; j++) dp[0][j] = j;
+    for (let i = 1; i <= m; i++) {
+      for (let j = 1; j <= n; j++) {
+        dp[i][j] = a[i - 1] === b[j - 1]
+          ? dp[i - 1][j - 1]
+          : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+      }
+    }
+    return dp[m][n];
+  };
+
+  // ── Stop words: never trigger suggestions on their own ──
+  const STOP_WORDS = useMemo(() => new Set([
+    // English
+    'of','the','a','an','and','or','in','on','at','to','for','with','by','from',
+    'is','was','were','are','be','been','has','have','had','it','its','this',
+    'that','their','they','he','she','his','her','we','you','i','my','our','your',
+    // Filipino/Tagalog
+    'ang','ng','na','sa','si','ni','mga','ay','at','o','para','kung','dahil',
+    'kaya','pero','nang','din','doon','dito','yan','yun','ito','raw','daw',
+    'ba','po','nga','lang','pala','rin','naman','siya','niya','nila','kami',
+    'tayo','sila','ikaw','ako','kayo','mo','ko','namin','natin','kanila','kanya',
+    // Ilocano
+    'ti','iti','ken','da','nga','ta','no','kas','kadagiti','dagiti','diay',
+    'toy','dayta','daytoy','isuna','isuda','amin','laeng','met','pay','man',
+    'ngarud','ket',
+  ]), []);
+
+  // ── Keyword → subcategory names ──
+  type KeywordEntry = { subcategories: string[]; priority?: number };
+  const KEYWORD_DB: Record<string, KeywordEntry> = useMemo(() => ({
+    // ═══════════════════════════════════════════
+    // 🔫 VIOLENT CRIMES — Shooting
+    // ═══════════════════════════════════════════
+    shooting: { subcategories: ['Shooting'], priority: 1 },
+    shot: { subcategories: ['Shooting'], priority: 1 },
+    gunshot: { subcategories: ['Shooting'], priority: 1 },
+    shoot: { subcategories: ['Shooting'] },
+    gunfire: { subcategories: ['Shooting'] },
+    sniper: { subcategories: ['Shooting'] },
+    gunman: { subcategories: ['Shooting'] },
+    armed: { subcategories: ['Shooting'] },
+    bullet: { subcategories: ['Shooting'] },
+    fired: { subcategories: ['Shooting', 'Illegal Firearms'] },
+    caliber: { subcategories: ['Shooting', 'Illegal Firearms'] },
+    pistol: { subcategories: ['Shooting', 'Illegal Firearms'] },
+    revolver: { subcategories: ['Shooting', 'Illegal Firearms'] },
+    rifle: { subcategories: ['Shooting', 'Illegal Firearms'] },
+    shotgun: { subcategories: ['Shooting', 'Illegal Firearms'] },
+    ammunition: { subcategories: ['Shooting', 'Illegal Firearms'] },
+    ammo: { subcategories: ['Shooting', 'Illegal Firearms'] },
+    trigger: { subcategories: ['Shooting'] },
+    ballistic: { subcategories: ['Shooting'] },
+    gunwound: { subcategories: ['Shooting'] },
+    shooter: { subcategories: ['Shooting'] },
+    crossfire: { subcategories: ['Shooting'] },
+    discharge: { subcategories: ['Shooting'] },
+    'armed attack': { subcategories: ['Shooting'] },
+    'fired gun': { subcategories: ['Shooting'] },
+    'bullet wound': { subcategories: ['Shooting'] },
+    'fatally shot': { subcategories: ['Shooting', 'Murder'] },
+    // Filipino
+    binaril: { subcategories: ['Shooting'] },
+    pinutukan: { subcategories: ['Shooting'] },
+    baril: { subcategories: ['Shooting'], priority: 1 },
+    binitawan: { subcategories: ['Shooting'] },
+    nagpaputok: { subcategories: ['Shooting'] },
+    putok: { subcategories: ['Shooting'] },
+    armado: { subcategories: ['Shooting'] },
+    tiro: { subcategories: ['Shooting'] },
+    bumaril: { subcategories: ['Shooting'] },
+    nabaril: { subcategories: ['Shooting'] },
+    tirador: { subcategories: ['Shooting'] },
+    nagbaril: { subcategories: ['Shooting'] },
+    sugatan: { subcategories: ['Shooting', 'Physical Injury'] },
+    pinuksa: { subcategories: ['Shooting', 'Murder'] },
+    naputukan: { subcategories: ['Shooting'] },
+    barilan: { subcategories: ['Shooting'] },
+    // Ilocano
+    naibaril: { subcategories: ['Shooting'] },
+    barita: { subcategories: ['Shooting'] },
+    napaputok: { subcategories: ['Shooting'] },
+    natiro: { subcategories: ['Shooting'] },
+    natirohan: { subcategories: ['Shooting'] },
+    nagbarita: { subcategories: ['Shooting'] },
+
+    // ═══════════════════════════════════════════
+    // 🔫 VIOLENT CRIMES — Stabbing
+    // ═══════════════════════════════════════════
+    stabbing: { subcategories: ['Stabbing'], priority: 1 },
+    stabbed: { subcategories: ['Stabbing'] },
+    knifed: { subcategories: ['Stabbing'] },
+    knife: { subcategories: ['Stabbing'] },
+    blade: { subcategories: ['Stabbing'] },
+    slash: { subcategories: ['Stabbing'] },
+    slashed: { subcategories: ['Stabbing'] },
+    stab: { subcategories: ['Stabbing'] },
+    bladed: { subcategories: ['Stabbing'] },
+    bolo: { subcategories: ['Stabbing'] },
+    laceration: { subcategories: ['Stabbing'] },
+    puncture: { subcategories: ['Stabbing'] },
+    impaled: { subcategories: ['Stabbing'] },
+    dagger: { subcategories: ['Stabbing'] },
+    icepick: { subcategories: ['Stabbing'] },
+    machete: { subcategories: ['Stabbing'] },
+    slit: { subcategories: ['Stabbing'] },
+    pierced: { subcategories: ['Stabbing'] },
+    'knife attack': { subcategories: ['Stabbing'] },
+    'stab wound': { subcategories: ['Stabbing'] },
+    'cut with knife': { subcategories: ['Stabbing'] },
+    'bolo attack': { subcategories: ['Stabbing'] },
+    'bladed weapon': { subcategories: ['Stabbing'] },
+    // Filipino
+    saksak: { subcategories: ['Stabbing'] },
+    sinaksak: { subcategories: ['Stabbing'] },
+    binaltak: { subcategories: ['Stabbing'] },
+    patalim: { subcategories: ['Stabbing'] },
+    itak: { subcategories: ['Stabbing'] },
+    sundang: { subcategories: ['Stabbing'] },
+    kutsilyo: { subcategories: ['Stabbing'] },
+    balisong: { subcategories: ['Stabbing'] },
+    nasaksakan: { subcategories: ['Stabbing'] },
+    balaraw: { subcategories: ['Stabbing'] },
+    panaksak: { subcategories: ['Stabbing'] },
+    nagtaga: { subcategories: ['Stabbing'] },
+    tinaga: { subcategories: ['Stabbing'] },
+    tinusok: { subcategories: ['Stabbing'] },
+    tusok: { subcategories: ['Stabbing'] },
+    nabaon: { subcategories: ['Stabbing'] },
+    pinagtaga: { subcategories: ['Stabbing'] },
+    // Ilocano
+    nasaksak: { subcategories: ['Stabbing'] },
+    buneng: { subcategories: ['Stabbing'] },
+    nawong: { subcategories: ['Stabbing'] },
+    kris: { subcategories: ['Stabbing'] },
+    naibaon: { subcategories: ['Stabbing'] },
+    nasilaban: { subcategories: ['Stabbing'] },
+    nabuneng: { subcategories: ['Stabbing'] },
+    natusok: { subcategories: ['Stabbing'] },
+
+    // ═══════════════════════════════════════════
+    // 🔫 VIOLENT CRIMES — VAW
+    // ═══════════════════════════════════════════
+    vaw: { subcategories: ['Violence Against Women', 'VAW', 'Violation of RA 9262'], priority: 1 },
+    'violence against women': { subcategories: ['Violence Against Women', 'VAW', 'Violation of RA 9262'] },
+    battered: { subcategories: ['Violence Against Women', 'Physical Injury'] },
+    'domestic abuse': { subcategories: ['Domestic Violence', 'Violence Against Women'] },
+    'wife beating': { subcategories: ['Violence Against Women', 'Domestic Violence'] },
+    'gender violence': { subcategories: ['Violence Against Women'] },
+    'abused woman': { subcategories: ['Violence Against Women'] },
+    'beaten wife': { subcategories: ['Violence Against Women'] },
+    'intimate partner violence': { subcategories: ['Violence Against Women', 'Domestic Violence'] },
+    'marital abuse': { subcategories: ['Domestic Violence', 'Violence Against Women'] },
+    harassed: { subcategories: ['Violence Against Women'] },
+    harassment: { subcategories: ['Violence Against Women'] },
+    molestation: { subcategories: ['Violence Against Women', 'Sexual Assault'] },
+    coerced: { subcategories: ['Violence Against Women', 'Extortion'] },
+    bruised: { subcategories: ['Physical Injury', 'Violence Against Women'] },
+    // Filipino
+    inaabuso: { subcategories: ['Violence Against Women', 'Child Abuse'] },
+    tinatampalasan: { subcategories: ['Violence Against Women'] },
+    binubugbog: { subcategories: ['Physical Injury', 'Violence Against Women'] },
+    tampalasan: { subcategories: ['Violence Against Women'] },
+    inabuso: { subcategories: ['Violence Against Women', 'Sexual Assault'] },
+    sinaktan: { subcategories: ['Violence Against Women', 'Physical Injury'] },
+    babae: { subcategories: ['Violence Against Women'] },
+    asawa: { subcategories: ['Violence Against Women', 'Domestic Violence'] },
+    karahasan: { subcategories: ['Violence Against Women'] },
+    kinulata: { subcategories: ['Violence Against Women', 'Physical Injury'] },
+    pinalo: { subcategories: ['Violence Against Women', 'Physical Injury'] },
+    pinahirapan: { subcategories: ['Violence Against Women', 'Child Abuse'] },
+    nananakit: { subcategories: ['Violence Against Women', 'Physical Injury'] },
+    'karahasan sa babae': { subcategories: ['Violence Against Women'] },
+    'inaabuso ang babae': { subcategories: ['Violence Against Women'] },
+    'sinaktan ang babae': { subcategories: ['Violence Against Women'] },
+    // Ilocano
+    'nasakitan ti babai': { subcategories: ['Violence Against Women'] },
+    inadaan: { subcategories: ['Violence Against Women'] },
+    nasufriran: { subcategories: ['Violence Against Women'] },
+    nasalungat: { subcategories: ['Violence Against Women'] },
+
+    // ═══════════════════════════════════════════
+    // 🔫 VIOLENT CRIMES — Murder / Kidnapping
+    // ═══════════════════════════════════════════
+    murder: { subcategories: ['Murder', 'Homicide'], priority: 1 },
+    killed: { subcategories: ['Murder', 'Homicide'] },
+    kill: { subcategories: ['Murder', 'Homicide'] },
+    patay: { subcategories: ['Murder', 'Homicide'] },
+    pinatay: { subcategories: ['Murder'] },
+    napaslang: { subcategories: ['Murder'] },
+    namatay: { subcategories: ['Murder'] },
+    kidnap: { subcategories: ['Kidnapping'] },
+    kidnapped: { subcategories: ['Kidnapping'] },
+    kidnapping: { subcategories: ['Kidnapping'] },
+    abduct: { subcategories: ['Kidnapping'] },
+    abducted: { subcategories: ['Kidnapping'] },
+    dinukot: { subcategories: ['Kidnapping'] },
+    dukot: { subcategories: ['Kidnapping'] },
+
+    // ═══════════════════════════════════════════
+    // 🔥 ARSON / FIRE — Smart split
+    // ═══════════════════════════════════════════
+    // English "fire/fired/firing/firearm/firearms" → BOTH Fire AND Firearms
+    fire: { subcategories: ['Structural Fire', 'Fire', 'Arson', 'Illegal Firearms'], priority: 1 },
+    firing: { subcategories: ['Shooting', 'Structural Fire', 'Illegal Firearms'] },
+    firearm: { subcategories: ['Illegal Firearms', 'Shooting'], priority: 1 },
+    firearms: { subcategories: ['Illegal Firearms', 'Shooting'], priority: 1 },
+    // English arson/fire words → fire category
+    arson: { subcategories: ['Arson'], priority: 1 },
+    burned: { subcategories: ['Arson', 'Structural Fire'] },
+    burning: { subcategories: ['Arson', 'Structural Fire'] },
+    blaze: { subcategories: ['Structural Fire', 'Fire'] },
+    inferno: { subcategories: ['Structural Fire'] },
+    engulfed: { subcategories: ['Structural Fire'] },
+    flames: { subcategories: ['Structural Fire', 'Fire'] },
+    scorched: { subcategories: ['Structural Fire'] },
+    charred: { subcategories: ['Arson', 'Structural Fire'] },
+    wildfire: { subcategories: ['Structural Fire'] },
+    combustion: { subcategories: ['Arson'] },
+    ignited: { subcategories: ['Arson'] },
+    smoke: { subcategories: ['Structural Fire'] },
+    firefighter: { subcategories: ['Structural Fire'] },
+    firetruck: { subcategories: ['Structural Fire'] },
+    'burning building': { subcategories: ['Structural Fire'] },
+    'set on fire': { subcategories: ['Arson'] },
+    'structure fire': { subcategories: ['Structural Fire'] },
+    'house fire': { subcategories: ['Structural Fire'] },
+    'fire incident': { subcategories: ['Structural Fire', 'Fire'] },
+    'engulfed in flames': { subcategories: ['Structural Fire'] },
+    // Filipino — fire ONLY (no firearms)
+    sunog: { subcategories: ['Structural Fire', 'Fire', 'Arson'], priority: 1 },
+    nasusunog: { subcategories: ['Structural Fire', 'Fire'] },
+    nagsunog: { subcategories: ['Arson'] },
+    sinunog: { subcategories: ['Arson'] },
+    apoy: { subcategories: ['Structural Fire', 'Fire'], priority: 1 },
+    nagliliyab: { subcategories: ['Structural Fire', 'Fire'] },
+    nagliyab: { subcategories: ['Structural Fire'] },
+    nasunog: { subcategories: ['Structural Fire', 'Fire'] },
+    sunugin: { subcategories: ['Arson'] },
+    ningas: { subcategories: ['Structural Fire'] },
+    naglalab: { subcategories: ['Structural Fire'] },
+    naglablab: { subcategories: ['Structural Fire'] },
+    nagaapoy: { subcategories: ['Structural Fire'] },
+    nagniningas: { subcategories: ['Structural Fire'] },
+    usok: { subcategories: ['Structural Fire'] },
+    abo: { subcategories: ['Arson'] },
+    nagsindi: { subcategories: ['Arson'] },
+    pagsisindi: { subcategories: ['Arson'] },
+    'sunog ng bahay': { subcategories: ['Structural Fire'] },
+    // Ilocano — fire ONLY
+    apuy: { subcategories: ['Structural Fire', 'Fire'] },
+    naglabaga: { subcategories: ['Structural Fire'] },
+    naisunog: { subcategories: ['Structural Fire'] },
+    naalimbasog: { subcategories: ['Structural Fire'] },
+    nagdara: { subcategories: ['Structural Fire'] },
+    nagliwanag: { subcategories: ['Structural Fire'] },
+
+    // ═══════════════════════════════════════════
+    // 🏠 PROPERTY CRIMES — Robbery
+    // ═══════════════════════════════════════════
+    robbery: { subcategories: ['Robbery'], priority: 1 },
+    robbed: { subcategories: ['Robbery'] },
+    holdup: { subcategories: ['Robbery'] },
+    'hold up': { subcategories: ['Robbery'] },
+    'hold-up': { subcategories: ['Robbery'] },
+    mugged: { subcategories: ['Robbery'] },
+    mugging: { subcategories: ['Robbery'] },
+    snatch: { subcategories: ['Snatching', 'Robbery'] },
+    snatched: { subcategories: ['Snatching'] },
+    snatching: { subcategories: ['Snatching'] },
+    looting: { subcategories: ['Robbery'] },
+    heist: { subcategories: ['Robbery'] },
+    strongarm: { subcategories: ['Robbery'] },
+    ransacked: { subcategories: ['Robbery', 'Burglary'] },
+    gunpoint: { subcategories: ['Robbery'] },
+    'armed robbery': { subcategories: ['Robbery'] },
+    // Filipino
+    holdap: { subcategories: ['Robbery'] },
+    ninakaw: { subcategories: ['Theft', 'Robbery'] },
+    nagnakaw: { subcategories: ['Theft'] },
+    nanakawan: { subcategories: ['Robbery', 'Theft'] },
+    'nang-agaw': { subcategories: ['Robbery', 'Snatching'] },
+    dinampot: { subcategories: ['Robbery'] },
+    tinangay: { subcategories: ['Robbery', 'Snatching'] },
+    tulisan: { subcategories: ['Robbery'] },
+    nangloob: { subcategories: ['Robbery', 'Burglary'] },
+    nangharang: { subcategories: ['Robbery'] },
+    inagaw: { subcategories: ['Snatching', 'Robbery'] },
+    pinagharang: { subcategories: ['Robbery'] },
+    nagtangay: { subcategories: ['Robbery'] },
+    nagnanakaw: { subcategories: ['Theft'] },
+    kinuha: { subcategories: ['Theft', 'Robbery'] },
+    pinilit: { subcategories: ['Robbery', 'Extortion'] },
+    // Ilocano
+    natakawan: { subcategories: ['Robbery', 'Theft'] },
+    nanakaw: { subcategories: ['Theft'] },
+    naagaw: { subcategories: ['Snatching', 'Robbery'] },
+    nangabak: { subcategories: ['Robbery'] },
+    naladaw: { subcategories: ['Robbery'] },
+    nanggunaw: { subcategories: ['Robbery'] },
+    nagikkat: { subcategories: ['Theft'] },
+    nagtakaw: { subcategories: ['Theft'] },
+
+    // ═══════════════════════════════════════════
+    // 🏠 PROPERTY CRIMES — Theft
+    // ═══════════════════════════════════════════
+    theft: { subcategories: ['Theft', 'Qualified Theft'], priority: 1 },
+    stolen: { subcategories: ['Theft'] },
+    pickpocket: { subcategories: ['Theft'] },
+    shoplifting: { subcategories: ['Theft'] },
+    shoplifted: { subcategories: ['Theft'] },
+    pilfered: { subcategories: ['Theft'] },
+    swiped: { subcategories: ['Theft'] },
+    filched: { subcategories: ['Theft'] },
+    larceny: { subcategories: ['Theft'] },
+    embezzlement: { subcategories: ['Theft', 'Swindling'] },
+    'missing item': { subcategories: ['Theft'] },
+    'stolen property': { subcategories: ['Theft'] },
+    'break in': { subcategories: ['Burglary'] },
+    'break-in': { subcategories: ['Burglary'] },
+    'broke in': { subcategories: ['Burglary'] },
+    'broke-in': { subcategories: ['Burglary'] },
+    burglar: { subcategories: ['Burglary'] },
+    burglary: { subcategories: ['Burglary'], priority: 1 },
+    trespassing: { subcategories: ['Trespassing'] },
+    trespass: { subcategories: ['Trespassing'] },
+    lumusob: { subcategories: ['Trespassing'] },
+    // Filipino
+    magnakaw: { subcategories: ['Theft'] },
+    nakawan: { subcategories: ['Theft'] },
+    nawala: { subcategories: ['Theft'] },
+    nawalan: { subcategories: ['Theft'] },
+    nakaw: { subcategories: ['Theft'] },
+    tangay: { subcategories: ['Theft', 'Snatching'] },
+    agaw: { subcategories: ['Snatching'] },
+    naala: { subcategories: ['Theft'] },
+    // Ilocano
+    naikkat: { subcategories: ['Theft'] },
+    naikkaten: { subcategories: ['Theft'] },
+    naited: { subcategories: ['Theft'] },
+
+    // ═══════════════════════════════════════════
+    // 🏠 PROPERTY CRIMES — Carnapping
+    // ═══════════════════════════════════════════
+    carnapping: { subcategories: ['Carnapping'], priority: 1 },
+    carnapped: { subcategories: ['Carnapping'] },
+    motornapping: { subcategories: ['Carnapping'] },
+    carjacked: { subcategories: ['Carnapping'] },
+    carjacking: { subcategories: ['Carnapping'] },
+    hotwired: { subcategories: ['Carnapping'] },
+    'car theft': { subcategories: ['Carnapping'] },
+    'stolen vehicle': { subcategories: ['Carnapping'] },
+    'stolen car': { subcategories: ['Carnapping'] },
+    'stolen motorcycle': { subcategories: ['Carnapping'] },
+    'vehicle theft': { subcategories: ['Carnapping'] },
+    'hijacked car': { subcategories: ['Carnapping'] },
+    'stolen-car': { subcategories: ['Carnapping'] },
+    'stolen-vehicle': { subcategories: ['Carnapping'] },
+    'stolen-motor': { subcategories: ['Carnapping'] },
+    // Filipino
+    kinarnap: { subcategories: ['Carnapping'] },
+    'nagnakaw ng sasakyan': { subcategories: ['Carnapping'] },
+    'ninakaw ang kotse': { subcategories: ['Carnapping'] },
+    'nakaw na motor': { subcategories: ['Carnapping'] },
+    kotse: { subcategories: ['Carnapping', 'Vehicular Accident'] },
+    sasakyan: { subcategories: ['Carnapping', 'Vehicular Accident'] },
+    motor: { subcategories: ['Carnapping'] },
+    motorsiklo: { subcategories: ['Carnapping'] },
+    // Ilocano
+    nakarnap: { subcategories: ['Carnapping'] },
+
+    // ═══════════════════════════════════════════
+    // 🏠 PROPERTY CRIMES — Cyber-Identity Theft
+    // ═══════════════════════════════════════════
+    'identity theft': { subcategories: ['Cyber-Identity Theft', 'Identity Theft'] },
+    'hacked account': { subcategories: ['Hacking', 'Cyber-Identity Theft'] },
+    phishing: { subcategories: ['Cyber-Identity Theft', 'Scam'] },
+    'scammed online': { subcategories: ['Swindling', 'Cyber-Identity Theft'] },
+    'fake account': { subcategories: ['Cyber-Identity Theft'] },
+    'account takeover': { subcategories: ['Cyber-Identity Theft', 'Hacking'] },
+    'cyber theft': { subcategories: ['Cyber-Identity Theft'] },
+    'data breach': { subcategories: ['Hacking', 'Cyber-Identity Theft'] },
+    'online fraud': { subcategories: ['Swindling', 'Cyber-Identity Theft'] },
+    'stolen credentials': { subcategories: ['Cyber-Identity Theft'] },
+    password: { subcategories: ['Hacking', 'Cyber-Identity Theft'] },
+    credentials: { subcategories: ['Cyber-Identity Theft'] },
+    spoofed: { subcategories: ['Cyber-Identity Theft'] },
+    keylogger: { subcategories: ['Hacking'] },
+    spyware: { subcategories: ['Hacking'] },
+    leaked: { subcategories: ['Hacking', 'Cyber-Identity Theft'] },
+    compromised: { subcategories: ['Hacking', 'Cyber-Identity Theft'] },
+    'na-hack': { subcategories: ['Hacking'] },
+    'nalinlang online': { subcategories: ['Swindling', 'Cyber-Identity Theft'] },
+    'niloko online': { subcategories: ['Swindling'] },
+    'pekeng account': { subcategories: ['Cyber-Identity Theft'] },
+    'peke': { subcategories: ['Cyber-Identity Theft', 'Swindling'] },
+    'pekeng-account': { subcategories: ['Cyber-Identity Theft'] },
+    'ninakaw ang account': { subcategories: ['Cyber-Identity Theft', 'Hacking'] },
+
+    // ═══════════════════════════════════════════
+    // 🏠 PROPERTY CRIMES — Vandalism
+    // ═══════════════════════════════════════════
+    vandal: { subcategories: ['Vandalism', 'Malicious Mischief'] },
+    vandalism: { subcategories: ['Vandalism', 'Malicious Mischief'] },
+    vandalized: { subcategories: ['Vandalism'] },
+    graffiti: { subcategories: ['Vandalism'] },
+    sinira: { subcategories: ['Vandalism', 'Malicious Mischief'] },
+    winasak: { subcategories: ['Vandalism'] },
+
+    // ═══════════════════════════════════════════
+    // 💊 DRUG-RELATED
+    // ═══════════════════════════════════════════
+    drugs: { subcategories: ['Possession of Dangerous Drugs', 'Drug Possession', 'Illegal Drugs'] },
+    drug: { subcategories: ['Possession of Dangerous Drugs', 'Drug Possession', 'Illegal Drugs'] },
+    shabu: { subcategories: ['Possession of Dangerous Drugs', 'Drug Possession'], priority: 1 },
+    meth: { subcategories: ['Possession of Dangerous Drugs'] },
+    methamphetamine: { subcategories: ['Possession of Dangerous Drugs'] },
+    marijuana: { subcategories: ['Possession of Dangerous Drugs'] },
+    weed: { subcategories: ['Possession of Dangerous Drugs'] },
+    cannabis: { subcategories: ['Possession of Dangerous Drugs'] },
+    cocaine: { subcategories: ['Possession of Dangerous Drugs'] },
+    heroin: { subcategories: ['Possession of Dangerous Drugs'] },
+    ecstasy: { subcategories: ['Possession of Dangerous Drugs'] },
+    mdma: { subcategories: ['Possession of Dangerous Drugs'] },
+    narcotics: { subcategories: ['Possession of Dangerous Drugs'] },
+    pusher: { subcategories: ['Drug Dealing', 'Possession of Dangerous Drugs'] },
+    dealer: { subcategories: ['Drug Dealing'] },
+    rugby: { subcategories: ['Possession of Dangerous Drugs'] },
+    solvent: { subcategories: ['Possession of Dangerous Drugs'] },
+    contraband: { subcategories: ['Possession of Dangerous Drugs'] },
+    paraphernalia: { subcategories: ['Possession of Dangerous Drugs'] },
+    syringe: { subcategories: ['Possession of Dangerous Drugs', 'Drug Use'] },
+    needle: { subcategories: ['Possession of Dangerous Drugs', 'Drug Use'] },
+    snorted: { subcategories: ['Drug Use'] },
+    injected: { subcategories: ['Drug Use'] },
+    inhaled: { subcategories: ['Drug Use'] },
+    addict: { subcategories: ['Drug Use', 'Possession of Dangerous Drugs'] },
+    addiction: { subcategories: ['Drug Use'] },
+    'illegal drugs': { subcategories: ['Possession of Dangerous Drugs', 'Illegal Drugs'] },
+    'drug possession': { subcategories: ['Possession of Dangerous Drugs'] },
+    'drug pusher': { subcategories: ['Drug Dealing'] },
+    'drug lord': { subcategories: ['Drug Dealing'] },
+    // Filipino
+    droga: { subcategories: ['Possession of Dangerous Drugs', 'Illegal Drugs'] },
+    nagdadrugas: { subcategories: ['Possession of Dangerous Drugs', 'Drug Use'] },
+    adik: { subcategories: ['Drug Use'] },
+    addikto: { subcategories: ['Drug Use', 'Possession of Dangerous Drugs'] },
+    'nagbebenta ng droga': { subcategories: ['Drug Dealing'] },
+    nagpupuslit: { subcategories: ['Drug Dealing'] },
+    natagpuan: { subcategories: ['Possession of Dangerous Drugs'] },
+    naaresto: { subcategories: ['Possession of Dangerous Drugs'] },
+    'nag-iinject': { subcategories: ['Drug Use'] },
+    naghihithit: { subcategories: ['Drug Use'] },
+    // Ilocano
+    naadiksyon: { subcategories: ['Drug Use'] },
+    nagdroga: { subcategories: ['Possession of Dangerous Drugs'] },
+    nagbaligya: { subcategories: ['Drug Dealing'] },
+
+    // ═══════════════════════════════════════════
+    // 🚗 TRAFFIC INCIDENTS
+    // ═══════════════════════════════════════════
+    accident: { subcategories: ['Vehicular Accident'] },
+    'vehicular accident': { subcategories: ['Vehicular Accident'], priority: 1 },
+    'car crash': { subcategories: ['Vehicular Accident'] },
+    'hit and run': { subcategories: ['Hit and Run'] },
+    'hit-and-run': { subcategories: ['Hit and Run'] },
+    collision: { subcategories: ['Vehicular Accident'] },
+    'road accident': { subcategories: ['Vehicular Accident'] },
+    'motorcycle accident': { subcategories: ['Vehicular Accident'] },
+    'truck crash': { subcategories: ['Vehicular Accident'] },
+    'overturned vehicle': { subcategories: ['Vehicular Accident'] },
+    crash: { subcategories: ['Vehicular Accident'] },
+    rammed: { subcategories: ['Vehicular Accident'] },
+    reckless: { subcategories: ['Vehicular Accident', 'Reckless Imprudence'] },
+    speeding: { subcategories: ['Vehicular Accident'] },
+    'drunk driving': { subcategories: ['Vehicular Accident'] },
+    'drunk-driving': { subcategories: ['Vehicular Accident'] },
+    pedestrian: { subcategories: ['Vehicular Accident'] },
+    sideswiped: { subcategories: ['Vehicular Accident'] },
+    'rear-ended': { subcategories: ['Vehicular Accident'] },
+    'run over': { subcategories: ['Vehicular Accident'] },
+    runover: { subcategories: ['Vehicular Accident'] },
+    // Filipino
+    aksidente: { subcategories: ['Vehicular Accident'] },
+    banggaan: { subcategories: ['Vehicular Accident'] },
+    nasagasaan: { subcategories: ['Vehicular Accident'] },
+    nabanggaan: { subcategories: ['Vehicular Accident'] },
+    nabangga: { subcategories: ['Vehicular Accident'] },
+    tumagilid: { subcategories: ['Vehicular Accident'] },
+    nahulog: { subcategories: ['Vehicular Accident'] },
+    pabaya: { subcategories: ['Vehicular Accident', 'Reckless Imprudence'] },
+    lasing: { subcategories: ['Vehicular Accident'] },
+    bangga: { subcategories: ['Vehicular Accident'] },
+    // Ilocano
+    naaksidente: { subcategories: ['Vehicular Accident'] },
+    nakibang: { subcategories: ['Vehicular Accident'] },
+    natumba: { subcategories: ['Vehicular Accident'] },
+    naibanggaan: { subcategories: ['Vehicular Accident'] },
+    // TIP / Trafficking
+    'human trafficking': { subcategories: ['Traffic-in-persons (TIP)', 'TIP'] },
+    trafficking: { subcategories: ['Traffic-in-persons (TIP)', 'TIP'] },
+    trafficked: { subcategories: ['Traffic-in-persons (TIP)', 'TIP'] },
+    smuggled: { subcategories: ['Traffic-in-persons (TIP)'] },
+    'trafficking in persons': { subcategories: ['Traffic-in-persons (TIP)', 'TIP'] },
+    'victim of trafficking': { subcategories: ['Traffic-in-persons (TIP)'] },
+    'illegal recruitment': { subcategories: ['Traffic-in-persons (TIP)', 'Illegal Recruitment'] },
+    'illegal-recruitment': { subcategories: ['Traffic-in-persons (TIP)', 'Illegal Recruitment'] },
+    natraffick: { subcategories: ['Traffic-in-persons (TIP)'] },
+    natrafico: { subcategories: ['Traffic-in-persons (TIP)'] },
+    inilikas: { subcategories: ['Traffic-in-persons (TIP)'] },
+    inirerekrut: { subcategories: ['Traffic-in-persons (TIP)'] },
+
+    // ═══════════════════════════════════════════
+    // ⚠️ OTHER CRIMES — Hacking
+    // ═══════════════════════════════════════════
+    hacking: { subcategories: ['Hacking'], priority: 1 },
+    hacked: { subcategories: ['Hacking'] },
+    hack: { subcategories: ['Hacking'] },
+    cyber: { subcategories: ['Hacking', 'Cyber-Identity Theft'] },
+    'cyber attack': { subcategories: ['Hacking'] },
+    malware: { subcategories: ['Hacking'] },
+    ransomware: { subcategories: ['Hacking'] },
+    intrusion: { subcategories: ['Hacking'] },
+    cracking: { subcategories: ['Hacking'] },
+    'unauthorized access': { subcategories: ['Hacking'] },
+    exploit: { subcategories: ['Hacking'] },
+    vulnerability: { subcategories: ['Hacking'] },
+    ddos: { subcategories: ['Hacking'] },
+    'na-breach': { subcategories: ['Hacking'] },
+
+    // ═══════════════════════════════════════════
+    // ⚠️ OTHER CRIMES — Rape / Sexual Assault
+    // ═══════════════════════════════════════════
+    rape: { subcategories: ['Rape', 'Sexual Assault'], priority: 1 },
+    raped: { subcategories: ['Rape', 'Sexual Assault'] },
+    'sexual assault': { subcategories: ['Sexual Assault', 'Rape'] },
+    molested: { subcategories: ['Sexual Assault', 'Acts of Lasciviousness'] },
+    'sexual abuse': { subcategories: ['Sexual Assault', 'Rape'] },
+    'sexual violence': { subcategories: ['Sexual Assault', 'Rape'] },
+    violated: { subcategories: ['Rape', 'Sexual Assault'] },
+    'unwanted touching': { subcategories: ['Acts of Lasciviousness', 'Sexual Assault'] },
+    ginahasa: { subcategories: ['Rape'] },
+    nagahasa: { subcategories: ['Rape'] },
+    naabuso: { subcategories: ['Sexual Assault', 'Rape'] },
+    nailada: { subcategories: ['Rape'] },
+    sapilitan: { subcategories: ['Rape'] },
+    sekswal: { subcategories: ['Sexual Assault'] },
+
+    // ═══════════════════════════════════════════
+    // ⚠️ OTHER CRIMES — Child Abuse
+    // ═══════════════════════════════════════════
+    'child abuse': { subcategories: ['Child Abuse'], priority: 1 },
+    'abused child': { subcategories: ['Child Abuse'] },
+    'maltreated child': { subcategories: ['Child Abuse'] },
+    'battered child': { subcategories: ['Child Abuse'] },
+    'neglected child': { subcategories: ['Child Abuse'] },
+    'child exploitation': { subcategories: ['Child Abuse'] },
+    underage: { subcategories: ['Child Abuse'] },
+    minor: { subcategories: ['Child Abuse'] },
+    'inaabuso ang bata': { subcategories: ['Child Abuse'] },
+    'binubugbog ang bata': { subcategories: ['Child Abuse'] },
+    'nasakitan ang bata': { subcategories: ['Child Abuse'] },
+    batang: { subcategories: ['Child Abuse'] },
+    bata: { subcategories: ['Child Abuse'] },
+    menor: { subcategories: ['Child Abuse'] },
+    'nasakitan ti ubing': { subcategories: ['Child Abuse'] },
+    ubing: { subcategories: ['Child Abuse'] },
+
+    // ═══════════════════════════════════════════
+    // ⚠️ OTHER CRIMES — Extortion
+    // ═══════════════════════════════════════════
+    extortion: { subcategories: ['Extortion'], priority: 1 },
+    extorted: { subcategories: ['Extortion'] },
+    blackmail: { subcategories: ['Extortion'] },
+    blackmailed: { subcategories: ['Extortion'] },
+    ransom: { subcategories: ['Extortion', 'Kidnapping'] },
+    bribed: { subcategories: ['Extortion'] },
+    bribery: { subcategories: ['Extortion'] },
+    intimidated: { subcategories: ['Extortion', 'Grave Threats'] },
+    'demanded money': { subcategories: ['Extortion'] },
+    'threat for money': { subcategories: ['Extortion'] },
+    pangongotong: { subcategories: ['Extortion'] },
+    kotong: { subcategories: ['Extortion'] },
+    'humingi ng pera': { subcategories: ['Extortion'] },
+    nagbanta: { subcategories: ['Extortion', 'Grave Threats'] },
+    pinakyaw: { subcategories: ['Extortion'] },
+    nabaluktot: { subcategories: ['Extortion'] },
+
+    // ═══════════════════════════════════════════
+    // ⚠️ OTHER CRIMES — Grave Threats
+    // ═══════════════════════════════════════════
+    'grave threats': { subcategories: ['Grave Threats'], priority: 1 },
+    'death threat': { subcategories: ['Grave Threats'] },
+    'death-threat': { subcategories: ['Grave Threats'] },
+    'threatened to kill': { subcategories: ['Grave Threats'] },
+    menace: { subcategories: ['Grave Threats'] },
+    terrorized: { subcategories: ['Grave Threats'] },
+    threatened: { subcategories: ['Grave Threats'] },
+    banta: { subcategories: ['Grave Threats'] },
+    bantaan: { subcategories: ['Grave Threats'] },
+    papatayin: { subcategories: ['Grave Threats'] },
+    tatandaan: { subcategories: ['Grave Threats'] },
+    tinakot: { subcategories: ['Grave Threats'] },
+    'banta ng kamatayan': { subcategories: ['Grave Threats'] },
+    pinapaatras: { subcategories: ['Grave Threats'] },
+    natatakot: { subcategories: ['Grave Threats'] },
+    nahadlawan: { subcategories: ['Grave Threats'] },
+    nabugtong: { subcategories: ['Grave Threats'] },
+    nabukod: { subcategories: ['Grave Threats'] },
+
+    // ═══════════════════════════════════════════
+    // ⚠️ OTHER CRIMES — Physical Injury
+    // ═══════════════════════════════════════════
+    'physical injury': { subcategories: ['Physical Injury', 'Serious Physical Injuries', 'Slight Physical Injuries'] },
+    mauling: { subcategories: ['Physical Injury'] },
+    mauled: { subcategories: ['Physical Injury'] },
+    beaten: { subcategories: ['Physical Injury'] },
+    fistfight: { subcategories: ['Physical Injury'] },
+    brawl: { subcategories: ['Physical Injury'] },
+    assault: { subcategories: ['Assault', 'Physical Injury'] },
+    assaulted: { subcategories: ['Assault', 'Physical Injury'] },
+    punched: { subcategories: ['Physical Injury'] },
+    kicked: { subcategories: ['Physical Injury'] },
+    fractured: { subcategories: ['Physical Injury', 'Serious Physical Injuries'] },
+    injured: { subcategories: ['Physical Injury'] },
+    injury: { subcategories: ['Physical Injury'] },
+    hospitalized: { subcategories: ['Physical Injury', 'Serious Physical Injuries'] },
+    bleeding: { subcategories: ['Physical Injury'] },
+    bugbog: { subcategories: ['Physical Injury'] },
+    sinuntok: { subcategories: ['Physical Injury'] },
+    suntok: { subcategories: ['Physical Injury'] },
+    suntukan: { subcategories: ['Physical Injury'] },
+    away: { subcategories: ['Physical Injury'] },
+    nagkagulo: { subcategories: ['Physical Injury'] },
+    nasugatan: { subcategories: ['Physical Injury'] },
+    nasaktan: { subcategories: ['Physical Injury'] },
+    kulata: { subcategories: ['Physical Injury'] },
+    pinagpalo: { subcategories: ['Physical Injury'] },
+    naospital: { subcategories: ['Physical Injury', 'Serious Physical Injuries'] },
+    dumudugo: { subcategories: ['Physical Injury'] },
+    nabugbog: { subcategories: ['Physical Injury'] },
+    naibasol: { subcategories: ['Physical Injury'] },
+    naawit: { subcategories: ['Physical Injury'] },
+    nabali: { subcategories: ['Physical Injury'] },
+
+    // ═══════════════════════════════════════════
+    // ⚠️ OTHER CRIMES — Swindling / Estafa / Scam
+    // ═══════════════════════════════════════════
+    swindling: { subcategories: ['Swindling', 'Estafa'] },
+    estafa: { subcategories: ['Swindling', 'Estafa'] },
+    scam: { subcategories: ['Swindling', 'Scam', 'Estafa'] },
+    scammed: { subcategories: ['Swindling', 'Scam'] },
+    fraud: { subcategories: ['Swindling', 'Fraud'] },
+    fraudulent: { subcategories: ['Swindling'] },
+    cheated: { subcategories: ['Swindling'] },
+    deceived: { subcategories: ['Swindling'] },
+    conned: { subcategories: ['Swindling'] },
+    bogus: { subcategories: ['Swindling'] },
+    duped: { subcategories: ['Swindling'] },
+    tricked: { subcategories: ['Swindling'] },
+    'na-scam': { subcategories: ['Swindling', 'Scam'] },
+    niloko: { subcategories: ['Swindling'] },
+    dinaya: { subcategories: ['Swindling'] },
+    estapador: { subcategories: ['Swindling'] },
+    panloloko: { subcategories: ['Swindling'] },
+    nalinlang: { subcategories: ['Swindling'] },
+    inimik: { subcategories: ['Swindling'] },
+
+    // ═══════════════════════════════════════════
+    // ⚠️ OTHER CRIMES — Miscellaneous
+    // ═══════════════════════════════════════════
+    noise: { subcategories: ['Noise Disturbance', 'Alarms and scandals'] },
+    maingay: { subcategories: ['Noise Disturbance'] },
+    gulo: { subcategories: ['Noise Disturbance'] },
+    disturbance: { subcategories: ['Noise Disturbance'] },
+    'illegal firearms': { subcategories: ['Illegal Firearms', 'Shooting'] },
+    'illegal possession': { subcategories: ['Illegal Firearms', 'Possession of Dangerous Drugs'] },
+    gun: { subcategories: ['Shooting', 'Illegal Firearms'] },
+    'domestic violence': { subcategories: ['Domestic Violence'] },
+    domestic: { subcategories: ['Domestic Violence'] },
+    abuso: { subcategories: ['Domestic Violence', 'Violence Against Women'] },
+    marahas: { subcategories: ['Domestic Violence'] },
+    // Natural Disasters
+    flood: { subcategories: ['Flood'] },
+    baha: { subcategories: ['Flood'] },
+    earthquake: { subcategories: ['Earthquake'] },
+    lindol: { subcategories: ['Earthquake'] },
+    typhoon: { subcategories: ['Typhoon'] },
+    bagyo: { subcategories: ['Typhoon'] },
+    storm: { subcategories: ['Typhoon'] },
+    // Suicide
+    suicide: { subcategories: ['Suicide'] },
+    nagpakamatay: { subcategories: ['Suicide'] },
+    nagbigti: { subcategories: ['Suicide'] },
+    // Illegal Gambling
+    gambling: { subcategories: ['Illegal Gambling'] },
+    'illegal gambling': { subcategories: ['Illegal Gambling'] },
+    sugal: { subcategories: ['Illegal Gambling'] },
+    pustahan: { subcategories: ['Illegal Gambling'] },
+    // Reckless Imprudence
+    'reckless imprudence': { subcategories: ['Reckless Imprudence'] },
+    imprudence: { subcategories: ['Reckless Imprudence'] },
+  }), []);
+
+  // Build flat keyword list for fuzzy matching
+  const ALL_KEYWORDS = useMemo(() => Object.keys(KEYWORD_DB), [KEYWORD_DB]);
+
+  // Fuzzy match: find closest keywords within Levenshtein distance ≤ 2
+  const fuzzyMatch = useCallback((word: string): string[] => {
+    if (word.length < 3) return [];
+    const matches: { kw: string; dist: number }[] = [];
+    for (const kw of ALL_KEYWORDS) {
+      if (kw.includes(' ')) continue;
+      if (Math.abs(kw.length - word.length) > 2) continue;
+      const dist = levenshtein(word, kw);
+      if (dist <= 2 && dist > 0) {
+        matches.push({ kw, dist });
+      }
+    }
+    return matches.sort((a, b) => a.dist - b.dist).slice(0, 3).map((m) => m.kw);
+  }, [ALL_KEYWORDS]);
+
+  type SuggestedLink = { label: string; categoryName: string; subcategory: string; color: string; icon: string };
+  const [descriptionSuggestions, setDescriptionSuggestions] = useState<SuggestedLink[]>([]);
+
+  const handleDescriptionChange = useCallback((text: string) => {
+    updateFormData({ what_happened: text });
+    if (!text.trim()) { setDescriptionSuggestions([]); return; }
+
+    const lower = text.toLowerCase();
+    const words = lower.split(/\s+/).filter(Boolean);
+    const contentWords = words.filter((w) => !STOP_WORDS.has(w));
+    const matchedKeys = new Set<string>();
+    const matched: { link: SuggestedLink; priority: number }[] = [];
+
+    const addMatches = (entry: KeywordEntry) => {
+      for (const subName of entry.subcategories) {
+        const subLower = subName.toLowerCase();
+        let found = false;
+        for (const ql of allQuickLinks) {
+          const key = `${ql.categoryName}::${ql.label}`;
+          if (!matchedKeys.has(key) && ql.label.toLowerCase() === subLower) {
+            matchedKeys.add(key);
+            matched.push({ link: ql, priority: entry.priority ?? 5 });
+            found = true;
+          }
+        }
+        if (found) continue;
+        for (const ql of allQuickLinks) {
+          const key = `${ql.categoryName}::${ql.label}`;
+          const qlLower = ql.label.toLowerCase();
+          const subWords = subLower.split(/\s+/);
+          const labelWords = qlLower.split(/\s+/);
+          const hasOverlap = qlLower.includes(subLower) || subLower.includes(qlLower)
+            || subWords.some((sw) => sw.length > 3 && labelWords.some((lw) => lw.includes(sw) || sw.includes(lw)));
+          if (!matchedKeys.has(key) && hasOverlap) {
+            matchedKeys.add(key);
+            matched.push({ link: ql, priority: entry.priority ?? 5 });
+          }
+        }
+      }
+    };
+
+    // Phase 1: Multi-word phrase matching (longest first)
+    const phraseKeys = Object.keys(KEYWORD_DB).filter((k) => k.includes(' ')).sort((a, b) => b.length - a.length);
+    for (const phrase of phraseKeys) {
+      if (lower.includes(phrase)) addMatches(KEYWORD_DB[phrase]);
+    }
+
+    // Phase 2: Single-word exact matching (skip stop words)
+    for (const word of contentWords) {
+      if (KEYWORD_DB[word]) addMatches(KEYWORD_DB[word]);
+    }
+
+    // Phase 3: Fuzzy matching for typos (only if no exact matches yet)
+    if (matched.length === 0) {
+      for (const word of contentWords) {
+        if (!KEYWORD_DB[word] && word.length >= 3) {
+          const fuzzyResults = fuzzyMatch(word);
+          for (const fkw of fuzzyResults) addMatches(KEYWORD_DB[fkw]);
+        }
+      }
+    }
+
+    matched.sort((a, b) => a.priority - b.priority || a.link.label.localeCompare(b.link.label));
+    setDescriptionSuggestions(matched.map((m) => m.link));
+  }, [updateFormData, allQuickLinks, KEYWORD_DB, STOP_WORDS, fuzzyMatch]);
 
   return (
     <KeyboardAvoidingView
@@ -1256,140 +2080,6 @@ export default function ReportIncidentIndex() {
         contentContainerStyle={{ paddingBottom: 100 }}
         className="flex-1">
         <View style={{ paddingHorizontal: 16, paddingTop: 20 }}>
-          {/* Quick Links */}
-          <View style={{ marginBottom: 24 }}>
-            <Text
-              style={{
-                fontSize: 20,
-                fontWeight: '800',
-                color: colors.text,
-                letterSpacing: -0.3,
-                marginBottom: 4,
-              }}>
-              What happened?
-            </Text>
-            <Text
-              style={{
-                fontSize: 13,
-                color: colors.textSecondary,
-                marginBottom: 14,
-              }}>
-              Quick select or fill out the form below
-            </Text>
-            {quickLinksScrollable ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ gap: 8 }}>
-                {quickLinks.map((link, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    onPress={link.onPress}
-                    style={{
-                      backgroundColor: colors.card,
-                      borderColor: colors.border,
-                      borderWidth: 1,
-                      borderRadius: 18,
-                      paddingVertical: 16,
-                      paddingHorizontal: 14,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      minWidth: 100,
-                      minHeight: 95,
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.05,
-                      shadowRadius: 6,
-                      elevation: 2,
-                    }}
-                    activeOpacity={0.7}>
-                    <Text style={{ fontSize: 30, marginBottom: 8 }}>{link.icon}</Text>
-                    <Text
-                      style={{
-                        fontSize: 11,
-                        fontWeight: '600',
-                        color: colors.text,
-                        textAlign: 'center',
-                        lineHeight: 14,
-                      }}>
-                      {link.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            ) : (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                {quickLinks.map((link, index) => (
-                  <TouchableOpacity
-                    key={index}
-                    onPress={link.onPress}
-                    style={{
-                      backgroundColor: colors.card,
-                      borderColor: colors.border,
-                      borderWidth: 1,
-                      borderRadius: 18,
-                      paddingVertical: 14,
-                      paddingHorizontal: 8,
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexGrow: 1,
-                      flexBasis: '21%',
-                      minHeight: 88,
-                      shadowColor: '#000',
-                      shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.05,
-                      shadowRadius: 6,
-                      elevation: 2,
-                    }}
-                    activeOpacity={0.7}>
-                    <Text style={{ fontSize: 26, marginBottom: 6 }}>{link.icon}</Text>
-                    <Text
-                      style={{
-                        fontSize: 10,
-                        fontWeight: '600',
-                        color: colors.text,
-                        textAlign: 'center',
-                        lineHeight: 13,
-                      }}>
-                      {link.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-            <TouchableOpacity
-              onPress={() => setQuickLinksScrollable(!quickLinksScrollable)}
-              style={{
-                alignSelf: 'center',
-                marginTop: 10,
-                flexDirection: 'row',
-                alignItems: 'center',
-              }}
-              activeOpacity={0.7}>
-              <Text style={{ fontSize: 12, color: colors.textSecondary, marginRight: 6 }}>
-                {quickLinksScrollable ? 'Show grid' : 'Show scroll'}
-              </Text>
-              <View
-                style={{
-                  width: 36,
-                  height: 20,
-                  borderRadius: 10,
-                  backgroundColor: quickLinksScrollable ? colors.primary : colors.border,
-                  justifyContent: 'center',
-                }}>
-                <View
-                  style={{
-                    width: 16,
-                    height: 16,
-                    borderRadius: 8,
-                    backgroundColor: '#FFFFFF',
-                    marginLeft: quickLinksScrollable ? 18 : 2,
-                  }}
-                />
-              </View>
-            </TouchableOpacity>
-          </View>
-
           {/* Date/Time and Location */}
           <View style={{ flexDirection: 'row', gap: 10, marginBottom: 22 }}>
             {/* Date/Time Card */}
@@ -1538,146 +2228,6 @@ export default function ReportIncidentIndex() {
             </TouchableOpacity>
           </View>
 
-          {/* Incident Title */}
-          <View style={{ marginBottom: 18 }}>
-            <Text
-              style={{
-                fontSize: 14,
-                fontWeight: '700',
-                color: colors.text,
-                marginBottom: 8,
-              }}>
-              Incident Title <Text style={{ color: colors.error }}>*</Text>
-            </Text>
-            <TextInput
-              placeholder="Brief title of the incident"
-              value={formData.incident_title}
-              onChangeText={(value) => updateFormData({ incident_title: value })}
-              style={{
-                backgroundColor: colors.card,
-                borderColor: uiState.validationErrors.incident_title ? colors.error : colors.border,
-                borderWidth: 1,
-                borderRadius: 14,
-                paddingHorizontal: 16,
-                paddingVertical: 14,
-                fontSize: 15,
-                color: colors.text,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.04,
-                shadowRadius: 3,
-                elevation: 1,
-              }}
-              placeholderTextColor={colors.textSecondary}
-            />
-            {uiState.validationErrors.incident_title && (
-              <Text style={{ color: colors.error, fontSize: 12, marginTop: 4 }}>
-                {uiState.validationErrors.incident_title}
-              </Text>
-            )}
-          </View>
-
-          {/* Category */}
-          <View style={{ marginBottom: 18 }}>
-            <Text
-              style={{
-                fontSize: 14,
-                fontWeight: '700',
-                color: colors.text,
-                marginBottom: 8,
-              }}>
-              Category <Text style={{ color: colors.error }}>*</Text>
-            </Text>
-            <TouchableOpacity
-              onPress={() => !categoriesLoading && updateUIState({ showCategoryDropdown: true })}
-              disabled={categoriesLoading}
-              activeOpacity={0.7}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                backgroundColor: colors.card,
-                borderColor: uiState.validationErrors.incident_category
-                  ? colors.error
-                  : colors.border,
-                borderWidth: 1,
-                borderRadius: 14,
-                paddingHorizontal: 16,
-                paddingVertical: 14,
-                opacity: categoriesLoading ? 0.6 : 1,
-                shadowColor: '#000',
-                shadowOffset: { width: 0, height: 1 },
-                shadowOpacity: 0.04,
-                shadowRadius: 3,
-                elevation: 1,
-              }}>
-              <Text
-                style={{
-                  fontSize: 15,
-                  color: formData.incident_category ? colors.text : colors.textSecondary,
-                }}>
-                {categoriesLoading
-                  ? 'Loading categories...'
-                  : categories.find((cat) => cat.id.toString() === formData.incident_category)
-                      ?.name || 'Select incident category'}
-              </Text>
-              <ChevronDown size={18} color={colors.textSecondary} />
-            </TouchableOpacity>
-            {categoriesError && (
-              <Text style={{ color: colors.error, fontSize: 12, marginTop: 4 }}>
-                Failed to load categories: {categoriesError}
-              </Text>
-            )}
-            {uiState.validationErrors.incident_category && (
-              <Text style={{ color: colors.error, fontSize: 12, marginTop: 4 }}>
-                {uiState.validationErrors.incident_category}
-              </Text>
-            )}
-          </View>
-
-          {/* Subcategory - shown after category selection */}
-          {formData.incident_category && (
-            <View style={{ marginBottom: 18 }}>
-              <Text
-                style={{
-                  fontSize: 14,
-                  fontWeight: '700',
-                  color: colors.text,
-                  marginBottom: 8,
-                }}>
-                Subcategory
-              </Text>
-              <TouchableOpacity
-                onPress={() => updateUIState({ showSubcategoryDropdown: true })}
-                activeOpacity={0.7}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  backgroundColor: colors.card,
-                  borderColor: colors.border,
-                  borderWidth: 1,
-                  borderRadius: 14,
-                  paddingHorizontal: 16,
-                  paddingVertical: 14,
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 1 },
-                  shadowOpacity: 0.04,
-                  shadowRadius: 3,
-                  elevation: 1,
-                }}>
-                <Text
-                  style={{
-                    fontSize: 15,
-                    color: formData.incident_subcategory ? colors.text : colors.textSecondary,
-                  }}>
-                  {formData.incident_subcategory || 'Other'}
-                </Text>
-                <ChevronDown size={18} color={colors.textSecondary} />
-              </TouchableOpacity>
-            </View>
-          )}
-
           {/* What Happened */}
           <View style={{ marginBottom: 18 }}>
             <Text
@@ -1687,14 +2237,14 @@ export default function ReportIncidentIndex() {
                 color: colors.text,
                 marginBottom: 8,
               }}>
-              What Happened? <Text style={{ color: colors.error }}>*</Text>
+              What happened? <Text style={{ color: colors.error }}>*</Text>
             </Text>
             <TextInput
               placeholder="Describe the incident in detail..."
               value={formData.what_happened}
-              onChangeText={(value) => updateFormData({ what_happened: value })}
+              onChangeText={handleDescriptionChange}
               multiline
-              numberOfLines={6}
+              numberOfLines={5}
               style={{
                 backgroundColor: colors.card,
                 borderColor: uiState.validationErrors.what_happened ? colors.error : colors.border,
@@ -1704,7 +2254,7 @@ export default function ReportIncidentIndex() {
                 paddingVertical: 14,
                 fontSize: 15,
                 color: colors.text,
-                minHeight: 140,
+                minHeight: 120,
                 textAlignVertical: 'top',
                 shadowColor: '#000',
                 shadowOffset: { width: 0, height: 1 },
@@ -1719,7 +2269,151 @@ export default function ReportIncidentIndex() {
                 {uiState.validationErrors.what_happened}
               </Text>
             )}
+
+            {/* Keyword suggestions */}
+            {descriptionSuggestions.length > 0 && (
+              <View style={{ marginTop: 10 }}>
+                <Text style={{ fontSize: 12, fontWeight: '600', color: colors.textSecondary, marginBottom: 6 }}>
+                  Suggested quick links
+                </Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                  {descriptionSuggestions.map((link, idx) => (
+                    <TouchableOpacity
+                      key={idx}
+                      onPress={() => { handleQuickLink(link.categoryName, link.subcategory); setDescriptionSuggestions([]); }}
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        gap: 6,
+                        paddingHorizontal: 12,
+                        paddingVertical: 8,
+                        borderRadius: 20,
+                        backgroundColor: link.color + '15',
+                        borderWidth: 1,
+                        borderColor: link.color + '40',
+                      }}>
+                      <Text style={{ fontSize: 14 }}>{link.icon}</Text>
+                      <Text style={{ fontSize: 12, fontWeight: '600', color: link.color }}>{link.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
           </View>
+
+          {/* Quick Links — Category sections */}
+          <View style={{ marginBottom: 24 }}>
+            {quickLinkSections.map((section) => {
+              const isExpanded = expandedSections[section.categoryId] ?? false;
+              const isSelected = formData.incident_category === section.categoryId;
+              return (
+                <View key={section.categoryId} style={{ marginBottom: 8 }}>
+                  <TouchableOpacity
+                    onPress={() => toggleSection(section.categoryId)}
+                    activeOpacity={0.7}
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      backgroundColor: isSelected ? section.color + '15' : colors.card,
+                      borderWidth: 1,
+                      borderColor: isSelected ? section.color + '50' : colors.border,
+                      borderRadius: 14,
+                      borderBottomLeftRadius: isExpanded ? 0 : 14,
+                      borderBottomRightRadius: isExpanded ? 0 : 14,
+                      paddingHorizontal: 14,
+                      paddingVertical: 12,
+                    }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                      <Text style={{ fontSize: 20 }}>{section.icon}</Text>
+                      <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }} numberOfLines={1}>
+                        {section.categoryName}
+                      </Text>
+                    </View>
+                    {isExpanded
+                      ? <ChevronUp size={18} color={colors.textSecondary} />
+                      : <ChevronDown size={18} color={colors.textSecondary} />}
+                  </TouchableOpacity>
+                  {isExpanded && (
+                    <View
+                      style={{
+                        borderWidth: 1,
+                        borderTopWidth: 0,
+                        borderColor: isSelected ? section.color + '50' : colors.border,
+                        borderBottomLeftRadius: 14,
+                        borderBottomRightRadius: 14,
+                        backgroundColor: colors.card,
+                        padding: 10,
+                        flexDirection: 'row',
+                        flexWrap: 'wrap',
+                        gap: 8,
+                      }}>
+                      {section.items.map((item, itemIdx) => {
+                        const isSubSelected =
+                          formData.incident_category === section.categoryId &&
+                          formData.incident_subcategory === item.subcategory;
+                        return (
+                          <TouchableOpacity
+                            key={itemIdx}
+                            onPress={() => handleQuickLink(item.categoryName, item.subcategory)}
+                            activeOpacity={0.7}
+                            style={{
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: 80,
+                              paddingVertical: 10,
+                              paddingHorizontal: 4,
+                              borderRadius: 14,
+                              backgroundColor: isSubSelected ? section.color : section.color + '08',
+                              borderWidth: 1,
+                              borderColor: isSubSelected ? section.color : section.color + '25',
+                            }}>
+                            <Text style={{ fontSize: 24, marginBottom: 4 }}>{item.icon}</Text>
+                            <Text
+                              style={{
+                                fontSize: 10,
+                                fontWeight: '600',
+                                color: isSubSelected ? '#fff' : colors.text,
+                                textAlign: 'center',
+                                lineHeight: 13,
+                              }}
+                              numberOfLines={2}>
+                              {item.label}
+                            </Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </View>
+                  )}
+                </View>
+              );
+            })}
+          </View>
+
+          {/* Selected category indicator */}
+          {formData.incident_category && (
+            <View style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              backgroundColor: colors.primary + '10',
+              borderRadius: 12,
+              paddingHorizontal: 14,
+              paddingVertical: 10,
+              marginBottom: 18,
+              gap: 8,
+            }}>
+              <Text style={{ fontSize: 13, color: colors.textSecondary }}>Selected:</Text>
+              <Text style={{ fontSize: 13, fontWeight: '700', color: colors.text, flex: 1 }}>
+                {categories.find((cat) => cat.id.toString() === formData.incident_category)?.name}
+                {formData.incident_subcategory ? ` › ${formData.incident_subcategory}` : ''}
+              </Text>
+              <TouchableOpacity
+                onPress={() => updateFormData({ incident_category: '', incident_subcategory: '' })}
+                activeOpacity={0.7}>
+                <X size={16} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* Evidence Section */}
           <View style={{ marginBottom: 18 }}>
@@ -2449,44 +3143,6 @@ export default function ReportIncidentIndex() {
           </View>
         </View>
       </Modal>
-
-      {/* Dropdowns */}
-      <Dropdown
-        isVisible={uiState.showCategoryDropdown}
-        onClose={() => updateUIState({ showCategoryDropdown: false })}
-        onSelect={(item) =>
-          updateFormData({
-            incident_category: item?.id?.toString() || '',
-            incident_subcategory: 'Other',
-          })
-        }
-        data={incidentCategories}
-        keyExtractor={(item, index) => item?.id?.toString() || index.toString()}
-        renderItem={({ item }) => (
-          <View className="px-4 py-3">
-            <Text className="font-medium" style={{ color: colors.text }}>
-              {item.name}
-            </Text>
-          </View>
-        )}
-        title="Select Incident Category"
-        searchable={true}
-        searchPlaceholder="Search categories..."
-      />
-
-      <Dropdown
-        isVisible={uiState.showSubcategoryDropdown}
-        onClose={() => updateUIState({ showSubcategoryDropdown: false })}
-        onSelect={(item) => updateFormData({ incident_subcategory: item })}
-        data={subcategories[formData.incident_category as keyof typeof subcategories] || []}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={({ item }) => (
-          <View className="px-4 py-3">
-            <Text style={{ color: colors.text }}>{item}</Text>
-          </View>
-        )}
-        title="Select Subcategory"
-      />
 
       {/* Date & Time Pickers */}
       <DatePicker

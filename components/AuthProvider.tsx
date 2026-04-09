@@ -7,6 +7,9 @@ import * as QueryParams from 'expo-auth-session/build/QueryParams';
 import { useRouter } from 'expo-router';
 import { registerForFCMToken } from 'hooks/useFCMToken';
 import { LogoutOverlay } from './LogoutOverlay';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const GUEST_NAME_KEY = 'dispatch_guest_name';
 
 type AuthState = {
   user: User | null;
@@ -116,6 +119,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       console.log('Auth state changed:', _event, session?.user?.id);
       if (isComponentMounted) {
+        if (session) {
+          AsyncStorage.removeItem(GUEST_NAME_KEY).catch(() => null);
+        }
         setAuthState({
           user: session?.user ?? null,
           session,
