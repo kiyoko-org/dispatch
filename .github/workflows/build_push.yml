@@ -44,7 +44,7 @@ jobs:
       - name: Get commit info for artifact name
         run: |
            sanitize() {
-             echo "$1" | tr ' "<>*?|\\/' '-' | tr -s '-' | sed 's/^-*//;s/-*$//'
+             echo "$1" | tr ' :"<>*?|\\/' '-' | tr -s '-' | sed 's/^-*//;s/-*$//'
            }
            COMMIT_MESSAGE=$(git log -1 --pretty=%B | head -1 | sanitize)
            COMMIT_HASH=$(git rev-parse --short=8 HEAD)
@@ -54,16 +54,17 @@ jobs:
       - name: Install dependencies
         run: bun install
 
+      - name: Create google-services.json
+        run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > google-services.json
+
       - name: Make dotenv
         run: |
           cat > .env <<EOF
           SUPABASE_URL=${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
           GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}
+          GOOGLE_SERVICES_JSON=./google-services.json
           EOF
-
-      - name: Create google-services.json
-        run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > google-services.json
 
       - name: Make expo prebuilds
         run: bun expo prebuild
