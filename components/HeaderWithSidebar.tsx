@@ -84,7 +84,7 @@ export default function HeaderWithSidebar({
   const [isActivityOpen, setIsActivityOpen] = useState(false);
   const [localNotifCount, setLocalNotifCount] = useState<number>(0);
 
-  const userName = [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || 'Resident';
+
 
   // Load local notification count
   useEffect(() => {
@@ -165,13 +165,6 @@ export default function HeaderWithSidebar({
     {
       title: 'Dashboard',
       items: [
-        {
-          id: 'profile',
-          label: 'Profile',
-          icon: User,
-          route: '/(protected)/profile',
-          locked: false,
-        },
         {
           id: 'dashboard',
           label: 'Home Dashboard',
@@ -506,7 +499,21 @@ export default function HeaderWithSidebar({
         </View>
 
         {/* User Profile Footer */}
-        <View className="p-4" style={{ borderTopColor: colors.border, borderTopWidth: 1 }}>
+        <TouchableOpacity
+          className="p-4"
+          style={{ borderTopColor: colors.border, borderTopWidth: 1 }}
+          onPress={() => {
+            Animated.timing(sidebarAnim, {
+              toValue: -300,
+              duration: 300,
+              useNativeDriver: true,
+            }).start(() => {
+              setIsSidebarOpen(false);
+              router.push('/(protected)/profile' as any);
+            });
+          }}
+          activeOpacity={0.7}
+        >
           <View className="flex-row items-center">
             <View
               className="h-10 w-10 items-center justify-center rounded-full"
@@ -514,8 +521,8 @@ export default function HeaderWithSidebar({
               <User size={20} color={isGuest ? colors.textSecondary : colors.surface} />
             </View>
             <View className="ml-3 flex-1">
-              <Text className="text-sm font-medium" style={{ color: colors.text }}>
-                {isGuest ? guestName : userName || 'Resident'}
+              <Text className="text-base font-semibold" style={{ color: colors.text }}>
+                {isGuest ? guestName : [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') || 'Resident'}
               </Text>
               {isGuest && (
                 <Text className="text-xs" style={{ color: colors.textSecondary }}>
@@ -524,7 +531,7 @@ export default function HeaderWithSidebar({
               )}
             </View>
           </View>
-        </View>
+        </TouchableOpacity>
       </Animated.View>
 
       <NotificationSidebar

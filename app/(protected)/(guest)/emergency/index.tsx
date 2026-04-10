@@ -44,6 +44,7 @@ import { useTheme } from 'components/ThemeContext';
 import { useUserData } from 'contexts/UserDataContext';
 import { useHotlines } from '@kiyoko-org/dispatch-lib';
 import NetInfo from '@react-native-community/netinfo';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 let ImmediatePhoneCallModule: any = null;
 try {
@@ -163,6 +164,47 @@ export default function EmergencyScreen() {
   const { hotlines: serverHotlines } = useHotlines();
   const [emergencyNumber, setEmergencyNumber] = useState('');
   const [isOffline, setIsOffline] = useState(false);
+  const [cachedServerHotlines, setCachedServerHotlines] = useState<{
+    service: string;
+    number: string;
+    id: string;
+    isSaved: boolean;
+    description?: string | null;
+    source: 'server';
+  }[]>([]);
+
+  // Load cached server hotlines from AsyncStorage on mount
+  useEffect(() => {
+    const loadCached = async () => {
+      try {
+        const cached = await AsyncStorage.getItem('@dispatch/cached_server_hotlines_emergency');
+        if (cached) {
+          setCachedServerHotlines(JSON.parse(cached));
+        }
+      } catch (error) {
+        console.error('Error loading cached emergency hotlines:', error);
+      }
+    };
+    loadCached();
+  }, []);
+
+  // Cache server hotlines whenever they update
+  useEffect(() => {
+    if (serverHotlines.length > 0) {
+      const mapped = serverHotlines.map((hotline) => ({
+        service: hotline.name,
+        number: hotline.phone_number,
+        id: `server-${hotline.id}`,
+        isSaved: false,
+        description: hotline.description,
+        source: 'server' as const,
+      }));
+      setCachedServerHotlines(mapped);
+      AsyncStorage.setItem('@dispatch/cached_server_hotlines_emergency', JSON.stringify(mapped)).catch(
+        (err) => console.error('Error caching emergency hotlines:', err)
+      );
+    }
+  }, [serverHotlines]);
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state) => {
@@ -212,14 +254,17 @@ export default function EmergencyScreen() {
     isSaved: true,
   }));
 
-  const serverHotlineContacts = serverHotlines.map((hotline) => ({
-    service: hotline.name,
-    number: hotline.phone_number,
-    id: `server-${hotline.id}`,
-    isSaved: false,
-    description: hotline.description,
-    source: 'server' as const,
-  }));
+  // Use live server hotlines if available, otherwise fall back to cached
+  const serverHotlineContacts = serverHotlines.length > 0
+    ? serverHotlines.map((hotline) => ({
+        service: hotline.name,
+        number: hotline.phone_number,
+        id: `server-${hotline.id}`,
+        isSaved: false,
+        description: hotline.description,
+        source: 'server' as const,
+      }))
+    : cachedServerHotlines;
 
   const userHotlineContacts = userHotlines.map((hotline) => ({
     service: hotline.name,

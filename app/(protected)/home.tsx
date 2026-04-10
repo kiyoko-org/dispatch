@@ -104,7 +104,7 @@ export default function Home() {
   const recentReports = allReports.slice(0, 5);
   const reportCount = currentUserReports.length;
 
-  const nearbyAlertCount = allReports.length;
+
 
   const averageResponseTimeMinutes = useMemo(() => {
     const responseTimes = allReports
@@ -183,30 +183,6 @@ export default function Home() {
             paddingBottom: 24,
           }}
         >
-          {/* Decorative circles */}
-          <View
-            style={{
-              position: 'absolute',
-              top: -40,
-              right: -30,
-              width: 130,
-              height: 130,
-              borderRadius: 65,
-              backgroundColor: 'rgba(255,255,255,0.08)',
-            }}
-          />
-          <View
-            style={{
-              position: 'absolute',
-              bottom: -30,
-              left: -20,
-              width: 90,
-              height: 90,
-              borderRadius: 45,
-              backgroundColor: 'rgba(255,255,255,0.05)',
-            }}
-          />
-
           <Text
             style={{
               fontSize: 22,
@@ -218,7 +194,7 @@ export default function Home() {
             {isGuest
               ? `Hello, ${guestName}!`
               : profile?.first_name
-                ? `Welcome back, ${profile.first_name}`
+                ? `Welcome back, ${[profile.first_name, profile.last_name].filter(Boolean).join(' ')}`
                 : 'Welcome back!'}
           </Text>
           <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)' }}>
@@ -478,7 +454,7 @@ export default function Home() {
               Map
             </Text>
             <Text style={{ fontSize: 12, color: colors.textSecondary }}>
-              {isGuest ? 'Requires sign up' : `${nearbyAlertCount} nearby alerts`}
+              {isGuest ? 'Requires sign up' : 'View incidents'}
             </Text>
           </TouchableOpacity>
 
@@ -552,9 +528,6 @@ export default function Home() {
           {/* Section Header */}
           <View
             style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
               marginBottom: 14,
             }}
           >
@@ -568,21 +541,6 @@ export default function Home() {
             >
               Your Overview
             </Text>
-            {!isGuest && (
-              <TouchableOpacity
-                onPress={() => router.push('/(protected)/(verified)/cases')}
-              >
-                <Text
-                  style={{
-                    fontSize: 13,
-                    fontWeight: '600',
-                    color: colors.primary,
-                  }}
-                >
-                  See all
-                </Text>
-              </TouchableOpacity>
-            )}
           </View>
 
           {/* Stats Row */}

@@ -28,6 +28,7 @@ import { useHotlines } from '@kiyoko-org/dispatch-lib';
 import { useRouter } from 'expo-router';
 import { HotlineGroup } from 'lib/services/user-data.service';
 import NetInfo from '@react-native-community/netinfo';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type Hotline = {
   id: string;
@@ -53,6 +54,40 @@ export default function HotlinesPage() {
   const { hotlines: serverHotlines, deleteHotline: deleteHotlineFromServer } = useHotlines();
 
   const [isOffline, setIsOffline] = useState(false);
+  const [cachedServerHotlines, setCachedServerHotlines] = useState<Hotline[]>([]);
+
+  // Load cached server hotlines from AsyncStorage on mount
+  useEffect(() => {
+    const loadCached = async () => {
+      try {
+        const cached = await AsyncStorage.getItem('@dispatch/cached_server_hotlines');
+        if (cached) {
+          setCachedServerHotlines(JSON.parse(cached));
+        }
+      } catch (error) {
+        console.error('Error loading cached hotlines:', error);
+      }
+    };
+    loadCached();
+  }, []);
+
+  // Cache server hotlines whenever they update
+  useEffect(() => {
+    if (serverHotlines.length > 0) {
+      const mapped: Hotline[] = serverHotlines.map((h) => ({
+        id: `server-${h.id}`,
+        name: h.name,
+        number: h.phone_number,
+        category: 'Emergency',
+        description: h.description || undefined,
+        source: 'server' as const,
+      }));
+      setCachedServerHotlines(mapped);
+      AsyncStorage.setItem('@dispatch/cached_server_hotlines', JSON.stringify(mapped)).catch(
+        (err) => console.error('Error caching server hotlines:', err)
+      );
+    }
+  }, [serverHotlines]);
 
   useEffect(() => {
     const unsubscribe = NetInfo.addEventListener((state) => {
@@ -61,14 +96,17 @@ export default function HotlinesPage() {
     return () => unsubscribe();
   }, []);
 
-  const serverHotlinesMapped: Hotline[] = serverHotlines.map((h) => ({
-    id: `server-${h.id}`,
-    name: h.name,
-    number: h.phone_number,
-    category: 'Emergency',
-    description: h.description || undefined,
-    source: 'server' as const,
-  }));
+  // Use live server hotlines if available, otherwise fall back to cached
+  const serverHotlinesMapped: Hotline[] = serverHotlines.length > 0
+    ? serverHotlines.map((h) => ({
+        id: `server-${h.id}`,
+        name: h.name,
+        number: h.phone_number,
+        category: 'Emergency',
+        description: h.description || undefined,
+        source: 'server' as const,
+      }))
+    : cachedServerHotlines;
 
   const userHotlinesMapped: Hotline[] = userHotlines.map((h) => ({
     id: `user-${h.id}`,

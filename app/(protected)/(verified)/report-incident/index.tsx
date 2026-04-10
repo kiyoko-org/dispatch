@@ -1175,38 +1175,87 @@ export default function ReportIncidentIndex() {
   const SUBCATEGORY_ICONS: Record<string, string> = {
     // Property Crimes
     'Theft': '🔓', 'Robbery': '💰', 'Burglary': '🏚️', 'Vandalism': '🎨', 'Snatching': '📱', 'Trespassing': '🚪',
-    'Carnapping': '🚙',
+    'Carnapping': '🚙', 'Motor Vehicle Theft': '🏍️', 'Pickpocketing': '👛', 'Shoplifting': '🛒',
+    'Cattle Rustling': '🐄', 'Recovered Cattle Evidence': '🐄',
     // Traffic Incidents
     'Vehicular Accident': '🚗', 'Hit and Run': '💨', 'DUI': '🍺',
     'Traffic-in-persons (TIP)': '🚸', 'TIP': '🚸',
+    'Reckless Driving': '🚘', 'Road Obstruction': '🚧', 'Illegal Parking': '🅿️',
     // Violent Crimes
     'Murder': '☠️', 'Homicide': '☠️', 'Shooting': '🔫', 'Stabbing': '🔪',
     'Assault': '👊', 'Physical Assault': '👊', 'Physical Injury': '🩹',
     'Domestic Violence': '🏠', 'Violence Against Women': '🚺', 'VAW': '🚺',
     'Kidnapping': '👤', 'Sexual Assault': '⚠️', 'Rape': '⚠️',
+    'Mauling': '🐕', 'Frustrated Murder': '🗡️', 'Attempted Murder': '🗡️',
+    'Frustrated Homicide': '🗡️', 'Attempted Homicide': '🗡️',
+    'Grave Coercion': '😠', 'Light Coercion': '😠',
+    'Stray Bullet': '🎯', 'Loose Firearms': '🔫',
     // Fire Incidents
     'Structural Fire': '🔥', 'Fire': '🔥', 'Arson': '🧨',
+    'Grass Fire': '🔥', 'Electrical Fire': '⚡', 'Vehicular Fire': '🚒',
     // Natural Disasters
     'Flood': '🌊', 'Earthquake': '🌍', 'Typhoon': '🌀',
+    'Landslide': '⛰️', 'Volcanic Eruption': '🌋', 'Storm Surge': '🌊',
     // Drug-Related
     'Possession of Dangerous Drugs': '💊', 'Drug Possession': '💊', 'Drug Dealing': '💉', 'Drug Use': '🚬',
+    'Sale of Dangerous Drugs': '💉', 'Drug Paraphernalia': '🧪', 'Drug Den': '🏚️',
     // Other Crimes
     'Hacking': '💻', 'Cyber-Identity Theft': '🔐', 'Identity Theft': '🔐',
+    'Cybercrime': '💻', 'Online Scam': '💻', 'Cyber Libel': '💻',
     'Scam': '🎭', 'Swindling': '🎭', 'Fraud': '🎭', 'Estafa': '🎭',
+    'Swindling/Estafa': '🎭', 'Swindling/ Estafa': '🎭',
     'Noise Disturbance': '📢', 'Extortion': '💸', 'Grave Threats': '😡',
     'Child Abuse': '🧒', 'Acts of Lasciviousness': '🚫', 'Adultery': '💔',
-    'Alarms and scandals': '🔔', 'Anti-Fencing Law': '🏷️',
+    'Concubinage': '💔', 'Bigamy': '💍',
+    'Alarms and scandals': '🔔', 'Alarms and Scandals': '🔔', 'Anti-Fencing Law': '🏷️',
     'Found Cadaver/Death under Investigation': '🔍', 'Illegal Gambling': '🎰',
     'Illegal Logging': '🪵', 'Illegal Mining': '⛏️', 'Illegal Fishing': '🐟',
     'Illegal Firearms': '🔫', 'Illegal Possession of Firearms': '🔫',
+    'Illegal Possession of Firearms/Ammunition': '🔫', 'Illegal Possession of Explosives': '💣',
+    'Illegal Possession of Drugs': '💊', 'Illegal Possession of Drug Paraphernalia': '🧪',
     'Illegal Detention': '🔒', 'Illegal Recruitment': '📝', 'Illegal Drugs': '💊',
     'Less Serious Physical Injuries': '🩹', 'Malicious Mischief': '😈',
     'Obstruction of Justice': '⚖️', 'Qualified Theft': '🗝️',
-    'Resistance and Disobedience': '✊', 'Reckless Imprudence': '⚡',
+    'Resistance and Disobedience': '✊', 'Resistence to authority': '✊',
+    'Resistance to Authority': '✊', 'Reckless Imprudence': '⚡',
+    'Reckless Imprudence Resulting in Homicide': '⚡', 'Reckless Imprudence Resulting in Physical Injuries': '⚡',
     'Serious Illegal Detention': '🔒', 'Serious Physical Injuries': '🏥',
     'Slight Physical Injuries': '🤕', 'Special Laws': '📜',
-    'Suicide': '🆘', 'Unjust Vexation': '😤', 'Usurpation of Authority': '👑',
-    'Violation of RA 9262': '🚺', 'Violation of City Ordinance': '📋',
+    'Suicide': '🆘', 'Attempted Suicide': '🆘',
+    'Unjust Vexation': '😤', 'Usurpation of Authority': '👑',
+    'Violation of RA 9262': '🚺', 'Violation of City Ordinance': '🏛️',
+    'Violation of COMELEC Gun Ban': '🗳️', 'Violation of COMELEC Liquor Ban': '🗳️',
+    'Violation of COMELEC Resolution': '🗳️', 'Violation of COMELEC Rules': '🗳️',
+    'Violation of RA 7610': '🧒', 'Violation of RA 9165': '💊',
+    'Violation of RA 10591': '🔫', 'Violation of RA 8484': '💳',
+    'Violation of RA 9995': '📵', 'Violation of RA 10175': '💻',
+    'Violation of Cybercrime Prevention Act': '💻',
+    'Violation of Anti-Violence Against Women and Children Act': '🚺',
+    'Violation of Comprehensive Dangerous Drugs Act': '💊',
+    'Libel': '📰', 'Slander': '🗣️', 'Slander / Oral Defamation': '🗣️',
+    'Oral Defamation': '🗣️', 'Defamation': '🗣️',
+    'Other Threats': '⚠️', 'Threats': '⚠️', 'Grave Threat': '😡',
+    'Police Dispatch for Immediate Response': '🚔', 'Police Dispatch': '🚔',
+    'Police Assistance': '🚔', 'Barangay Assistance': '🏘️',
+    'Missing Person': '🔎', 'Lost/Missing Person': '🔎',
+    'Disorderly Conduct': '🚷', 'Public Disturbance': '📢',
+    'Forgery': '🖊️', 'Falsification': '🖊️', 'Falsification of Documents': '🖊️',
+    'Bribery': '💵', 'Corruption': '💵', 'Graft and Corruption': '💵',
+    'Illegal Entry': '🚫', 'Illegal Construction': '🏗️',
+    'Environmental Violation': '🌿', 'Animal Cruelty': '🐾',
+    'Harassment': '😰', 'Sexual Harassment': '⚠️',
+    'Grave Scandal': '📢', 'Alarm and Scandal': '🔔',
+    'Perjury': '🤥', 'Contempt': '⚖️',
+    'Human Trafficking': '🚸', 'Smuggling': '📦',
+    'Tax Evasion': '💰', 'Money Laundering': '🏦',
+    'Escaped Prisoner': '🏃', 'Fugitive': '🏃',
+    'Squatting': '🏠', 'Land Grabbing': '🏗️',
+    'Violation of Forestry Law': '🌲', 'Illegal Dumping': '🗑️',
+    'Anti-Social Behavior': '😤', 'Vagrancy': '🚶',
+    'Curfew Violation': '🌙', 'Loitering': '🚶',
+    'Gambling': '🎰', 'Cockfighting Violation': '🐓',
+    'Recovered Stolen Vehicle': '🚙', 'Recovered Stolen Property': '📦',
+    'Recovered Evidence': '🔬', 'Turn-over': '📋',
     'Other': '📋',
   };
 
@@ -1281,6 +1330,82 @@ export default function ReportIncidentIndex() {
     'toy','dayta','daytoy','isuna','isuda','amin','laeng','met','pay','man',
     'ngarud','ket',
   ]), []);
+
+  // ── Banned words: auto-deleted from all text inputs, never trigger suggestions ──
+  const BANNED_WORDS = useMemo(() => [
+    // English — Sexual / Body
+    'fuck','fucker','fucking','fucked','fuckhead','fucktard','shit',
+    'cunt','cunts','dick','dicks','cock','cocks','cocksucker',
+    'pussy','pussies','boner','boners','blowjob','handjob','rimjob',
+    'cumshot','cumslut','cum','dildo','vibrator','erection','ejaculate',
+    'jackoff','jerkoff','masturbate','masturbation',
+    // English — Insults / Slurs
+    'bitch','bitches','bitching','bastard','bastards',
+    'ass','asshole','assholes','jackass','motherfucker','mofo','mf',
+    'whore','whores','slut','slutty','slutbag',
+    'twat','twats','wanker','wankers','douchebag','douche',
+    'prick','pricks','turd','turds',
+    'dipshit','apeshit','horseshit','bullshit','dumbshit',
+    'scumbag','scum','skank','skanky',
+    // English — Racial / Identity Slurs
+    'nigger','nigga','chink','gook','spic','kike','wetback',
+    'faggot','fag','dyke','retard','retarded','spaz','tranny',
+    // English — Other Profanity
+    'damn','goddamn','goddammit','hell','piss','pissed','pisser',
+    'crap','crappy','arse','arsehole','bollock','bollocks',
+    // Filipino / Tagalog — Core Swears
+    'putangina','tangina','taena',
+    'puta','putahe','putcha',
+    'gago','gaga','gagi','gagong',
+    'pakshet','pakingshet','pakyu',
+    'ulol','ulul','amputa','amputahin',
+    'kupal','kupaling',
+    // Filipino — Insults
+    'tanga','tangahan','mangmang',
+    'bobo','bobong','bobita',
+    'loko','loka','lokong',
+    'tarantado','tardo',
+    'siraulo',
+    'buwisit','bwiset','buset',
+    'leche','lecheng',
+    'punyeta','punyetang',
+    'lintik','lintikan',
+    'hayop','hayupak','hinayupak',
+    'hudas','hudasing',
+    'peste','pesteng',
+    'inutil','inutilan','torpe',
+    // Filipino — Vulgar / Sexual
+    'tite','titi','titibay',
+    'puke','puki','pukingina',
+    'jakol','jakoler',
+    'kantot','kantotin',
+    'tamod','suso','bilat',
+    'iyot','iyotin','engot',
+    'tae',
+    // Ilocano — Sexual / Body
+    'yot','yotninam','inamo',
+    'uki','buto','salsal','arem',
+    // Ilocano — Insults
+    'sadot','buang','dakes',
+    'bekkelen','napaitan','agmauyong',
+    'ulbod','agkakapsut','ag-yot',
+  ], []);
+
+  const BANNED_PHRASES = useMemo(
+    () => [
+      'putang ina','tang ina','pak yu','sira ulo','piring ulo',
+      'hayop ka','puking ina','kainin mo tae ko',
+      'inta ag yot','ang ang','nagbangsit ka','naimas ti ima mo',
+      'p.i.','p*tangina','t*ngina',
+    ].sort((a, b) => b.length - a.length),
+    []
+  );
+
+  const BANNED_SET = useMemo(() => {
+    const set = new Set<string>();
+    for (const w of BANNED_WORDS) set.add(w);
+    return set;
+  }, [BANNED_WORDS]);
 
   // ── Keyword → subcategory names ──
   type KeywordEntry = { subcategories: string[]; priority?: number };
@@ -1961,29 +2086,81 @@ export default function ReportIncidentIndex() {
   // Build flat keyword list for fuzzy matching
   const ALL_KEYWORDS = useMemo(() => Object.keys(KEYWORD_DB), [KEYWORD_DB]);
 
-  // Fuzzy match: find closest keywords within Levenshtein distance ≤ 2
+  // Fuzzy match: accept only typo-like matches, not unrelated words.
   const fuzzyMatch = useCallback((word: string): string[] => {
-    if (word.length < 3) return [];
+    if (word.length < 4) return [];
+    const normalizedWord = word.toLowerCase().trim();
+    const maxDistance =
+      normalizedWord.length >= 8 ? 2 : 1;
     const matches: { kw: string; dist: number }[] = [];
     for (const kw of ALL_KEYWORDS) {
       if (kw.includes(' ')) continue;
-      if (Math.abs(kw.length - word.length) > 2) continue;
-      const dist = levenshtein(word, kw);
-      if (dist <= 2 && dist > 0) {
+      if (Math.abs(kw.length - normalizedWord.length) > maxDistance) continue;
+      // Guardrail: fuzzy typo should usually keep the same first character.
+      if (kw[0] !== normalizedWord[0]) continue;
+      const dist = levenshtein(normalizedWord, kw);
+      if (dist <= maxDistance && dist > 0) {
         matches.push({ kw, dist });
       }
     }
     return matches.sort((a, b) => a.dist - b.dist).slice(0, 3).map((m) => m.kw);
   }, [ALL_KEYWORDS]);
 
+  // ── Profanity filter: normalization, detection, and sanitization ──
+  const normalizeLeet = useCallback((word: string): string => {
+    return word
+      .replace(/0/g, 'o').replace(/1/g, 'i').replace(/3/g, 'e')
+      .replace(/4/g, 'a').replace(/5/g, 's').replace(/@/g, 'a')
+      .replace(/\$/g, 's').replace(/!/g, 'i')
+      .replace(/[.*_\-]+/g, '');
+  }, []);
+
+  const isBannedWord = useCallback((token: string): boolean => {
+    const raw = token.toLowerCase().trim();
+    if (raw.length < 2) return false;
+    if (BANNED_SET.has(raw)) return true;
+    const normalized = normalizeLeet(raw);
+    if (normalized !== raw && normalized.length >= 2 && BANNED_SET.has(normalized)) return true;
+    if (normalized.length < 5) return false;
+    const maxDist = normalized.length >= 8 ? 2 : 1;
+    for (const banned of BANNED_WORDS) {
+      if (banned.length < 5 || banned.includes(' ')) continue;
+      if (Math.abs(banned.length - normalized.length) > maxDist) continue;
+      if (banned[0] !== normalized[0]) continue;
+      const dist = levenshtein(normalized, banned);
+      if (dist <= maxDist && dist > 0) return true;
+    }
+    return false;
+  }, [BANNED_SET, BANNED_WORDS, normalizeLeet]);
+
+  const sanitizeText = useCallback((text: string): string => {
+    let result = text;
+    for (const phrase of BANNED_PHRASES) {
+      const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      result = result.replace(new RegExp(escaped, 'gi'), '');
+    }
+    result = result.split(/(\s+)/).map(token => {
+      if (/^\s+$/.test(token)) return token;
+      if (BANNED_SET.has(token.toLowerCase())) return '';
+      const clean = token.replace(/[^a-zA-Z0-9]/g, '');
+      if (!clean) return token;
+      return isBannedWord(clean) ? '' : token;
+    }).join('');
+    result = result.replace(/ {2,}/g, ' ');
+    result = result.trimStart();
+    if (!text.endsWith(' ')) result = result.trimEnd();
+    return result;
+  }, [BANNED_PHRASES, BANNED_SET, isBannedWord]);
+
   type SuggestedLink = { label: string; categoryName: string; subcategory: string; color: string; icon: string };
   const [descriptionSuggestions, setDescriptionSuggestions] = useState<SuggestedLink[]>([]);
 
   const handleDescriptionChange = useCallback((text: string) => {
-    updateFormData({ what_happened: text });
-    if (!text.trim()) { setDescriptionSuggestions([]); return; }
+    const sanitized = sanitizeText(text);
+    updateFormData({ what_happened: sanitized });
+    if (!sanitized.trim()) { setDescriptionSuggestions([]); return; }
 
-    const lower = text.toLowerCase();
+    const lower = sanitized.toLowerCase();
     const words = lower.split(/\s+/).filter(Boolean);
     const contentWords = words.filter((w) => !STOP_WORDS.has(w));
     const matchedKeys = new Set<string>();
@@ -2040,7 +2217,7 @@ export default function ReportIncidentIndex() {
 
     matched.sort((a, b) => a.priority - b.priority || a.link.label.localeCompare(b.link.label));
     setDescriptionSuggestions(matched.map((m) => m.link));
-  }, [updateFormData, allQuickLinks, KEYWORD_DB, STOP_WORDS, fuzzyMatch]);
+  }, [updateFormData, sanitizeText, allQuickLinks, KEYWORD_DB, STOP_WORDS, fuzzyMatch]);
 
   return (
     <KeyboardAvoidingView
@@ -2890,7 +3067,7 @@ export default function ReportIncidentIndex() {
                 <TextInput
                   placeholder="Nearby landmark (optional)"
                   value={formData.nearby_landmark}
-                  onChangeText={(value) => updateFormData({ nearby_landmark: value })}
+                  onChangeText={(value) => updateFormData({ nearby_landmark: sanitizeText(value) })}
                   style={{
                     backgroundColor: colors.card,
                     borderColor: colors.border,
@@ -3623,7 +3800,7 @@ export default function ReportIncidentIndex() {
                 placeholder="Describe what you witnessed..."
                 value={witnessModal.witnessStatement}
                 onChangeText={(value) =>
-                  setWitnessModal((prev) => ({ ...prev, witnessStatement: value }))
+                  setWitnessModal((prev) => ({ ...prev, witnessStatement: sanitizeText(value) }))
                 }
                 multiline
                 numberOfLines={6}
