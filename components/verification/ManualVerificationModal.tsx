@@ -9,7 +9,6 @@ import {
   View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 import { randomUUID } from 'expo-crypto';
 import {
@@ -123,36 +122,6 @@ export default function ManualVerificationModal({
     } catch (error) {
       console.error('Failed to pick verification image', error);
       Alert.alert('Error', 'Failed to pick image. Please try again.');
-    } finally {
-      setPickerLoading(false);
-    }
-  }
-
-  async function pickPdf(target: 'front' | 'back') {
-    setPickerLoading(true);
-
-    try {
-      const result = await DocumentPicker.getDocumentAsync({
-        type: ['application/pdf'],
-        copyToCacheDirectory: true,
-      });
-
-      if (result.canceled || !result.assets[0]) return;
-
-      const asset = result.assets[0];
-      const file = await createLocalVerificationFile({
-        uri: asset.uri,
-        mimeType: asset.mimeType ?? 'application/pdf',
-        sizeBytes: asset.size ?? null,
-        name: asset.name,
-      });
-
-      if (!file) return;
-      if (target === 'front') setFrontFile(file);
-      else setBackFile(file);
-    } catch (error) {
-      console.error('Failed to pick verification pdf', error);
-      Alert.alert('Error', 'Failed to pick PDF. Please try again.');
     } finally {
       setPickerLoading(false);
     }
@@ -291,12 +260,6 @@ export default function ManualVerificationModal({
                 disabled={pickerLoading || submitting}
                 colors={colors}
               />
-              <ActionButton
-                label="Choose PDF"
-                onPress={() => void pickPdf('front')}
-                disabled={pickerLoading || submitting}
-                colors={colors}
-              />
             </View>
           </View>
 
@@ -318,12 +281,6 @@ export default function ManualVerificationModal({
                 disabled={pickerLoading || submitting}
                 colors={colors}
               />
-              <ActionButton
-                label="Choose PDF"
-                onPress={() => void pickPdf('back')}
-                disabled={pickerLoading || submitting}
-                colors={colors}
-              />
             </View>
           </View>
 
@@ -341,7 +298,7 @@ export default function ManualVerificationModal({
               Upload rules
             </Text>
             <Text style={{ marginTop: 8, fontSize: 12, lineHeight: 18, color: colors.textSecondary }}>
-              • Allowed files: JPG, PNG, PDF{`\n`}
+              • Allowed files: JPG, PNG{`\n`}
               • Max size: {Math.round(VERIFICATION_MAX_FILE_SIZE_BYTES / (1024 * 1024))} MB per file{`\n`}
               • Front file is required{`\n`}
               • Manual review may take time

@@ -282,10 +282,13 @@ Recommended MVP approach:
 
 ### Allowed file types
 
-Must match backend bucket policy:
+Mobile MVP should allow:
 - jpg / jpeg
 - png
-- pdf
+
+Note:
+- backend still technically allows PDF
+- mobile submission flow should stay image-only for now
 
 ### Max file size
 
@@ -295,11 +298,11 @@ Must match backend bucket limit:
 ### File picker behavior
 
 Recommended:
-- allow image picker for photo capture / gallery
-- allow document picker for PDF
+- allow image picker for gallery selection first
+- optional camera capture later
 
 Open question for implementation:
-- do we want camera capture in MVP, or gallery/document picker only?
+- do we want camera capture in MVP, or gallery-only first?
 
 ---
 
@@ -558,7 +561,7 @@ Start with the smallest end-to-end slice:
 
 Then add:
 - optional back file
-- PDF support if picker handling is smooth
+- camera capture if needed
 - rejected-state resubmission polish
 
 ---
@@ -567,6 +570,5 @@ Then add:
 
 1. Should manual verification use a modal, bottom sheet, or separate screen?
 2. Should MVP support camera capture immediately, or gallery/document picker only?
-3. Should we allow PDF on day one in the mobile app UI, or image files only first?
-4. Should we show full request history on mobile, or only latest request state?
-5. Should rejected requests expose admin review notes directly, or show a simpler rejection message first?
+3. Should we show full request history on mobile, or only latest request state?
+4. Should rejected requests expose admin review notes directly, or show a simpler rejection message first?
