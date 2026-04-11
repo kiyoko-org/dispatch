@@ -21,10 +21,16 @@ import {
   ChevronRight,
   Navigation,
 } from 'lucide-react-native';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useRouter } from 'expo-router';
 import * as Location from 'expo-location';
+import {
+  deriveVerificationState,
+  type VerificationRequest,
+} from '@kiyoko-org/dispatch-lib';
+import { useDispatchClient } from 'components/DispatchProvider';
 import HeaderWithSidebar from 'components/HeaderWithSidebar';
+import ManualVerificationModal from 'components/verification/ManualVerificationModal';
 import { useTheme } from 'components/ThemeContext';
 import { useCurrentProfile } from 'contexts/CurrentProfileContext';
 import { useGuest } from 'contexts/GuestContext';
@@ -43,6 +49,56 @@ function daysInMonth(month: number, year: number) {
 
 function firstDayOfMonth(month: number, year: number) {
   return new Date(year, month, 1).getDay();
+}
+
+function formatVerificationDocumentType(documentType: string | null | undefined) {
+  if (!documentType) return 'ID document';
+
+  switch (documentType) {
+    case 'drivers_license':
+      return "Driver's License";
+    case 'postal_id':
+      return 'Postal ID';
+    case 'umid':
+      return 'UMID';
+    case 'passport':
+      return 'Passport';
+    default:
+      return 'Other ID';
+  }
+}
+
+function getVerificationCardConfig(state: 'verified' | 'pending' | 'rejected' | 'unverified') {
+  switch (state) {
+    case 'pending':
+      return {
+        backgroundColor: '#F59E0B18',
+        borderColor: '#F59E0B40',
+        accentColor: '#F59E0B',
+        title: 'Verification Pending',
+      };
+    case 'rejected':
+      return {
+        backgroundColor: '#EF444418',
+        borderColor: '#EF444440',
+        accentColor: '#EF4444',
+        title: 'Verification Rejected',
+      };
+    case 'verified':
+      return {
+        backgroundColor: '#22C55E18',
+        borderColor: '#22C55E40',
+        accentColor: '#22C55E',
+        title: 'Level 2 Verified',
+      };
+    default:
+      return {
+        backgroundColor: '#2563EB18',
+        borderColor: '#2563EB40',
+        accentColor: '#2563EB',
+        title: 'Level 2 Verification',
+      };
+  }
 }
 
 // ── CharCount ──────────────────────────────────────────────────────────────
@@ -335,11 +391,15 @@ function CalendarPicker({ visible, initial, onConfirm, onClose, colors }: Calend
 // ── Main component ─────────────────────────────────────────────────────────
 export default function ProfilePage() {
   const { colors, isDark } = useTheme();
+  const { client, isInitialized } = useDispatchClient();
   const { profile, loading, refresh } = useCurrentProfile();
   const { isGuest, guestName } = useGuest();
   const router = useRouter();
 
   const [cameraModalVisible, setCameraModalVisible] = useState(false);
+  const [manualVerificationModalVisible, setManualVerificationModalVisible] = useState(false);
+  const [verificationRequests, setVerificationRequests] = useState<VerificationRequest[]>([]);
+  const [verificationRequestsLoading, setVerificationRequestsLoading] = useState(false);
   const [isScanning, setIsScanning] = useState(false);
   const [verifyLoading, setVerifyLoading] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
@@ -370,6 +430,34 @@ export default function ProfilePage() {
       .update({ [field]: value.trim() || null })
       .eq('id', profile.id);
   }, [profile?.id]);
+
+  const loadVerificationRequests = useCallback(async () => {
+    if (!client || !profile?.id) {
+      setVerificationRequests([]);
+      return;
+    }
+
+    setVerificationRequestsLoading(true);
+
+    try {
+      const { data, error } = await client.fetchMyVerificationRequests();
+      if (error) {
+        console.error('Failed to fetch verification requests', error);
+        return;
+      }
+
+      setVerificationRequests((data ?? []) as VerificationRequest[]);
+    } catch (error) {
+      console.error('Unexpected verification request fetch error', error);
+    } finally {
+      setVerificationRequestsLoading(false);
+    }
+  }, [client, profile?.id]);
+
+  useEffect(() => {
+    if (!isInitialized || !client || !profile?.id) return;
+    void loadVerificationRequests();
+  }, [client, isInitialized, loadVerificationRequests, profile?.id]);
 
   async function handleGetLocation() {
     setLocationLoading(true);
@@ -414,6 +502,7 @@ export default function ProfilePage() {
       } else if (data?.success) {
         Alert.alert('Success', 'Your account has been securely verified!');
         await refresh();
+        await loadVerificationRequests();
       } else {
         Alert.alert('Verification failed', data?.error || 'Invalid or fraudulent ID recognized.');
       }
@@ -434,6 +523,17 @@ export default function ProfilePage() {
     if (isNaN(d.getTime())) return 'Not set';
     return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
   };
+
+  const verificationState = useMemo(() => {
+    return deriveVerificationState({
+      isVerified: profile?.is_verified,
+      requests: verificationRequests,
+    });
+  }, [profile?.is_verified, verificationRequests]);
+
+  const verificationCard = getVerificationCardConfig(verificationState.state);
+  const latestVerificationRequest = verificationState.latestRequest;
+  const colorMap = colors as unknown as Record<string, string>;
 
   const iconProps = { size: 15, color: colors.textSecondary };
   const divider = <View style={{ marginLeft: 16, height: 1, backgroundColor: colors.border }} />;
@@ -487,43 +587,174 @@ export default function ProfilePage() {
 
       <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
-        {/* Verification banner */}
-        {!profile?.is_verified && (
-          <View style={{ paddingHorizontal: 24, paddingTop: 24 }}>
-            <View style={{ borderRadius: 16, padding: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: colors.primary }}>
-              <View style={{ flex: 1, marginRight: 12 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                  <Shield size={15} color="white" />
-                  <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Level 2 Verification</Text>
-                </View>
-                <Text style={{ color: '#fff', fontSize: 13, opacity: 0.9 }}>
-                  Scan your National ID to unlock all features.
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={openCameraForQr}
-                disabled={verifyLoading}
-                style={{ borderRadius: 20, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: 'rgba(255,255,255,0.2)' }}>
-                {verifyLoading
-                  ? <ActivityIndicator color="white" size="small" />
-                  : <Text style={{ color: '#fff', fontWeight: '600', fontSize: 13 }}>Verify Now</Text>}
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+        {/* Verification section */}
+        <View style={{ paddingHorizontal: 24, paddingTop: 24 }}>
+          <View
+            style={{
+              borderRadius: 16,
+              padding: 16,
+              backgroundColor: verificationState.state === 'unverified' ? colors.primary : verificationCard.backgroundColor,
+              borderWidth: verificationState.state === 'unverified' ? 0 : 1,
+              borderColor: verificationState.state === 'unverified' ? 'transparent' : verificationCard.borderColor,
+            }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+              {verificationState.state === 'verified' ? (
+                <ShieldCheck size={20} color={verificationCard.accentColor} />
+              ) : (
+                <Shield size={18} color={verificationState.state === 'unverified' ? '#fff' : verificationCard.accentColor} />
+              )}
 
-        {/* Verified badge */}
-        {profile?.is_verified && (
-          <View style={{ paddingHorizontal: 24, paddingTop: 24 }}>
-            <View style={{ borderRadius: 16, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#22C55E18', borderWidth: 1, borderColor: '#22C55E40' }}>
-              <ShieldCheck size={20} color="#22C55E" />
-              <View>
-                <Text style={{ fontWeight: '700', fontSize: 14, color: '#22C55E' }}>Level 2 Verified</Text>
-                <Text style={{ fontSize: 12, color: '#22C55E', opacity: 0.8 }}>Your identity has been verified</Text>
+              <View style={{ flex: 1 }}>
+                <Text
+                  style={{
+                    fontWeight: '700',
+                    fontSize: 15,
+                    color: verificationState.state === 'unverified' ? '#fff' : verificationCard.accentColor,
+                  }}
+                >
+                  {verificationCard.title}
+                </Text>
+
+                {verificationState.state === 'verified' && (
+                  <Text style={{ marginTop: 4, fontSize: 12, color: verificationCard.accentColor, opacity: 0.85 }}>
+                    Your identity has been verified.
+                  </Text>
+                )}
+
+                {verificationState.state === 'unverified' && (
+                  <Text style={{ marginTop: 4, fontSize: 13, color: '#fff', opacity: 0.92 }}>
+                    Verify with National ID or upload another ID for manual review.
+                  </Text>
+                )}
+
+                {verificationState.state === 'pending' && (
+                  <>
+                    <Text style={{ marginTop: 4, fontSize: 12, color: colors.text }}>
+                      {latestVerificationRequest
+                        ? `${formatVerificationDocumentType(latestVerificationRequest.document_type)} submitted on ${formatDate(latestVerificationRequest.created_at)}`
+                        : 'Your verification request is currently under review.'}
+                    </Text>
+                    <Text style={{ marginTop: 6, fontSize: 12, color: colors.textSecondary }}>
+                      You already have a pending request. Please wait for admin review.
+                    </Text>
+                  </>
+                )}
+
+                {verificationState.state === 'rejected' && (
+                  <>
+                    <Text style={{ marginTop: 4, fontSize: 12, color: colors.text }}>
+                      {latestVerificationRequest
+                        ? `${formatVerificationDocumentType(latestVerificationRequest.document_type)} was reviewed on ${formatDate(latestVerificationRequest.reviewed_at ?? latestVerificationRequest.updated_at)}`
+                        : 'Your last manual verification request was rejected.'}
+                    </Text>
+                    {!!latestVerificationRequest?.review_notes && (
+                      <Text style={{ marginTop: 6, fontSize: 12, color: colors.textSecondary }}>
+                        Notes: {latestVerificationRequest.review_notes}
+                      </Text>
+                    )}
+                  </>
+                )}
               </View>
             </View>
+
+            {verificationRequestsLoading && verificationState.state !== 'verified' ? (
+              <View style={{ paddingTop: 12 }}>
+                <ActivityIndicator color={verificationState.state === 'unverified' ? '#fff' : verificationCard.accentColor} />
+              </View>
+            ) : null}
+
+            {verificationState.state === 'unverified' && (
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
+                <TouchableOpacity
+                  onPress={openCameraForQr}
+                  disabled={verifyLoading}
+                  style={{
+                    flex: 1,
+                    borderRadius: 12,
+                    paddingVertical: 12,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: 'rgba(255,255,255,0.18)',
+                  }}
+                >
+                  {verifyLoading ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Verify National ID</Text>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setManualVerificationModalVisible(true)}
+                  disabled={!client || verificationRequestsLoading}
+                  style={{
+                    flex: 1,
+                    borderRadius: 12,
+                    paddingVertical: 12,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: '#fff',
+                  }}
+                >
+                  <Text style={{ color: colors.primary, fontWeight: '700', fontSize: 13 }}>Upload Another ID</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {verificationState.state === 'rejected' && (
+              <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
+                <TouchableOpacity
+                  onPress={openCameraForQr}
+                  disabled={verifyLoading}
+                  style={{
+                    flex: 1,
+                    borderRadius: 12,
+                    paddingVertical: 12,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: colors.primary,
+                  }}
+                >
+                  {verifyLoading ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Try National ID</Text>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setManualVerificationModalVisible(true)}
+                  disabled={!client || verificationRequestsLoading}
+                  style={{
+                    flex: 1,
+                    borderRadius: 12,
+                    paddingVertical: 12,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    backgroundColor: colors.surface,
+                    borderWidth: 1,
+                    borderColor: colors.border,
+                  }}
+                >
+                  <Text style={{ color: colors.text, fontWeight: '700', fontSize: 13 }}>Submit Another ID</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
-        )}
+        </View>
+
+        {client && profile?.id ? (
+          <ManualVerificationModal
+            visible={manualVerificationModalVisible}
+            profileId={profile.id}
+            client={client}
+            colors={colorMap}
+            onClose={() => setManualVerificationModalVisible(false)}
+            onSubmitted={async () => {
+              await refresh();
+              await loadVerificationRequests();
+            }}
+          />
+        ) : null}
 
         {/* Camera Modal */}
         <Modal visible={cameraModalVisible} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setCameraModalVisible(false)}>
@@ -547,7 +778,7 @@ export default function ProfilePage() {
         <CalendarPicker
           visible={calendarVisible}
           initial={birthDate}
-          colors={colors as Record<string, string>}
+          colors={colorMap}
           onConfirm={(iso) => {
             setBirthDate(iso);
             saveField('birth_date', iso);
@@ -575,7 +806,7 @@ export default function ProfilePage() {
             onBlurSave={(v) => saveField('first_name', v)}
             limit={30}
             icon={<User {...iconProps} />}
-            colors={colors as Record<string, string>}
+            colors={colorMap}
           />
           {divider}
 
@@ -587,7 +818,7 @@ export default function ProfilePage() {
             onBlurSave={(v) => saveField('middle_name', v)}
             limit={30}
             icon={<User {...iconProps} />}
-            colors={colors as Record<string, string>}
+            colors={colorMap}
           />
           {divider}
 
@@ -599,7 +830,7 @@ export default function ProfilePage() {
             onBlurSave={(v) => saveField('last_name', v)}
             limit={30}
             icon={<User {...iconProps} />}
-            colors={colors as Record<string, string>}
+            colors={colorMap}
           />
           {divider}
 
@@ -644,7 +875,7 @@ export default function ProfilePage() {
               value={address1}
               onChange={setAddress1}
               onBlurSave={(v) => saveField('permanent_address_1', v)}
-              colors={colors as Record<string, string>}
+              colors={colorMap}
             />
           </View>
 

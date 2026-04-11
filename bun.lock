@@ -6,7 +6,7 @@
       "name": "dispatch",
       "dependencies": {
         "@expo/metro-runtime": "~5.0.4",
-        "@kiyoko-org/dispatch-lib": "github:kiyoko-org/dispatch-lib#c83e44ed6fd575659aa7faed4fd4ea2636a8819c",
+        "@kiyoko-org/dispatch-lib": "github:kiyoko-org/dispatch-lib#0d3d929817b00e4855a355c5acca2c501d6eb77b",
         "@react-native-async-storage/async-storage": "^2.2.0",
         "@react-native-community/netinfo": "^11.4.1",
         "@supabase/supabase-js": "^2.54.0",
@@ -371,7 +371,7 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.29", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-uw6guiW/gcAGPDhLmd77/6lW8QLeiV5RUTsAX46Db6oLhGaVj4lhnPwb184s1bkc8kdVg/+h988dro8GRDpmYQ=="],
 
-    "@kiyoko-org/dispatch-lib": ["dispatch-lib@github:kiyoko-org/dispatch-lib#c83e44e", { "dependencies": { "@supabase/supabase-js": "^2.75.0", "zod": "^4.1.12" }, "peerDependencies": { "react": "^19.0.0", "typescript": "^5" } }, "kiyoko-org-dispatch-lib-c83e44e", "sha512-SylbmUUtY034Brm2/23bLuhgjDzLVRaS3FSZm5Wqo1q64YMp4Mntsvi8qt4VzDKIFhUEYUXLphing6wHGD4upg=="],
+    "@kiyoko-org/dispatch-lib": ["dispatch-lib@github:kiyoko-org/dispatch-lib#0d3d929", { "dependencies": { "@supabase/supabase-js": "^2.75.0", "zod": "^4.1.12" }, "peerDependencies": { "react": "^19.0.0", "typescript": "^5" } }, "kiyoko-org-dispatch-lib-0d3d929", "sha512-ixbOQlgzsjErNExK3YVw2tqHdlMc0d/+4+f3xBvEi04daid3rhjfpCH+0CKWSI/QjKK8op/CY0W95g9YMoQ6lw=="],
 
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@0.2.12", "", { "dependencies": { "@emnapi/core": "^1.4.3", "@emnapi/runtime": "^1.4.3", "@tybys/wasm-util": "^0.10.0" } }, "sha512-ZVWUcfwY4E/yPitQJl481FjFo3K22D6qF0DuFH6Y/nbnE11GY5uguDxZMGXPQ8WQ0128MXQD7TnfHyK4oWoIJQ=="],
 
