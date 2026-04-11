@@ -46,6 +46,12 @@ export function FloatingReportsButton() {
     });
   };
 
+  const getReportSummary = (report: { what_happened: string | null; incident_title: string | null }) => {
+    const sourceText = report.what_happened?.trim() || report.incident_title?.trim() || 'No details provided';
+    const maxLength = 80;
+    return sourceText.length > maxLength ? `${sourceText.slice(0, maxLength - 3)}...` : sourceText;
+  };
+
   return (
     <>
       <TouchableOpacity
@@ -89,8 +95,8 @@ export function FloatingReportsButton() {
                       router.push(`/cases/${report.id}`);
                     }}>
                     <View style={styles.reportContent}>
-                      <Text style={[styles.reportTitle, { color: colors.text }]}>
-                        {report.incident_title || 'Incident Report'}
+                      <Text style={[styles.reportTitle, { color: colors.text }]} numberOfLines={2}>
+                        {getReportSummary(report)}
                       </Text>
                       <View style={styles.reportMeta}>
                         <View

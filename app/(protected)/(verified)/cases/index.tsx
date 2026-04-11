@@ -68,6 +68,12 @@ export default function MyReports() {
     }
   };
 
+  const getReportSummary = (report: { what_happened: string | null; incident_title: string | null }) => {
+    const sourceText = report.what_happened?.trim() || report.incident_title?.trim() || 'No details provided';
+    const maxLength = 90;
+    return sourceText.length > maxLength ? `${sourceText.slice(0, maxLength - 3)}...` : sourceText;
+  };
+
   // Get status color
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {
@@ -97,8 +103,8 @@ export default function MyReports() {
       const matchesArchiveStatus = showArchived ? isArchived : !isArchived;
       const matchesSearch =
         !searchQuery ||
-        report.incident_title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        report.what_happened?.toLowerCase().includes(searchQuery.toLowerCase());
+        report.what_happened?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        report.incident_title?.toLowerCase().includes(searchQuery.toLowerCase());
       const matchesCategory =
         selectedCategory === 'all' || report.category_id?.toString() === selectedCategory;
       const matchesSubCategory =
@@ -118,7 +124,7 @@ export default function MyReports() {
           comparison = dateA - dateB;
           break;
         case 'title':
-          comparison = (a.incident_title || '').localeCompare(b.incident_title || '');
+          comparison = getReportSummary(a).localeCompare(getReportSummary(b));
           break;
       }
 
@@ -478,9 +484,10 @@ export default function MyReports() {
                             fontWeight: '600',
                             color: colors.text,
                             flex: 1,
+                            lineHeight: 22,
                           }}
-                          numberOfLines={1}>
-                          {report.incident_title || 'Incident Report'}
+                          numberOfLines={2}>
+                          {getReportSummary(report)}
                         </Text>
                       </View>
 

@@ -173,7 +173,7 @@ export default function ReportDetailsScreen() {
               marginBottom: 12,
             }}>
             <Text style={{ fontSize: 20, fontWeight: '700', color: colors.text, marginBottom: 8 }}>
-              {report.incident_title || 'Incident Report'}
+              {report.what_happened?.trim() || 'No details provided.'}
             </Text>
             <View
               style={{
@@ -230,21 +230,6 @@ export default function ReportDetailsScreen() {
             </View>
           </View>
 
-          <View
-            style={{
-              borderRadius: 16,
-              borderWidth: 1,
-              borderColor: colors.border,
-              backgroundColor: colors.card,
-              padding: 16,
-            }}>
-            <Text style={{ fontSize: 15, fontWeight: '700', color: colors.text, marginBottom: 8 }}>
-              What happened
-            </Text>
-            <Text style={{ color: colors.textSecondary, lineHeight: 22 }}>
-              {report.what_happened || 'No additional details provided.'}
-            </Text>
-          </View>
         </ScrollView>
       )}
     </KeyboardAvoidingView>
