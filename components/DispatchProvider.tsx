@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { initDispatchClient, type DispatchClient } from '@kiyoko-org/dispatch-lib';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
@@ -38,33 +38,67 @@ export function DispatchProvider({ children }: DispatchProviderProps) {
   const [categories, setCategories] = useState<Category[]>([]);
   const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [categoriesError, setCategoriesError] = useState<string | null>(null);
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const retryCountRef = useRef(0);
+
+  const clearRetryTimer = useCallback(() => {
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current);
+      retryTimeoutRef.current = null;
+    }
+  }, []);
 
   // Function to fetch categories
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async (options?: { resetRetry?: boolean }) => {
     if (!client) return;
-    
+
+    if (options?.resetRetry) {
+      retryCountRef.current = 0;
+      clearRetryTimer();
+    }
+
     setCategoriesLoading(true);
     setCategoriesError(null);
-    
+
     try {
       const { data, error: fetchError } = await client.getCategories();
-      
+
       if (fetchError) {
         console.error('Error fetching categories:', fetchError);
         setCategoriesError(fetchError.message || 'Failed to fetch categories');
+        if (retryCountRef.current < 3) {
+          const attempt = retryCountRef.current + 1;
+          retryCountRef.current = attempt;
+          const delay = Math.min(2000 * attempt, 6000);
+          clearRetryTimer();
+          retryTimeoutRef.current = setTimeout(() => {
+            void fetchCategories();
+          }, delay);
+        }
         return;
       }
-      
+
       if (data) {
         setCategories(data);
       }
+      retryCountRef.current = 0;
+      clearRetryTimer();
     } catch (err) {
       console.error('Unexpected error fetching categories:', err);
       setCategoriesError(err instanceof Error ? err.message : 'Unknown error');
+      if (retryCountRef.current < 3) {
+        const attempt = retryCountRef.current + 1;
+        retryCountRef.current = attempt;
+        const delay = Math.min(2000 * attempt, 6000);
+        clearRetryTimer();
+        retryTimeoutRef.current = setTimeout(() => {
+          void fetchCategories();
+        }, delay);
+      }
     } finally {
       setCategoriesLoading(false);
     }
-  };
+  }, [clearRetryTimer, client]);
 
   // Initialize DispatchClient and fetch categories
   useEffect(() => {
@@ -105,10 +139,10 @@ export function DispatchProvider({ children }: DispatchProviderProps) {
 
   // Fetch categories when client is initialized
   useEffect(() => {
-    if (isInitialized && client && categories.length === 0) {
-      fetchCategories();
+    if (isInitialized && client && categories.length === 0 && !categoriesLoading && !categoriesError) {
+      void fetchCategories({ resetRetry: true });
     }
-  }, [isInitialized, client, categories.length]);
+  }, [categories.length, categoriesError, categoriesLoading, client, fetchCategories, isInitialized]);
 
   // Listen for auth state changes and refetch categories on login
   useEffect(() => {
@@ -116,18 +150,22 @@ export function DispatchProvider({ children }: DispatchProviderProps) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
-      // Refetch categories when user signs in
-      if (event === 'SIGNED_IN' && session) {
-        console.log('Auth state changed to SIGNED_IN, refetching categories');
-        fetchCategories();
+    } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        void fetchCategories({ resetRetry: true });
       }
     });
 
     return () => {
       subscription.unsubscribe();
     };
-  }, [client]);
+  }, [client, fetchCategories]);
+
+  useEffect(() => {
+    return () => {
+      clearRetryTimer();
+    };
+  }, [clearRetryTimer]);
 
   return (
     <DispatchContext.Provider value={{ 
@@ -137,7 +175,7 @@ export function DispatchProvider({ children }: DispatchProviderProps) {
       categories, 
       categoriesLoading, 
       categoriesError, 
-      refreshCategories: fetchCategories 
+      refreshCategories: async () => fetchCategories({ resetRetry: true })
     }}>
       {children}
     </DispatchContext.Provider>

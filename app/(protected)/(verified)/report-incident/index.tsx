@@ -91,7 +91,7 @@ const uploadManager = new UploadManager(storageService, filePickerService);
 export default function ReportIncidentIndex() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
-  const { categories, categoriesLoading, categoriesError, client } = useDispatchClient();
+  const { categories, categoriesLoading, categoriesError, refreshCategories, client } = useDispatchClient();
   const { session } = useAuthContext();
   const { createReport, reports } = useReportsStore();
   const reportsRef = useRef(reports); // Keep ref in sync with reports state
@@ -1076,15 +1076,27 @@ export default function ReportIncidentIndex() {
 
   const handleSubmitReport = async () => {
     // Check if categories are loaded
-    if (categoriesLoading) {
+    if (categoriesLoading && categories.length === 0) {
       Alert.alert('Loading', 'Please wait while categories are being loaded...', [{ text: 'OK' }]);
       return;
     }
 
     if (categories.length === 0) {
-      Alert.alert('Error', 'Categories are not available. Please refresh the page and try again.', [
-        { text: 'OK' },
-      ]);
+      Alert.alert(
+        'Error',
+        categoriesError
+          ? `Categories are not available: ${categoriesError}`
+          : 'Categories are not available. Please refresh the page and try again.',
+        [
+          {
+            text: 'Retry',
+            onPress: () => {
+              void refreshCategories();
+            },
+          },
+          { text: 'OK', style: 'cancel' },
+        ]
+      );
       return;
     }
 
@@ -2480,91 +2492,147 @@ export default function ReportIncidentIndex() {
 
           {/* Quick Links — Category sections */}
           <View style={{ marginBottom: 24 }}>
-            {quickLinkSections.map((section) => {
-              const isExpanded = expandedSections[section.categoryId] ?? false;
-              const isSelected = formData.incident_category === section.categoryId;
-              return (
-                <View key={section.categoryId} style={{ marginBottom: 8 }}>
-                  <TouchableOpacity
-                    onPress={() => toggleSection(section.categoryId)}
-                    activeOpacity={0.7}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      backgroundColor: isSelected ? section.color + '15' : colors.card,
-                      borderWidth: 1,
-                      borderColor: isSelected ? section.color + '50' : colors.border,
-                      borderRadius: 14,
-                      borderBottomLeftRadius: isExpanded ? 0 : 14,
-                      borderBottomRightRadius: isExpanded ? 0 : 14,
-                      paddingHorizontal: 14,
-                      paddingVertical: 12,
-                    }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                      <Text style={{ fontSize: 20 }}>{section.icon}</Text>
-                      <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text }} numberOfLines={1}>
-                        {section.categoryName}
-                      </Text>
-                    </View>
-                    {isExpanded
-                      ? <ChevronUp size={18} color={colors.textSecondary} />
-                      : <ChevronDown size={18} color={colors.textSecondary} />}
-                  </TouchableOpacity>
-                  {isExpanded && (
-                    <View
+            {categoriesLoading && categories.length === 0 ? (
+              <View
+                style={{
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: colors.border,
+                  backgroundColor: colors.card,
+                  paddingVertical: 18,
+                  paddingHorizontal: 14,
+                  alignItems: 'center',
+                  gap: 8,
+                }}>
+                <ActivityIndicator size="small" color={colors.primary} />
+                <Text style={{ color: colors.textSecondary, fontSize: 13 }}>
+                  Loading categories...
+                </Text>
+              </View>
+            ) : categoriesError && categories.length === 0 ? (
+              <View
+                style={{
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: colors.error + '50',
+                  backgroundColor: colors.error + '10',
+                  paddingVertical: 14,
+                  paddingHorizontal: 14,
+                  gap: 8,
+                }}>
+                <Text style={{ color: colors.error, fontSize: 13, fontWeight: '600' }}>
+                  Failed to load categories
+                </Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>
+                  {categoriesError}
+                </Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    void refreshCategories();
+                  }}
+                  activeOpacity={0.8}
+                  style={{
+                    alignSelf: 'flex-start',
+                    borderRadius: 10,
+                    backgroundColor: colors.primary,
+                    paddingHorizontal: 14,
+                    paddingVertical: 8,
+                  }}>
+                  <Text style={{ color: '#FFFFFF', fontWeight: '600', fontSize: 12 }}>Retry</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              quickLinkSections.map((section) => {
+                const isExpanded = expandedSections[section.categoryId] ?? false;
+                const isSelected = formData.incident_category === section.categoryId;
+                return (
+                  <View key={section.categoryId} style={{ marginBottom: 8 }}>
+                    <TouchableOpacity
+                      onPress={() => toggleSection(section.categoryId)}
+                      activeOpacity={0.7}
                       style={{
-                        borderWidth: 1,
-                        borderTopWidth: 0,
-                        borderColor: isSelected ? section.color + '50' : colors.border,
-                        borderBottomLeftRadius: 14,
-                        borderBottomRightRadius: 14,
-                        backgroundColor: colors.card,
-                        padding: 10,
                         flexDirection: 'row',
-                        flexWrap: 'wrap',
-                        gap: 8,
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        backgroundColor: isSelected ? section.color + '15' : colors.card,
+                        borderWidth: 1,
+                        borderColor: isSelected ? section.color + '50' : colors.border,
+                        borderRadius: 14,
+                        borderBottomLeftRadius: isExpanded ? 0 : 14,
+                        borderBottomRightRadius: isExpanded ? 0 : 14,
+                        paddingHorizontal: 14,
+                        paddingVertical: 12,
                       }}>
-                      {section.items.map((item, itemIdx) => {
-                        const isSubSelected =
-                          formData.incident_category === section.categoryId &&
-                          formData.incident_subcategory === item.subcategory;
-                        return (
-                          <TouchableOpacity
-                            key={itemIdx}
-                            onPress={() => handleQuickLink(item.categoryName, item.subcategory)}
-                            activeOpacity={0.7}
-                            style={{
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              width: 80,
-                              paddingVertical: 10,
-                              paddingHorizontal: 4,
-                              borderRadius: 14,
-                              backgroundColor: isSubSelected ? section.color : section.color + '08',
-                              borderWidth: 1,
-                              borderColor: isSubSelected ? section.color : section.color + '25',
-                            }}>
-                            <Text style={{ fontSize: 24, marginBottom: 4 }}>{item.icon}</Text>
-                            <Text
+                      <View
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                        <Text style={{ fontSize: 20 }}>{section.icon}</Text>
+                        <Text
+                          style={{ fontSize: 14, fontWeight: '600', color: colors.text }}
+                          numberOfLines={1}>
+                          {section.categoryName}
+                        </Text>
+                      </View>
+                      {isExpanded ? (
+                        <ChevronUp size={18} color={colors.textSecondary} />
+                      ) : (
+                        <ChevronDown size={18} color={colors.textSecondary} />
+                      )}
+                    </TouchableOpacity>
+                    {isExpanded && (
+                      <View
+                        style={{
+                          borderWidth: 1,
+                          borderTopWidth: 0,
+                          borderColor: isSelected ? section.color + '50' : colors.border,
+                          borderBottomLeftRadius: 14,
+                          borderBottomRightRadius: 14,
+                          backgroundColor: colors.card,
+                          padding: 10,
+                          flexDirection: 'row',
+                          flexWrap: 'wrap',
+                          gap: 8,
+                        }}>
+                        {section.items.map((item, itemIdx) => {
+                          const isSubSelected =
+                            formData.incident_category === section.categoryId &&
+                            formData.incident_subcategory === item.subcategory;
+                          return (
+                            <TouchableOpacity
+                              key={itemIdx}
+                              onPress={() => handleQuickLink(item.categoryName, item.subcategory)}
+                              activeOpacity={0.7}
                               style={{
-                                fontSize: 10,
-                                fontWeight: '600',
-                                color: isSubSelected ? '#fff' : colors.text,
-                                textAlign: 'center',
-                                lineHeight: 13,
-                              }}
-                              numberOfLines={2}>
-                              {item.label}
-                            </Text>
-                          </TouchableOpacity>
-                        );
-                      })}
-                    </View>
-                  )}
-                </View>
-              );
-            })}
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                width: 80,
+                                paddingVertical: 10,
+                                paddingHorizontal: 4,
+                                borderRadius: 14,
+                                backgroundColor: isSubSelected ? section.color : section.color + '08',
+                                borderWidth: 1,
+                                borderColor: isSubSelected ? section.color : section.color + '25',
+                              }}>
+                              <Text style={{ fontSize: 24, marginBottom: 4 }}>{item.icon}</Text>
+                              <Text
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: '600',
+                                  color: isSubSelected ? '#fff' : colors.text,
+                                  textAlign: 'center',
+                                  lineHeight: 13,
+                                }}
+                                numberOfLines={2}>
+                                {item.label}
+                              </Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    )}
+                  </View>
+                );
+              })
+            )}
           </View>
 
           {/* Selected category indicator */}

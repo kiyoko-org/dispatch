@@ -48,6 +48,7 @@ export default function VerifiedLayout() {
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="report-incident/index" />
       <Stack.Screen name="cases/index" />
+      <Stack.Screen name="cases/[id]" />
       <Stack.Screen name="map/index" />
       <Stack.Screen name="trust-score/index" />
     </Stack>
