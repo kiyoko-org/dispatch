@@ -117,7 +117,6 @@ type InlineFieldProps = {
   label: string;
   value: string;
   onChange: (v: string) => void;
-  onBlurSave: (v: string) => void;
   limit: number;
   placeholder?: string;
   icon: React.ReactNode;
@@ -125,7 +124,7 @@ type InlineFieldProps = {
   colors: Record<string, string>;
 };
 
-function InlineField({ label, value, onChange, onBlurSave, limit, placeholder, icon, multiline = false, colors }: InlineFieldProps) {
+function InlineField({ label, value, onChange, limit, placeholder, icon, multiline = false, colors }: InlineFieldProps) {
   const [focused, setFocused] = useState(false);
 
   return (
@@ -139,7 +138,7 @@ function InlineField({ label, value, onChange, onBlurSave, limit, placeholder, i
       <TextInput
         value={value}
         onChangeText={(t) => onChange(t.slice(0, limit))}
-        onBlur={() => { setFocused(false); onBlurSave(value); }}
+        onBlur={() => setFocused(false)}
         onFocus={() => setFocused(true)}
         placeholder={placeholder ?? `Enter ${label.toLowerCase()}`}
         placeholderTextColor={colors.textSecondary}
@@ -412,24 +411,83 @@ export default function ProfilePage() {
   const [lastName, setLastName] = useState('');
   const [birthDate, setBirthDate] = useState('');
   const [address1, setAddress1] = useState('');
+  const [saveLoading, setSaveLoading] = useState(false);
 
-  useEffect(() => {
-    if (profile) {
-      setFirstName(profile.first_name ?? '');
-      setMiddleName(profile.middle_name ?? '');
-      setLastName(profile.last_name ?? '');
-      setBirthDate(profile.birth_date ?? '');
-      setAddress1([profile.permanent_address_1, profile.permanent_address_2].filter(Boolean).join(', '));
-    }
+  const normalizeValue = useCallback((value: string) => {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }, []);
+
+  const resetDraftFromProfile = useCallback(() => {
+    if (!profile) return;
+    setFirstName(profile.first_name ?? '');
+    setMiddleName(profile.middle_name ?? '');
+    setLastName(profile.last_name ?? '');
+    setBirthDate(profile.birth_date ?? '');
+    setAddress1(profile.permanent_address_1 ?? '');
   }, [profile]);
 
-  const saveField = useCallback(async (field: string, value: string) => {
-    if (!profile?.id) return;
-    await supabase
-      .from('profiles')
-      .update({ [field]: value.trim() || null })
-      .eq('id', profile.id);
-  }, [profile?.id]);
+  useEffect(() => {
+    resetDraftFromProfile();
+  }, [resetDraftFromProfile]);
+
+  const changedProfileFields = useMemo(() => {
+    if (!profile) return {} as Record<string, string | null>;
+
+    const changes: Record<string, string | null> = {};
+
+    const firstNameValue = normalizeValue(firstName);
+    if (firstNameValue !== (profile.first_name ?? null)) {
+      changes.first_name = firstNameValue;
+    }
+
+    const middleNameValue = normalizeValue(middleName);
+    if (middleNameValue !== (profile.middle_name ?? null)) {
+      changes.middle_name = middleNameValue;
+    }
+
+    const lastNameValue = normalizeValue(lastName);
+    if (lastNameValue !== (profile.last_name ?? null)) {
+      changes.last_name = lastNameValue;
+    }
+
+    const birthDateValue = normalizeValue(birthDate);
+    if (birthDateValue !== (profile.birth_date ?? null)) {
+      changes.birth_date = birthDateValue;
+    }
+
+    const addressValue = normalizeValue(address1);
+    if (addressValue !== (profile.permanent_address_1 ?? null)) {
+      changes.permanent_address_1 = addressValue;
+    }
+
+    return changes;
+  }, [address1, birthDate, firstName, lastName, middleName, normalizeValue, profile]);
+
+  const hasUnsavedChanges = Object.keys(changedProfileFields).length > 0;
+
+  const saveProfileEdits = useCallback(async () => {
+    if (!client || !profile?.id || !hasUnsavedChanges) return;
+
+    setSaveLoading(true);
+
+    try {
+      const { error } = await client.updateProfile(profile.id, changedProfileFields);
+
+      if (error) {
+        Alert.alert('Save failed', error.message || 'Could not save profile changes.');
+        return;
+      }
+
+      await refresh();
+      Alert.alert('Saved', 'Profile changes saved.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not save profile changes.';
+      Alert.alert('Save failed', message);
+    } finally {
+      setSaveLoading(false);
+    }
+  }, [changedProfileFields, client, hasUnsavedChanges, profile?.id, refresh]);
 
   const loadVerificationRequests = useCallback(async () => {
     if (!client || !profile?.id) {
@@ -473,7 +531,6 @@ export default function ProfilePage() {
         const parts = [geo.streetNumber, geo.street, geo.district, geo.city, geo.region].filter(Boolean);
         const addr = parts.join(', ').slice(0, 150);
         setAddress1(addr);
-        saveField('permanent_address_1', addr);
       }
     } catch {
       Alert.alert('Error', 'Could not get location. Please try again.');
@@ -781,7 +838,6 @@ export default function ProfilePage() {
           colors={colorMap}
           onConfirm={(iso) => {
             setBirthDate(iso);
-            saveField('birth_date', iso);
           }}
           onClose={() => setCalendarVisible(false)}
         />
@@ -803,7 +859,6 @@ export default function ProfilePage() {
             label="FIRST NAME"
             value={firstName}
             onChange={setFirstName}
-            onBlurSave={(v) => saveField('first_name', v)}
             limit={30}
             icon={<User {...iconProps} />}
             colors={colorMap}
@@ -815,7 +870,6 @@ export default function ProfilePage() {
             label="MIDDLE NAME"
             value={middleName}
             onChange={setMiddleName}
-            onBlurSave={(v) => saveField('middle_name', v)}
             limit={30}
             icon={<User {...iconProps} />}
             colors={colorMap}
@@ -827,7 +881,6 @@ export default function ProfilePage() {
             label="LAST NAME"
             value={lastName}
             onChange={setLastName}
-            onBlurSave={(v) => saveField('last_name', v)}
             limit={30}
             icon={<User {...iconProps} />}
             colors={colorMap}
@@ -874,12 +927,38 @@ export default function ProfilePage() {
             <InlineAddressField
               value={address1}
               onChange={setAddress1}
-              onBlurSave={(v) => saveField('permanent_address_1', v)}
               colors={colorMap}
             />
           </View>
 
         </View>
+
+        {hasUnsavedChanges && (
+          <View style={{ paddingHorizontal: 16, paddingTop: 20 }}>
+            <TouchableOpacity
+              onPress={() => void saveProfileEdits()}
+              disabled={saveLoading}
+              style={{
+                borderRadius: 14,
+                paddingVertical: 14,
+                alignItems: 'center',
+                justifyContent: 'center',
+                backgroundColor: saveLoading ? colors.surfaceVariant : colors.primary,
+              }}>
+              {saveLoading ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>Save Changes</Text>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={resetDraftFromProfile}
+              disabled={saveLoading}
+              style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 12 }}>
+              <Text style={{ color: colors.textSecondary, fontSize: 13, fontWeight: '600' }}>Discard</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={{ height: 40 }} />
       </ScrollView>
@@ -888,10 +967,9 @@ export default function ProfilePage() {
 }
 
 // ── InlineAddressField (multiline variant with its own focus state) ─────────
-function InlineAddressField({ value, onChange, onBlurSave, colors }: {
+function InlineAddressField({ value, onChange, colors }: {
   value: string;
   onChange: (v: string) => void;
-  onBlurSave: (v: string) => void;
   colors: Record<string, string>;
 }) {
   const [focused, setFocused] = useState(false);
@@ -902,7 +980,7 @@ function InlineAddressField({ value, onChange, onBlurSave, colors }: {
       <TextInput
         value={value}
         onChangeText={(t) => onChange(t.slice(0, LIMIT))}
-        onBlur={() => { setFocused(false); onBlurSave(value); }}
+        onBlur={() => setFocused(false)}
         onFocus={() => setFocused(true)}
         placeholder="Enter address"
         placeholderTextColor={colors.textSecondary}
