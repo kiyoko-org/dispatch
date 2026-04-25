@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   StatusBar,
@@ -25,7 +25,6 @@ import HeaderWithSidebar from 'components/HeaderWithSidebar';
 import { useTheme } from 'components/ThemeContext';
 import { useUserData } from 'contexts/UserDataContext';
 import { useHotlines } from '@kiyoko-org/dispatch-lib';
-import { useRouter } from 'expo-router';
 import { HotlineGroup } from 'lib/services/user-data.service';
 import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -40,7 +39,6 @@ type Hotline = {
 };
 
 export default function HotlinesPage() {
-  const router = useRouter();
   const { colors, isDark } = useTheme();
   const {
     hotlines: userHotlines,
@@ -312,14 +310,25 @@ export default function HotlinesPage() {
     ]);
   };
 
-  const handleHotlineClick = (hotline: Hotline) => {
+  const handleHotlineClick = async (hotline: Hotline) => {
     if (isSelectionMode) {
       toggleHotlineSelection(hotline.id);
-    } else {
-      router.push({
-        pathname: '/(protected)/emergency',
-        params: { prefilledNumber: hotline.number },
-      });
+      return;
+    }
+
+    try {
+      const phoneUrl = `tel:${hotline.number}`;
+      const canCall = await Linking.canOpenURL(phoneUrl);
+
+      if (!canCall) {
+        Alert.alert('Call unavailable', 'This device cannot place phone calls right now.');
+        return;
+      }
+
+      await Linking.openURL(phoneUrl);
+    } catch (error) {
+      console.error('Failed to open hotline number:', error);
+      Alert.alert('Call failed', 'Could not start the call. Please try again.');
     }
   };
 
@@ -376,7 +385,7 @@ export default function HotlinesPage() {
         >
           <WifiOff size={16} color="#F59E0B" />
           <Text style={{ fontSize: 13, color: '#92400E', flex: 1 }}>
-            You're offline. Showing locally saved hotlines only.
+            You&apos;re offline. Showing locally saved hotlines only.
           </Text>
         </View>
       )}
@@ -644,7 +653,7 @@ export default function HotlinesPage() {
               No Hotlines Yet
             </Text>
             <Text className="text-center text-sm" style={{ color: colors.textSecondary }}>
-              Go to Emergency page to save hotlines
+              Add a hotline or wait for officer-defined hotlines to appear here.
             </Text>
           </View>
         )}

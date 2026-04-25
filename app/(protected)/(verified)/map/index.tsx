@@ -26,6 +26,7 @@ import HeaderWithSidebar from 'components/HeaderWithSidebar';
 import { useReportsStore } from 'contexts/ReportsContext';
 import DatePicker from 'components/DatePicker';
 import { useTheme } from 'components/ThemeContext';
+import { useAccessControl } from 'hooks/useAccessControl';
 import Papa from 'papaparse';
 import crimesCsvAsset from '../../../../assets/crimes.csv';
 import { dbscan, kMeans, gridBinning, regionAggregation, Point, Cluster } from 'lib/clustering';
@@ -83,6 +84,7 @@ type ReportWithCategory = DispatchReport & {
 export default function MapPage() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
+  const { withFeatureAccess } = useAccessControl();
   const [crimes, setCrimes] = useState<CrimeData[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCrime, setSelectedCrime] = useState<CrimeData | null>(null);
@@ -3393,7 +3395,7 @@ export default function MapPage() {
                 shadowRadius: 6,
                 elevation: 5,
               }}
-              onPress={() => router.push('/(protected)/report-incident')}>
+              onPress={() => withFeatureAccess('report', () => router.push('/(protected)/report-incident'))}>
               <AlertTriangle size={18} color="#FFF" />
               <Text className="ml-2 text-sm font-bold text-white">Report Incident</Text>
             </TouchableOpacity>

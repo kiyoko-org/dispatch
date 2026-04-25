@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, TouchableOpacity, StatusBar, Animated, Dimensions } from 'react-native';
+import { View, Text, ScrollView, TouchableOpacity, StatusBar, Animated } from 'react-native';
 import {
   Shield,
   FileText,
@@ -11,7 +11,7 @@ import {
   ClipboardList,
 } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
-import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import HeaderWithSidebar from '../../components/HeaderWithSidebar';
 import { useAuthContext } from 'components/AuthProvider';
 import { useTheme } from 'components/ThemeContext';
@@ -20,9 +20,7 @@ import { useReportsStore } from 'contexts/ReportsContext';
 import { useGuest } from 'contexts/GuestContext';
 import Splash from 'components/ui/Splash';
 import { LogoutOverlay } from 'components/LogoutOverlay';
-import Toast from 'components/ui/Toast';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+import { useAccessControl } from 'hooks/useAccessControl';
 
 const TRUST_LEVEL_COLORS = [
   { color: '#EF4444', label: 'Untrusted' },
@@ -51,7 +49,12 @@ export default function Home() {
   const { profile, loading: profileLoading } = useCurrentProfile();
   const { reports: allReports, currentUserReports } = useReportsStore();
   const { isGuest, guestName } = useGuest();
-  const [toastVisible, setToastVisible] = useState(false);
+  const {
+    authLevel,
+    isProfileComplete: profileComplete,
+    resolveFeatureAccess,
+    withFeatureAccess,
+  } = useAccessControl();
 
   // Animations
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -86,25 +89,37 @@ export default function Home() {
     ]).start();
   }, []);
 
-  const handleGuestLocked = useCallback(() => {
-    setToastVisible(true);
-  }, []);
-
-  function guardedPress(action: () => void) {
-    if (isGuest) {
-      handleGuestLocked();
-    } else {
-      action();
-    }
-  }
-
   const trustLevel = getTrustLevel(profile?.trust_score);
   const trustInfo = TRUST_LEVEL_COLORS[trustLevel];
   const trustPercent = getTrustPercentage(profile?.trust_score);
   const recentReports = allReports.slice(0, 5);
   const reportCount = currentUserReports.length;
 
+  const emergencyAccess = resolveFeatureAccess('emergency');
+  const reportAccess = resolveFeatureAccess('report');
+  const mapAccess = resolveFeatureAccess('map');
+  const trustScoreAccess = resolveFeatureAccess('trust-score');
+  const casesAccess = resolveFeatureAccess('cases');
 
+  const emergencySubtitle = emergencyAccess.allowed
+    ? 'Tap to alert with GPS location'
+    : emergencyAccess.reason === 'guest_blocked'
+      ? 'Create an account to enable SOS access'
+      : 'Complete your profile to enable SOS access';
+
+  const reportSubtitle = reportAccess.allowed
+    ? 'File a new report with evidence'
+    : reportAccess.reason === 'guest_blocked'
+      ? 'Create an account to report incidents'
+      : reportAccess.reason === 'verification_required'
+        ? 'Verify your identity to report incidents'
+        : 'Complete your profile to report incidents';
+
+  const mapSubtitle = mapAccess.allowed
+    ? 'View incidents'
+    : mapAccess.reason === 'guest_blocked'
+      ? 'Requires sign up'
+      : 'Requires verification';
 
   const averageResponseTimeMinutes = useMemo(() => {
     const responseTimes = allReports
@@ -199,10 +214,14 @@ export default function Home() {
           </Text>
           <Text style={{ fontSize: 14, color: 'rgba(255,255,255,0.8)' }}>
             {isGuest
-              ? 'Sign up to unlock all features'
-              : profile?.first_name
-                ? 'Your community safety dashboard'
-                : 'Complete your profile to unlock all features'}
+              ? 'Hotlines are unlocked. Sign up to access the rest.'
+              : authLevel === 'unverified'
+                ? profileComplete
+                  ? 'Emergency is unlocked. Verify your identity to unlock the rest.'
+                  : 'Complete your profile to unlock Emergency, then verify to unlock the rest.'
+                : profileComplete
+                  ? 'Your community safety dashboard'
+                  : 'Complete your profile to use Emergency and Report Incident.'}
           </Text>
         </Animated.View>
 
@@ -216,11 +235,12 @@ export default function Home() {
           }}
         >
           <TouchableOpacity
-            onPress={() => router.push('/(protected)/(guest)/emergency')}
+            onPress={() => withFeatureAccess('emergency', () => router.push('/(protected)/emergency'))}
             activeOpacity={0.85}
             style={{
               borderRadius: 20,
               overflow: 'hidden',
+              opacity: emergencyAccess.allowed ? 1 : 0.82,
               ...cardShadow,
               shadowColor: '#EF4444',
               shadowOpacity: 0.3,
@@ -272,7 +292,11 @@ export default function Home() {
                   marginRight: 16,
                 }}
               >
-                <AlertTriangle size={26} color="#FFFFFF" strokeWidth={2.5} />
+                {emergencyAccess.allowed ? (
+                  <AlertTriangle size={26} color="#FFFFFF" strokeWidth={2.5} />
+                ) : (
+                  <Lock size={24} color="#FFFFFF" />
+                )}
               </View>
 
               {/* Text */}
@@ -305,7 +329,7 @@ export default function Home() {
                     color: 'rgba(255,255,255,0.8)',
                   }}
                 >
-                  Tap to alert with GPS location
+                  {emergencySubtitle}
                 </Text>
               </View>
 
@@ -325,7 +349,9 @@ export default function Home() {
           }}
         >
           <TouchableOpacity
-            onPress={() => guardedPress(() => router.push('/(protected)/(verified)/report-incident'))}
+            onPress={() =>
+              withFeatureAccess('report', () => router.push('/(protected)/(verified)/report-incident'))
+            }
             activeOpacity={0.85}
             style={{
               backgroundColor: colors.surface,
@@ -336,7 +362,7 @@ export default function Home() {
               alignItems: 'center',
               borderWidth: 1,
               borderColor: colors.border,
-              opacity: isGuest ? 0.6 : 1,
+              opacity: reportAccess.allowed ? 1 : 0.6,
               ...cardShadow,
             }}
           >
@@ -352,10 +378,10 @@ export default function Home() {
                 marginRight: 16,
               }}
             >
-              {isGuest ? (
-                <Lock size={22} color="#F59E0B" />
-              ) : (
+              {reportAccess.allowed ? (
                 <ClipboardList size={22} color="#F59E0B" />
+              ) : (
+                <Lock size={22} color="#F59E0B" />
               )}
             </View>
 
@@ -377,7 +403,7 @@ export default function Home() {
                   color: colors.textSecondary,
                 }}
               >
-                File a new report with evidence
+                {reportSubtitle}
               </Text>
             </View>
 
@@ -398,7 +424,7 @@ export default function Home() {
         >
           {/* Map Card */}
           <TouchableOpacity
-            onPress={() => guardedPress(() => router.push('/(protected)/(verified)/map'))}
+            onPress={() => withFeatureAccess('map', () => router.push('/(protected)/(verified)/map'))}
             activeOpacity={0.85}
             style={{
               flex: 1,
@@ -407,7 +433,7 @@ export default function Home() {
               padding: 18,
               borderWidth: 1,
               borderColor: colors.border,
-              opacity: isGuest ? 0.6 : 1,
+              opacity: mapAccess.allowed ? 1 : 0.6,
               position: 'relative',
               overflow: 'hidden',
               ...cardShadow,
@@ -437,10 +463,10 @@ export default function Home() {
                 marginBottom: 14,
               }}
             >
-              {isGuest ? (
-                <Lock size={20} color={colors.primary} />
-              ) : (
+              {mapAccess.allowed ? (
                 <MapPin size={20} color={colors.primary} />
+              ) : (
+                <Lock size={20} color={colors.primary} />
               )}
             </View>
             <Text
@@ -453,9 +479,7 @@ export default function Home() {
             >
               Map
             </Text>
-            <Text style={{ fontSize: 12, color: colors.textSecondary }}>
-              {isGuest ? 'Requires sign up' : 'View incidents'}
-            </Text>
+            <Text style={{ fontSize: 12, color: colors.textSecondary }}>{mapSubtitle}</Text>
           </TouchableOpacity>
 
           {/* Hotlines Card */}
@@ -560,7 +584,9 @@ export default function Home() {
           >
             {/* Trust Score */}
             <TouchableOpacity
-              onPress={() => guardedPress(() => router.push('/(protected)/(verified)/trust-score'))}
+              onPress={() =>
+                withFeatureAccess('trust-score', () => router.push('/(protected)/(verified)/trust-score'))
+              }
               style={{ alignItems: 'center', flex: 1 }}
               activeOpacity={0.7}
             >
@@ -570,28 +596,28 @@ export default function Home() {
                   height: 48,
                   borderRadius: 24,
                   borderWidth: 2.5,
-                  borderColor: isGuest ? colors.border : trustInfo.color + '60',
-                  backgroundColor: isGuest ? colors.surfaceVariant : trustInfo.color + '10',
+                  borderColor: trustScoreAccess.allowed ? trustInfo.color + '60' : colors.border,
+                  backgroundColor: trustScoreAccess.allowed ? trustInfo.color + '10' : colors.surfaceVariant,
                   justifyContent: 'center',
                   alignItems: 'center',
                   marginBottom: 8,
                 }}
               >
-                {isGuest ? (
-                  <Lock size={18} color={colors.textSecondary} />
-                ) : (
+                {trustScoreAccess.allowed ? (
                   <Shield size={18} color={trustInfo.color} strokeWidth={2.5} />
+                ) : (
+                  <Lock size={18} color={colors.textSecondary} />
                 )}
               </View>
               <Text
                 style={{
                   fontSize: 16,
                   fontWeight: '800',
-                  color: isGuest ? colors.textSecondary : trustInfo.color,
+                  color: trustScoreAccess.allowed ? trustInfo.color : colors.textSecondary,
                   marginBottom: 2,
                 }}
               >
-                {isGuest ? '—' : `${trustPercent}%`}
+                {trustScoreAccess.allowed ? `${trustPercent}%` : '—'}
               </Text>
               <Text
                 style={{
@@ -615,7 +641,7 @@ export default function Home() {
 
             {/* My Cases */}
             <TouchableOpacity
-              onPress={() => guardedPress(() => router.push('/(protected)/(verified)/cases'))}
+              onPress={() => withFeatureAccess('cases', () => router.push('/(protected)/(verified)/cases'))}
               style={{ alignItems: 'center', flex: 1 }}
               activeOpacity={0.7}
             >
@@ -625,28 +651,28 @@ export default function Home() {
                   height: 48,
                   borderRadius: 24,
                   borderWidth: 2.5,
-                  borderColor: isGuest ? colors.border : colors.primary + '40',
-                  backgroundColor: isGuest ? colors.surfaceVariant : colors.primary + '10',
+                  borderColor: casesAccess.allowed ? colors.primary + '40' : colors.border,
+                  backgroundColor: casesAccess.allowed ? colors.primary + '10' : colors.surfaceVariant,
                   justifyContent: 'center',
                   alignItems: 'center',
                   marginBottom: 8,
                 }}
               >
-                {isGuest ? (
-                  <Lock size={18} color={colors.textSecondary} />
-                ) : (
+                {casesAccess.allowed ? (
                   <FileText size={18} color={colors.primary} strokeWidth={2.5} />
+                ) : (
+                  <Lock size={18} color={colors.textSecondary} />
                 )}
               </View>
               <Text
                 style={{
                   fontSize: 16,
                   fontWeight: '800',
-                  color: isGuest ? colors.textSecondary : colors.text,
+                  color: casesAccess.allowed ? colors.text : colors.textSecondary,
                   marginBottom: 2,
                 }}
               >
-                {isGuest ? '—' : reportCount}
+                {casesAccess.allowed ? reportCount : '—'}
               </Text>
               <Text
                 style={{
@@ -710,13 +736,6 @@ export default function Home() {
       </ScrollView>
 
       <LogoutOverlay visible={isLoggingOut} />
-      <Toast
-        visible={toastVisible}
-        message="Get"
-        actionLabel="Verified"
-        onAction={() => router.push('/auth/sign-up')}
-        onHide={() => setToastVisible(false)}
-      />
     </View>
   );
 }

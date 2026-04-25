@@ -23,12 +23,14 @@ import HeaderWithSidebar from 'components/HeaderWithSidebar';
 import { useTheme } from 'components/ThemeContext';
 import { useDispatchClient } from 'components/DispatchProvider';
 import { useReportsStore } from 'contexts/ReportsContext';
+import { useAccessControl } from 'hooks/useAccessControl';
 
 export default function MyReports() {
   const router = useRouter();
   const { colors, isDark } = useTheme();
   const { currentUserReports, loading, error, refresh } = useReportsStore();
   const { categories } = useDispatchClient();
+  const { withFeatureAccess } = useAccessControl();
 
   // Filter and sort state
   const [searchQuery, setSearchQuery] = useState('');
@@ -627,7 +629,7 @@ export default function MyReports() {
               </Text>
               {!showArchived && (
                 <TouchableOpacity
-                  onPress={() => router.push('/report-incident')}
+                  onPress={() => withFeatureAccess('report', () => router.push('/report-incident'))}
                   style={{
                     borderRadius: 12,
                     backgroundColor: colors.primary,

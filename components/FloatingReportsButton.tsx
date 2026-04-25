@@ -4,11 +4,13 @@ import { FileText, X, Clock } from 'lucide-react-native';
 import { useRouter } from 'expo-router';
 import { useTheme } from './ThemeContext';
 import { useReportsStore } from 'contexts/ReportsContext';
+import { useAccessControl } from 'hooks/useAccessControl';
 
 export function FloatingReportsButton() {
   const { colors } = useTheme();
   const { currentUserReports, loading } = useReportsStore();
   const router = useRouter();
+  const { withFeatureAccess } = useAccessControl();
   const [modalVisible, setModalVisible] = useState(false);
 
   const getStatusColor = (status: string) => {
@@ -126,7 +128,7 @@ export function FloatingReportsButton() {
                     style={[styles.createButton, { backgroundColor: colors.primary }]}
                     onPress={() => {
                       setModalVisible(false);
-                      router.push('/report-incident');
+                      withFeatureAccess('report', () => router.push('/report-incident'));
                     }}>
                     <Text style={[styles.createButtonText, { color: colors.surface }]}>
                       Create Report

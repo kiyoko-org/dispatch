@@ -20,6 +20,8 @@ import { useTheme } from './ThemeContext';
 import { useAuthContext } from './AuthProvider';
 import { useCurrentProfile } from 'contexts/CurrentProfileContext';
 import { useGuest } from 'contexts/GuestContext';
+import { useAccessControl } from 'hooks/useAccessControl';
+import type { FeatureKey } from 'lib/guards/access-control';
 import { SyncIndicator } from './SyncIndicator';
 import { useNotifications } from '@kiyoko-org/dispatch-lib';
 import NotificationSidebar from './NotificationSidebar';
@@ -70,6 +72,7 @@ export default function HeaderWithSidebar({
   const { session, signOut } = useAuthContext();
   const { profile } = useCurrentProfile();
   const { isGuest, guestName, clearGuest } = useGuest();
+  const { resolveFeatureAccess, withFeatureAccess } = useAccessControl();
   const { notifications, loading: notificationsLoading, deleteNotification } = useNotifications();
 
   const userNotifications = notifications
@@ -181,7 +184,7 @@ export default function HeaderWithSidebar({
           id: 'emergency',
           label: 'Emergency Response',
           icon: AlertTriangle,
-          route: '/(protected)/(guest)/emergency',
+          route: '/(protected)/emergency',
           locked: false,
         },
         {
@@ -240,6 +243,15 @@ export default function HeaderWithSidebar({
     },
   ];
 
+  const featureByItemId: Partial<Record<string, FeatureKey>> = {
+    emergency: 'emergency',
+    report: 'report',
+    'trust-score': 'trust-score',
+    map: 'map',
+    cases: 'cases',
+    hotlines: 'hotlines',
+  };
+
   const handleSidebarNavigation = (route: string) => {
     // Close sidebar first
     Animated.timing(sidebarAnim, {
@@ -253,8 +265,14 @@ export default function HeaderWithSidebar({
       const selectedItem = allItems.find((item) => item.id === route);
 
       if (selectedItem) {
+        const selectedFeature = featureByItemId[selectedItem.id];
+
         if (selectedItem.route) {
-          router.push(selectedItem.route as any);
+          if (selectedFeature) {
+            withFeatureAccess(selectedFeature, () => router.push(selectedItem.route as any));
+          } else {
+            router.push(selectedItem.route as any);
+          }
         } else if (selectedItem.id === 'logout') {
           if (isGuest) {
             clearGuest().then(() => router.replace('/auth/login'));
@@ -459,11 +477,12 @@ export default function HeaderWithSidebar({
               {/* Section Items */}
               <View className="px-2">
                 {section.items.map((item) => {
-                  const isItemLocked = isGuest && item.locked;
-                  const isDisabled = (!item.route && item.id !== 'logout') || isItemLocked;
+                  const itemFeature = featureByItemId[item.id];
+                  const isItemLocked = itemFeature ? !resolveFeatureAccess(itemFeature).allowed : false;
+                  const isDisabled = !item.route && item.id !== 'logout';
                   const iconColor = item.id === 'logout'
                     ? colors.error
-                    : isDisabled
+                    : isDisabled || isItemLocked
                       ? colors.textSecondary
                       : colors.text;
 
@@ -472,7 +491,7 @@ export default function HeaderWithSidebar({
                       key={item.id}
                       className="mx-2 mb-1 flex-row items-center rounded-lg px-3 py-3"
                       style={{
-                        opacity: isItemLocked ? 0.45 : 1,
+                        opacity: isItemLocked ? 0.55 : 1,
                         backgroundColor: 'transparent',
                       }}
                       onPress={() => handleSidebarNavigation(item.id)}

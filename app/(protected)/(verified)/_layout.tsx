@@ -1,48 +1,40 @@
-import { Stack, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Alert } from 'react-native';
-import { useAuth } from 'hooks/useAuth';
-import { useGuest } from 'contexts/GuestContext';
+import { Stack, usePathname, useRouter } from 'expo-router';
+import { useEffect, useMemo, useRef } from 'react';
 import Splash from 'components/ui/Splash';
+import { useAccessControl } from 'hooks/useAccessControl';
+import type { FeatureKey } from 'lib/guards/access-control';
+
+function getVerifiedFeatureFromPath(pathname: string): FeatureKey {
+  if (pathname.includes('report-incident')) return 'report';
+  if (pathname.includes('map')) return 'map';
+  if (pathname.includes('trust-score')) return 'trust-score';
+  return 'cases';
+}
 
 export default function VerifiedLayout() {
-  const { session, isLoading } = useAuth();
-  const { isGuest, isLoadingGuest } = useGuest();
   const router = useRouter();
-  const [alertShown, setAlertShown] = useState(false);
+  const pathname = usePathname();
+  const { authLevel, profileLoading, promptForBlockedFeature } = useAccessControl();
+  const alertShownRef = useRef(false);
 
-  const loading = isLoading || isLoadingGuest;
-  const isAuthenticated = !!session;
+  const blockedFeature = useMemo(() => getVerifiedFeatureFromPath(pathname), [pathname]);
 
   useEffect(() => {
-    if (!loading && !isAuthenticated && isGuest && !alertShown) {
-      setAlertShown(true);
-      Alert.alert(
-        'Sign Up Required',
-        'Create an account to access this feature.',
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-            onPress: () => {
-              if (router.canGoBack()) router.back();
-              else router.replace('/(protected)/home');
-            },
-          },
-          {
-            text: 'Sign Up',
-            onPress: () => router.push('/auth/sign-up'),
-          },
-        ],
-        { cancelable: false }
-      );
+    if (profileLoading) return;
+
+    if (authLevel === 'verified') {
+      alertShownRef.current = false;
+      return;
     }
-  }, [loading, isAuthenticated, isGuest, alertShown, router]);
 
-  if (loading) return <Splash />;
+    if (alertShownRef.current) return;
 
-  // Guests should not reach here — redirect home
-  if (!isAuthenticated && isGuest) return <Splash />;
+    alertShownRef.current = true;
+    promptForBlockedFeature(blockedFeature);
+    router.replace('/(protected)/home');
+  }, [authLevel, blockedFeature, profileLoading, promptForBlockedFeature, router]);
+
+  if (profileLoading || authLevel !== 'verified') return <Splash />;
 
   return (
     <Stack screenOptions={{ headerShown: false }}>

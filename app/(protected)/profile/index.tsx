@@ -36,6 +36,7 @@ import { useCurrentProfile } from 'contexts/CurrentProfileContext';
 import { useGuest } from 'contexts/GuestContext';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { supabase } from 'lib/supabase';
+import { isProfileComplete } from 'lib/guards/access-control';
 
 // ── helpers ────────────────────────────────────────────────────────────────
 const MONTHS = [
@@ -550,6 +551,26 @@ export default function ProfilePage() {
     } catch { Alert.alert('Error', 'Unable to request camera permission.'); }
   };
 
+  const openManualVerification = useCallback(() => {
+    if (hasUnsavedChanges) {
+      Alert.alert(
+        'Save Profile First',
+        'Save your profile changes before uploading another ID.',
+      );
+      return;
+    }
+
+    if (!isProfileComplete(profile)) {
+      Alert.alert(
+        'Complete Profile First',
+        'Complete and save your first name, last name, birth date, and current address before uploading another ID.',
+      );
+      return;
+    }
+
+    setManualVerificationModalVisible(true);
+  }, [hasUnsavedChanges, profile]);
+
   const processQrValue = async (qrValue: string) => {
     try {
       setVerifyLoading(true);
@@ -590,6 +611,7 @@ export default function ProfilePage() {
 
   const verificationCard = getVerificationCardConfig(verificationState.state);
   const latestVerificationRequest = verificationState.latestRequest;
+  const savedProfileComplete = useMemo(() => isProfileComplete(profile), [profile]);
   const colorMap = colors as unknown as Record<string, string>;
 
   const iconProps = { size: 15, color: colors.textSecondary };
@@ -609,7 +631,7 @@ export default function ProfilePage() {
           <Text style={{ fontSize: 13, color: colors.textSecondary, marginBottom: 32 }}>Guest Account</Text>
           <View style={{ width: '100%', borderRadius: 16, padding: 20, marginBottom: 24, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}>
             <Text style={{ fontSize: 13, textAlign: 'center', color: colors.textSecondary }}>
-              You're browsing as a guest. Create an account to unlock all features and keep your data safe.
+              You&apos;re browsing as a guest. Create an account to unlock all features and keep your data safe.
             </Text>
           </View>
           <TouchableOpacity
@@ -681,7 +703,7 @@ export default function ProfilePage() {
 
                 {verificationState.state === 'unverified' && (
                   <Text style={{ marginTop: 4, fontSize: 13, color: '#fff', opacity: 0.92 }}>
-                    Verify with National ID or upload another ID for manual review.
+                    Verify with National ID or upload another ID for manual review. Uploading another ID requires a complete saved profile.
                   </Text>
                 )}
 
@@ -742,7 +764,7 @@ export default function ProfilePage() {
                   )}
                 </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={() => setManualVerificationModalVisible(true)}
+                  onPress={openManualVerification}
                   disabled={!client || verificationRequestsLoading}
                   style={{
                     flex: 1,
@@ -779,7 +801,7 @@ export default function ProfilePage() {
                   )}
                 </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={() => setManualVerificationModalVisible(true)}
+                  onPress={openManualVerification}
                   disabled={!client || verificationRequestsLoading}
                   style={{
                     flex: 1,
@@ -798,6 +820,32 @@ export default function ProfilePage() {
             )}
           </View>
         </View>
+
+        {!savedProfileComplete && (
+          <View style={{ paddingHorizontal: 24, paddingTop: 16 }}>
+            <View
+              style={{
+                borderRadius: 16,
+                padding: 16,
+                backgroundColor: '#F59E0B18',
+                borderWidth: 1,
+                borderColor: '#F59E0B40',
+              }}
+            >
+              <Text style={{ fontSize: 14, fontWeight: '700', color: '#B45309' }}>
+                Complete your profile first
+              </Text>
+              <Text style={{ marginTop: 6, fontSize: 12, color: colors.textSecondary }}>
+                Save your first name, last name, birth date, and current address to unlock Emergency, Report Incident, and Upload Another ID.
+              </Text>
+              {hasUnsavedChanges && (
+                <Text style={{ marginTop: 6, fontSize: 12, color: '#B45309' }}>
+                  You still have unsaved profile changes.
+                </Text>
+              )}
+            </View>
+          </View>
+        )}
 
         {client && profile?.id ? (
           <ManualVerificationModal

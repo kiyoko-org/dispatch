@@ -65,6 +65,8 @@ import { FileUtils } from 'lib/services/file-utils';
 import { AudioRecorder } from 'expo-audio';
 import { UploadProgress } from 'components/ui/UploadProgress';
 import { SearchResult } from 'lib/types/search';
+import Splash from 'components/ui/Splash';
+import { useAccessControl } from 'hooks/useAccessControl';
 
 interface UIState {
   showCategoryDropdown: boolean;
@@ -94,12 +96,31 @@ export default function ReportIncidentIndex() {
   const { categories, categoriesLoading, categoriesError, refreshCategories, client } = useDispatchClient();
   const { session } = useAuthContext();
   const { createReport, reports } = useReportsStore();
+  const { profileLoading, promptForBlockedFeature, resolveFeatureAccess } = useAccessControl();
   const reportsRef = useRef(reports); // Keep ref in sync with reports state
+  const reportGuardShownRef = useRef(false);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const locationAbortControllerRef = useRef<AbortController | null>(null);
   const handleUseCurrentLocationRef = useRef<((silent?: boolean) => Promise<void>) | null>(null);
   const [recorder, setRecorder] = useState<AudioRecorder | null>(null);
   const [recordingDuration, setRecordingDuration] = useState(0);
+
+  const reportAccess = resolveFeatureAccess('report');
+
+  useEffect(() => {
+    if (profileLoading) return;
+
+    if (reportAccess.allowed) {
+      reportGuardShownRef.current = false;
+      return;
+    }
+
+    if (reportGuardShownRef.current) return;
+
+    reportGuardShownRef.current = true;
+    promptForBlockedFeature('report');
+    router.replace('/(protected)/home');
+  }, [profileLoading, promptForBlockedFeature, reportAccess.allowed, router]);
 
   // Consolidated form data state
   const [formData, setFormData] = useState<ReportData>({
@@ -2230,6 +2251,10 @@ export default function ReportIncidentIndex() {
     matched.sort((a, b) => a.priority - b.priority || a.link.label.localeCompare(b.link.label));
     setDescriptionSuggestions(matched.map((m) => m.link));
   }, [updateFormData, sanitizeText, allQuickLinks, KEYWORD_DB, STOP_WORDS, fuzzyMatch]);
+
+  if (profileLoading || !reportAccess.allowed) {
+    return <Splash />;
+  }
 
   return (
     <KeyboardAvoidingView

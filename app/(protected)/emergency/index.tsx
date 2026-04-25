@@ -45,6 +45,8 @@ import { useUserData } from 'contexts/UserDataContext';
 import { useHotlines } from '@kiyoko-org/dispatch-lib';
 import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Splash from 'components/ui/Splash';
+import { useAccessControl } from 'hooks/useAccessControl';
 
 let ImmediatePhoneCallModule: any = null;
 try {
@@ -151,6 +153,8 @@ export default function EmergencyScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { colors, isDark } = useTheme();
+  const { profileLoading, promptForBlockedFeature, resolveFeatureAccess } = useAccessControl();
+  const emergencyGuardShownRef = useRef(false);
   const {
     quickContacts,
     emergencyContacts: savedEmergencyContacts,
@@ -212,6 +216,23 @@ export default function EmergencyScreen() {
     });
     return () => unsubscribe();
   }, []);
+  const emergencyAccess = resolveFeatureAccess('emergency');
+
+  useEffect(() => {
+    if (profileLoading) return;
+
+    if (emergencyAccess.allowed) {
+      emergencyGuardShownRef.current = false;
+      return;
+    }
+
+    if (emergencyGuardShownRef.current) return;
+
+    emergencyGuardShownRef.current = true;
+    promptForBlockedFeature('emergency');
+    router.replace('/(protected)/home');
+  }, [emergencyAccess.allowed, profileLoading, promptForBlockedFeature, router]);
+
   const [emergencyProtocolActive, setEmergencyProtocolActive] = useState(false);
   const [pressedButtons, setPressedButtons] = useState<Set<string>>(new Set());
   const [isQuickContactsExpanded, setIsQuickContactsExpanded] = useState(false);
@@ -866,6 +887,10 @@ export default function EmergencyScreen() {
     return baseStyle;
   };
 
+  if (profileLoading || !emergencyAccess.allowed) {
+    return <Splash />;
+  }
+
   return (
     <View className="flex-1" style={{ backgroundColor: colors.background }}>
       <StatusBar
@@ -888,7 +913,7 @@ export default function EmergencyScreen() {
         >
           <WifiOff size={16} color="#F59E0B" />
           <Text style={{ fontSize: 13, color: '#92400E', flex: 1 }}>
-            You're offline. Calls and local contacts still work.
+            You&apos;re offline. Calls and local contacts still work.
           </Text>
         </View>
       )}
