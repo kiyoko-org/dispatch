@@ -36,7 +36,7 @@ import { ScreenContent } from 'components/ui/ScreenContent';
 import { Card } from 'components/ui/Card';
 import HeaderWithSidebar from 'components/HeaderWithSidebar';
 import { ContactsService } from 'lib/services/contacts';
-import { EmergencyContact } from 'lib/types';
+import { EmergencyCallLog, EmergencyContact } from 'lib/types';
 import * as Haptics from 'expo-haptics';
 import { emergencyCallService } from 'lib/services/emergency-calls';
 import * as Location from 'expo-location';
@@ -393,36 +393,132 @@ export default function EmergencyScreen() {
     }
   };
 
+  type EmergencyCallOutcome = NonNullable<EmergencyCallLog['outcome']>;
+
+  type MakeCallOptions = {
+    locationLat?: number;
+    locationLng?: number;
+    showLogFailureAlert?: boolean;
+  };
+
   const determineCallType = (phoneNumber: string): 'police' | 'fire' | 'medical' | 'general' => {
-    const emergencyMappings: { [key: string]: 'police' | 'fire' | 'medical' } = {
+    const normalizedNumber = phoneNumber.replace(/\D/g, '');
+    const emergencyMappings: Record<string, 'police' | 'fire' | 'medical'> = {
       '911': 'police',
       '9602955055': 'fire',
       '69420': 'medical',
     };
 
-    return emergencyMappings[phoneNumber] || 'general';
+    return emergencyMappings[normalizedNumber] ?? 'general';
+  };
+
+  const getCurrentLocation = async (): Promise<{
+    locationLat?: number;
+    locationLng?: number;
+  }> => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return {};
+
+      const location = await Location.getCurrentPositionAsync({});
+      return {
+        locationLat: location.coords.latitude,
+        locationLng: location.coords.longitude,
+      };
+    } catch (error) {
+      console.warn('Failed to get location:', error);
+      return {};
+    }
+  };
+
+  const createEmergencyLog = async (
+    number: string,
+    outcome: EmergencyCallOutcome,
+    options?: MakeCallOptions
+  ): Promise<EmergencyCallLog | null> => {
+    try {
+      const result = await emergencyCallService.logEmergencyCall(
+        number,
+        undefined,
+        determineCallType(number),
+        options?.locationLat,
+        options?.locationLng,
+        outcome
+      );
+
+      if (result.error || !result.data) {
+        console.error('Failed to create emergency_calls row:', result.error ?? 'No row returned');
+        return null;
+      }
+
+      return result.data;
+    } catch (error) {
+      console.error('Failed to create emergency_calls row:', error);
+      return null;
+    }
+  };
+
+  const markEmergencyLogFailed = async (logId?: string): Promise<boolean> => {
+    if (!logId) return false;
+
+    try {
+      const result = await emergencyCallService.updateEmergencyCallOutcome(logId, 'failed');
+      if (result.error || !result.data) {
+        console.error('Failed to update emergency_calls row:', result.error ?? 'No row returned');
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Failed to update emergency_calls row:', error);
+      return false;
+    }
+  };
+
+  const startPhoneCall = async (number: string): Promise<boolean> => {
+    if (Platform.OS === 'android' && ImmediatePhoneCallModule) {
+      try {
+        const permission = PermissionsAndroid.PERMISSIONS.CALL_PHONE;
+        const granted = await PermissionsAndroid.request(permission, {
+          title: 'Call permission',
+          message: 'This app needs permission to place phone calls for emergencies.',
+          buttonPositive: 'OK',
+        });
+
+        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+          const directCall = ImmediatePhoneCallModule.default || ImmediatePhoneCallModule;
+          if (typeof directCall === 'function') {
+            directCall(number);
+            return true;
+          }
+
+          if (typeof directCall?.immediatePhoneCall === 'function') {
+            directCall.immediatePhoneCall(number);
+            return true;
+          }
+        } else {
+          console.warn('CALL_PHONE permission denied; falling back to dialer');
+        }
+      } catch (error) {
+        console.warn('Direct call error:', error);
+      }
+    }
+
+    try {
+      await Linking.openURL(`tel:${number}`);
+      return true;
+    } catch (error) {
+      console.error('Failed to open phone dialer:', error);
+      return false;
+    }
   };
 
   const activateEmergencyProtocol = async () => {
     triggerHapticFeedback('emergency');
     setEmergencyProtocolActive(true);
 
-    let locationLat: number | undefined;
-    let locationLng: number | undefined;
-
-    try {
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status === 'granted') {
-        const location = await Location.getCurrentPositionAsync({});
-        locationLat = location.coords.latitude;
-        locationLng = location.coords.longitude;
-      }
-    } catch (error) {
-      console.warn('Failed to get location:', error);
-    }
-
+    const { locationLat, locationLng } = await getCurrentLocation();
     const emergencyNumber = '09552675012';
-    const callType = determineCallType(emergencyNumber);
 
     Alert.alert(
       'Emergency Activated',
@@ -431,19 +527,11 @@ export default function EmergencyScreen() {
         {
           text: 'OK',
           onPress: async () => {
-            try {
-              await makeCall(emergencyNumber);
-              await emergencyCallService.logEmergencyCall(
-                emergencyNumber,
-                undefined,
-                callType,
-                locationLat,
-                locationLng,
-                'initiated'
-              );
-            } catch (error) {
-              console.error('Failed to log emergency call:', error);
-            }
+            await makeCall(emergencyNumber, {
+              locationLat,
+              locationLng,
+              showLogFailureAlert: true,
+            });
           },
         },
       ]
@@ -504,41 +592,38 @@ export default function EmergencyScreen() {
     setEmergencyNumber((prev) => prev.slice(0, -1));
   };
 
-  const makeCall = async (number: string) => {
-    if (!number) return;
+  const makeCall = async (number: string, options?: MakeCallOptions) => {
+    if (!number) return false;
+
     triggerHapticFeedback('medium');
 
-    // Try Android direct call via native module + runtime permission
-    if (Platform.OS === 'android' && ImmediatePhoneCallModule) {
-      try {
-        const permission = PermissionsAndroid.PERMISSIONS.CALL_PHONE;
-        const granted = await PermissionsAndroid.request(permission, {
-          title: 'Call permission',
-          message: 'This app needs permission to place phone calls for emergencies.',
-          buttonPositive: 'OK',
-        });
+    const emergencyLogPromise = createEmergencyLog(number, 'initiated', options);
+    const didStartCall = await startPhoneCall(number);
+    const emergencyLog = await emergencyLogPromise;
 
-        if (granted === PermissionsAndroid.RESULTS.GRANTED) {
-          // The module export may be default or function - handle common shapes
-          const fn = ImmediatePhoneCallModule.default || ImmediatePhoneCallModule;
-          if (typeof fn === 'function') {
-            // e.g. immediatePhoneCall('1234567890')
-            fn(number);
-            return;
-          } else if (typeof fn.immediatePhoneCall === 'function') {
-            fn.immediatePhoneCall(number);
-            return;
-          }
-        } else {
-          console.warn('CALL_PHONE permission denied; falling back to dialer');
-        }
-      } catch (err) {
-        console.warn('Direct call error:', err);
+    if (didStartCall) {
+      if (!emergencyLog && options?.showLogFailureAlert) {
+        Alert.alert(
+          'Emergency Log Failed',
+          'The call started, but we could not create an emergency record in Dispatch.'
+        );
       }
+
+      return true;
     }
 
-    // Fallback: open the dialer (works on both iOS and Android)
-    Linking.openURL(`tel:${number}`);
+    const wasMarkedFailed = await markEmergencyLogFailed(emergencyLog?.id);
+
+    Alert.alert(
+      'Call Failed',
+      emergencyLog
+        ? wasMarkedFailed
+          ? 'We could not start the call. The emergency record was saved and marked as failed in Dispatch.'
+          : 'We could not start the call. The emergency record was saved in Dispatch, but its status could not be updated.'
+        : 'We could not start the call or create an emergency record in Dispatch.'
+    );
+
+    return false;
   };
 
   const sendMessage = () => {
@@ -948,7 +1033,7 @@ export default function EmergencyScreen() {
                           </TouchableOpacity>
                           {/* Call button */}
                           <TouchableOpacity
-                            onPress={() => makeCall(contact.phoneNumber)}
+                            onPress={() => makeCall(contact.phoneNumber, { showLogFailureAlert: true })}
                             style={{
                               width: 40,
                               height: 40,
@@ -1141,7 +1226,7 @@ export default function EmergencyScreen() {
                           </TouchableOpacity>
                           {/* Call button */}
                           <TouchableOpacity
-                            onPress={() => makeCall(contact.number)}
+                            onPress={() => makeCall(contact.number, { showLogFailureAlert: true })}
                             style={{
                               width: 40,
                               height: 40,
@@ -1394,7 +1479,7 @@ export default function EmergencyScreen() {
               <TouchableOpacity
                 className="items-center"
                 activeOpacity={1}
-                onPress={() => makeCall(emergencyNumber)}
+                onPress={() => makeCall(emergencyNumber, { showLogFailureAlert: true })}
                 onPressIn={() => handleButtonPressIn('call')}
                 onPressOut={() => handleButtonPressOut('call')}>
                 <View
