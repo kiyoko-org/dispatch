@@ -1,0 +1,89 @@
+name: Build and release
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            android/app/build
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Get commit info for artifact and release names
+        run: |
+          sanitize() {
+            echo "$1" | tr ' :"<>*?|\\/' '-' | tr -s '-' | sed 's/^-*//;s/-*$//'
+          }
+
+          COMMIT_MESSAGE=$(git log -1 --pretty=%B | head -1 | sanitize)
+          COMMIT_HASH=$(git rev-parse --short=8 HEAD)
+          BRANCH=$(sanitize "${{ github.ref_name }}")
+
+          echo "ARTIFACT_NAME=${COMMIT_MESSAGE}-${COMMIT_HASH}-${BRANCH}" >> $GITHUB_ENV
+          echo "RELEASE_TAG=release-${COMMIT_HASH}-${GITHUB_RUN_NUMBER}" >> $GITHUB_ENV
+          echo "RELEASE_NAME=Dispatch ${COMMIT_HASH} (${GITHUB_RUN_NUMBER})" >> $GITHUB_ENV
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Create google-services.json
+        run: echo '${{ secrets.GOOGLE_SERVICES_JSON }}' > google-services.json
+
+      - name: Make dotenv
+        run: |
+          cat > .env <<EOF
+          SUPABASE_URL=${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY=${{ secrets.SUPABASE_ANON_KEY }}
+          GOOGLE_MAPS_API_KEY=${{ secrets.GOOGLE_MAPS_API_KEY }}
+          GOOGLE_SERVICES_JSON=./google-services.json
+          EOF
+
+      - name: Make expo prebuilds
+        run: bun expo prebuild
+
+      - name: Build with Gradle
+        run: |
+          cd android
+          ./gradlew assembleRelease
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: android/app/build/outputs/apk/release/*.apk
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          name: ${{ env.RELEASE_NAME }}
+          files: android/app/build/outputs/apk/release/*.apk
+          fail_on_unmatched_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
